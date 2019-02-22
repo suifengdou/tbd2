@@ -1,0 +1,238 @@
+    {% extends 'mother.html' %}
+
+    {% block title %}京东FBP售后服务单{% endblock %}
+
+    {% load staticfiles %}
+
+    {% block css %}
+    <!-- Date-time picker css -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/pages/advance-elements/css/bootstrap-datetimepicker.css' %}">
+    <!-- Date-range picker css  -->
+    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/bootstrap-daterangepicker/css/daterangepicker.css' %}" />
+    <!-- Date-Dropper css -->
+    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datedropper/css/datedropper.min.css' %}" />
+    <!-- Data Table Css -->
+    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}">
+    <!-- themify-icons line icon -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/icon/themify-icons/themify-icons.css' %}">
+    <!-- ico font -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/icon/icofont/css/icofont.css' %}">
+    <!-- Style.css -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/css/jquery.mCustomScrollbar.css' %}">
+
+        <!-- 导入每个具体模块的第三方模块css -->
+
+
+
+    {% endblock %}
+
+
+    {% block content %}
+
+        <div class="page-header card">
+            <div class="card-block">
+                <h5 class="m-b-10">京东FBP售后服务单</h5>
+                <p class="text-muted m-b-10">lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+                <ul class="breadcrumb-title b-t-default p-t-10">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
+                    </li>
+                    <li class="breadcrumb-item"><a href="#!">京东FBP售后服务单</a>
+
+                        <!-- 京东服务单内部面包屑 -->
+
+                    </li>
+                    <li class="breadcrumb-item"><a href="#!">服务单概览</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- tab header start -->
+        <div class="tab-header card">
+                    <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{% url 'ass_ref_jdfbp:refundoverview' %}" >服务单概览</a>
+                            <div class="slide"></div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'ass_ref_jdfbp:refundlist' %}" >服务单明细</a>
+                            <div class="slide"></div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'ass_ref_jdfbp:upload' %}" >服务单导入</a>
+                            <div class="slide"></div>
+                        </li>
+                    </ul>
+                </div>
+        <!-- tab header end -->
+
+        <div class="row">
+            <div class="col-lg-12">
+
+                <!-- tab content start -->
+                <div class="tab-content">
+
+                    <!-- tab pane info start -->
+                    <div class="tab-pane active" id="binfo" role="tabpanel" aria-expanded="true">
+                        <!-- info card start -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-header-text">User Services</h5>
+                            </div>
+                            <div class="card-block">
+                                <div class="row">
+
+                                    <div class="col-md-12">
+                                        <div class="card b-l-success business-info services m-b-20">
+                                            <div class="card-header">
+                                                <div class="service-header">
+                                                    <a href="#">
+                                                        <h5 class="card-header-text">系统内订单数量</h5>
+                                                    </a>
+                                                </div>
+                                                <span class="dropdown-toggle addon-btn text-muted f-right service-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" role="tooltip">
+                                         </span>
+                                                <div class="dropdown-menu dropdown-menu-right b-none services-list">
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-edit"></i> Edit</a>
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-ui-delete"></i> Delete</a>
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-eye-alt"></i> View</a>
+                                                </div>
+                                            </div>
+                                            <div class="card-block">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <p class="task-detail">整个系统订单数量：{{ finished_count | add:pending_count }}</p>
+                                                    </div>
+                                                    <!-- end of col-sm-8 -->
+                                                </div>
+                                                <!-- end of row -->
+                                            </div>
+                                            <!-- end of card-block -->
+                                        </div>
+                                    </div>
+
+
+
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-header-text">User Services</h5>
+                            </div>
+                            <div class="card-block">
+                                <div class="row">
+
+                                    <div class="col-md-6">
+                                        <div class="card b-l-success business-info services m-b-20">
+                                            <div class="card-header">
+                                                <div class="service-header">
+                                                    <a href="#">
+                                                        <h5 class="card-header-text">系统内完成订单数量</h5>
+                                                    </a>
+                                                </div>
+                                                <span class="dropdown-toggle addon-btn text-muted f-right service-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" role="tooltip">
+                                         </span>
+                                                <div class="dropdown-menu dropdown-menu-right b-none services-list">
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-edit"></i> Edit</a>
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-ui-delete"></i> Delete</a>
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-eye-alt"></i> View</a>
+                                                </div>
+                                            </div>
+                                            <div class="card-block">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <p class="task-detail">整个系统完成订单数量：{{ finished_count }}</p>
+                                                    </div>
+                                                    <!-- end of col-sm-8 -->
+                                                </div>
+                                                <!-- end of row -->
+                                            </div>
+                                            <!-- end of card-block -->
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="card b-l-success business-info services m-b-20">
+                                            <div class="card-header">
+                                                <div class="service-header">
+                                                    <a href="#">
+                                                        <h5 class="card-header-text">系统内待处理订单数量</h5>
+                                                    </a>
+                                                </div>
+                                                <span class="dropdown-toggle addon-btn text-muted f-right service-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" role="tooltip">
+                                         </span>
+                                                <div class="dropdown-menu dropdown-menu-right b-none services-list">
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-edit"></i> Edit</a>
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-ui-delete"></i> Delete</a>
+                                                    <a class="dropdown-item" href="#!"><i class="icofont icofont-eye-alt"></i> View</a>
+                                                </div>
+                                            </div>
+                                            <div class="card-block">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <p class="task-detail">系统内待处理订单数量：{{ pending_count }}</p>
+                                                    </div>
+                                                    <!-- end of col-sm-8 -->
+                                                </div>
+                                                <!-- end of row -->
+                                            </div>
+                                            <!-- end of card-block -->
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- info card end -->
+                    </div>
+                    <!-- tab pane info end -->
+                </div>
+                <!-- tab content end -->
+            </div>
+        </div>
+
+    {% endblock %}
+
+
+
+    {% block js %}
+    <!-- Date-range picker js -->
+    <script  src="{% static 'bower_components/bootstrap-daterangepicker/js/daterangepicker.js' %}"></script>
+
+    <!-- Date-dropper js -->
+    <script  src="{% static 'bower_components/datedropper/js/datedropper.min.js' %}"></script>
+
+    <!-- data-table js -->
+    <script src="{% static 'bower_components/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'bower_components/datatables.net-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'bower_components/datatables.net-responsive/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'bower_components/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js' %}"></script>
+
+    <!-- ck editor -->
+    <script src="{% static 'assets/pages/ckeditor/ckeditor.js' %}"></script>
+
+    <!-- echart js -->
+    <script src="{% static 'assets/pages/chart/echarts/js/echarts-all.js' %}" ></script>
+    <script src="{% static 'assets/pages/user-profile.js' %}"></script>
+    <script src="{% static 'assets/js/pcoded.min.js' %}"></script>
+    <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
+    <script src="{% static 'assets/js/jquery.mCustomScrollbar.concat.min.js' %}"></script>
+
+    <script src="{% static 'bower_components/bootstrap-table/bootstrap-table.js' %}" rel="stylesheet"></script>
+    <script src="{% static 'bower_components/bootstrap-table/locale/bootstrap-table-zh-CN.js' %}"></script>
+        <!-- 导入每个具体模块的第三方模块js-->
+
+    <!-- Todo js -->
+    <script  src="{% static 'assets/pages/todo/todo.js' %}"></script>
+    <script src="{% static 'assets/js/pcoded.min.js' %}"></script>
+    <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
+    <script src="{% static 'assets/js/jquery.mCustomScrollbar.concat.min.js' %}"></script>
+
+
+
+    {% endblock %}
