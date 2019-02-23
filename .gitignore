@@ -1,5 +1,9 @@
 # folder
 .idea
+__pycache__
+
 
 # files
 *.iml
+
+
