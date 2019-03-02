@@ -57,15 +57,15 @@
         <div class="tab-header card">
             <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_orders:overview' %}" >订单中控台</a>
+                    <a class="nav-link" href="{% url 'crm_maintenance:overview' %}" >订单中控台</a>
                     <div class="slide"></div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" href="{% url 'crm_orders:list' %}" >订单明细</a>
+                    <a class="nav-link active" href="{% url 'crm_maintenance:list' %}" >订单明细</a>
                     <div class="slide"></div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_orders:upload' %}" >订单导入</a>
+                    <a class="nav-link" href="{% url 'crm_maintenance:upload' %}" >订单导入</a>
                     <div class="slide"></div>
                 </li>
             </ul>
@@ -100,7 +100,7 @@
 
                                 <!-- datepicker sign start -->
                             <div class="col-md-4">
-                                <form class="form-search pull-right" method="GET" action="{% url 'crm_orders:list' %}?order_tag={{ order_tag }}&num={{ num }}">
+                                <form class="form-search pull-right" method="GET" action="{% url 'crm_maintenance:list' %}?order_tag={{ order_tag }}&num={{ num }}">
                                 <div class="row">
                                     <div class="col-md-8">
                                         <div class="c-datepicker-date-editor J-datepicker-range-betweenMonth mt10">
@@ -144,44 +144,44 @@
                         <tr class="table-primary">
 
 
+                            <th>维修单号</th>
+                            <th>维修单状态</th>
                             <th>店铺</th>
-                            <th>交易时间</th>
-                            <th>收件人</th>
-                            <th>收货地址</th>
-                            <th>收件人手机</th>
-                            <th>订单支付金额</th>
-                            <th>货品编号</th>
+                            <th>购买日期</th>
+                            <th>完成时间</th>
+                            <th>网名</th>
+                            <th>寄件人电话</th>
+                            <th>货品ID</th>
                             <th>货品名称</th>
-                            <th>实发数量</th>
-                            <th>分摊后总价</th>
+                            <th>故障描述</th>
+                            <th>是否过保</th>
+                            <th>传CRM状态</th>
+                            <th>传产品状态</th>
 
 
                         </tr>
                         </thead>
                         <tbody>
-                        {% for order in all_orders.object_list %}
+                        {% for order in all_service_orders.object_list %}
                             <tr>
-
-
-
 
                                 <td>
                                     <label class="check-task">
-                                        <span class="task-title-sp">{{ order.shop }}</span>
+                                        <span class="task-title-sp">{{ order.maintenance_order_id }}</span>
                                     </label>
                                 </td>
-                                <td>{{ order.order_time|date:"Y-m-d H:i:s" }}</td>
-                                <td>{{ order.receiver_name }}</td>
-                                <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.receiver_address }}</span></td>
-
-                                <td>{{ order.receiver_mobile }}</td>
-                                <td>{{ order.payment }}</td>
+                                <td>{{ order.order_status }}</td>
+                                <td>{{ order.shop }}</td>
+                                <td>{{ order.date_of_purchase }}</td>
+                                <td>{{ order.finish_time|date:"Y-m-d H:i:s" }}</td>
+                                <td>{{ order.buyer_nick }}</td>
+                                <td>{{ order.sender_mobile }}</td>
                                 <td>{{ order.goods_id }}</td>
                                 <td>{{ order.goods_name }}</td>
-                                <td>{{ order.real_quantity }}</td>
-                                <td>{{ order.allocated_total_fee }}</td>
-
-
+                                <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.description }}</span></td>
+                                <td>{{ order.is_guarantee }}</td>
+                                <td>{{ order.tocustomer_status }}</td>
+                                <td>{{ order.toproduct_status }}</td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -195,13 +195,13 @@
                 <div class="col-md-4">
                     <nav>
                         <ul class="pagination">
-                            {% if all_orders.has_previous %}
-                                <li><label class="badge badge-warning"><a href="?{{ all_orders.previous_page_number.querystring }}">上一页</a></label></li>
+                            {% if all_service_orders.has_previous %}
+                                <li><label class="badge badge-warning"><a href="?{{ all_service_orders.previous_page_number.querystring }}">上一页</a></label></li>
                             {% endif %}
 
-                            {% for page in all_orders.pages %}
+                            {% for page in all_service_orders.pages %}
                                 {% if page %}
-                                    {% ifequal page all_orders.number %}
+                                    {% ifequal page all_service_orders.number %}
                                         <li class="active"><label class="badge badge-warning"><a href="?{{ page.querystring }}">{{ page }}</a></label></li>
                                     {% else %}
                                         <li><label class="badge badge-warning"><a href="?{{ page.querystring }}" class="page">{{ page }}</a></label></li>
@@ -210,8 +210,8 @@
                                     <li class="none"><label class="badge badge-warning"><a href="">...</a></label></li>
                                 {% endif %}
                             {% endfor %}
-                            {% if all_orders.has_next %}
-                                <li><label class="badge badge-warning"><a href="?{{ all_orders.next_page_number.querystring }}">下一页</a></label></li>
+                            {% if all_service_orders.has_next %}
+                                <li><label class="badge badge-warning"><a href="?{{ all_service_orders.next_page_number.querystring }}">下一页</a></label></li>
                             {% endif %}
                         </ul>
                     </nav>
