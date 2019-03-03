@@ -27,7 +27,7 @@ class MaintenanceInfo(BaseModel):
         '保修结束语': 'appraisal',
         '关联订单号': 'null',
         '关联店铺': 'shop',
-        '购买时间': 'date_of_purchase',
+        '购买时间': 'purchase_time',
         '创建时间': 'create_time',
         '创建人': 'creator',
         '审核时间': 'handle_time',
@@ -66,7 +66,7 @@ class MaintenanceInfo(BaseModel):
     }
 
     VERIFY_FIELD = ['maintenance_order_id', 'warehouse', 'completer', 'shop', 'create_time', 'creator',
-                    'handle_time', 'finish_time', 'buyer_nick', 'sender_mobile', 'receiver_mobile',
+                    'handle_time', 'finish_time', 'buyer_nick', 'sender_mobile', 'return_mobile',
                     'goods_id', 'goods_abbreviation', 'is_guarantee']
 
     ODER_STATUS = (
@@ -95,7 +95,7 @@ class MaintenanceInfo(BaseModel):
     send_order_id = models.CharField(max_length=50, verbose_name='发货订单编号')
     appraisal = models.CharField(max_length=200, verbose_name='保修结束语')
     shop = models.CharField(max_length=60, verbose_name='关联店铺')
-    date_of_purchase = models.DateTimeField(verbose_name='购买时间')
+    purchase_time = models.DateTimeField(verbose_name='购买时间')
     create_time = models.DateTimeField(verbose_name='创建时间')
     creator = models.CharField(max_length=50, verbose_name='创建人')
     handle_time = models.DateTimeField(verbose_name='审核时间')
@@ -108,14 +108,14 @@ class MaintenanceInfo(BaseModel):
     sender_name = models.CharField(max_length=100, verbose_name='寄件客户姓名')
     sender_mobile = models.CharField(max_length=50, verbose_name='寄件客户手机')
     sender_area = models.CharField(max_length=50, verbose_name='寄件客户省市县')
-    sender_address = models.CharField(max_length=50, verbose_name='寄件客户地址')
+    sender_address = models.CharField(max_length=200, verbose_name='寄件客户地址')
     send_logistics_company = models.CharField(max_length=50, verbose_name='收件物流公司')
     send_logistics_no = models.CharField(max_length=50, verbose_name='收件物流单号')
     send_memory = models.CharField(max_length=200, verbose_name='收件备注')
     return_name = models.CharField(max_length=50, verbose_name='寄回客户姓名')
     return_mobile = models.CharField(max_length=50, verbose_name='寄回客户手机')
     return_area = models.CharField(max_length=50, verbose_name='寄回省市区')
-    return_address = models.CharField(max_length=50, verbose_name='寄回地址')
+    return_address = models.CharField(max_length=200, verbose_name='寄回地址')
     return_logistics_company = models.CharField(max_length=50, verbose_name='寄件指定物流公司')
     return_logistics_no = models.CharField(max_length=50, verbose_name='寄件物流单号')
     return_memory = models.CharField(max_length=200, verbose_name='寄件备注')
@@ -124,8 +124,8 @@ class MaintenanceInfo(BaseModel):
     goods_abbreviation = models.CharField(max_length=60, verbose_name='保修货品简称')
     description = models.CharField(max_length=500, verbose_name='故障描述')
     is_guarantee = models.CharField(max_length=50, verbose_name='是否在保修期内')
-    charge_status = models.CharField(max_length=30, verbose_name='收费状态')
-    charge_amount = models.IntegerField(verbose_name='收费金额')
+    charge_status = models.CharField(default='', max_length=30, verbose_name='收费状态')
+    charge_amount = models.IntegerField(default=0, verbose_name='收费金额')
     charge_memory = models.TextField(default='', verbose_name='收费说明')
     repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
     tocustomer_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)

@@ -24,5 +24,6 @@ urlpatterns = [
     url(r'^assistants/refund/jdfbp/', include('apps.assistants.assistant_refund_jdfbp.urls', namespace='ass_ref_jdfbp')),
     url(r'^external/express/sf/', include('apps.external.external_sf_consignation.urls', namespace='ext_exp_sf')),
     url(r'^crm/orders/', include('apps.crm.orders.urls', namespace='crm_orders')),
+    url(r'^crm/maintenance/', include('apps.crm.maintenance.urls', namespace='crm_maintenance')),
     url(r'^$', IndexView.as_view(), name='index'),
 ]

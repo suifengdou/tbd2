@@ -173,7 +173,7 @@
                             {% for page in all_service_orders.pages %}
                                 {% if page %}
                                     {% ifequal page all_service_orders.number %}
-                                        <li class="active"><label class="badge badge-warning"><a href="?{{ page.querystring }}">{{ page }}</a></label></li>
+                                        <li class="active"><label class="badge badge-success"><a href="?{{ page.querystring }}">{{ page }}</a></label></li>
                                     {% else %}
                                         <li><label class="badge badge-warning"><a href="?{{ page.querystring }}" class="page">{{ page }}</a></label></li>
                                     {% endifequal %}
