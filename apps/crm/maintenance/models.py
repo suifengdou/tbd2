@@ -96,8 +96,8 @@ class MaintenanceInfo(BaseModel):
     appraisal = models.CharField(max_length=200, verbose_name='保修结束语')
     shop = models.CharField(max_length=60, verbose_name='关联店铺')
     purchase_time = models.DateTimeField(verbose_name='购买时间')
-    create_time = models.DateTimeField(verbose_name='创建时间')
-    creator = models.CharField(max_length=50, verbose_name='创建人')
+    ori_create_time = models.DateTimeField(null=True, blank=True, verbose_name='创建时间')
+    ori_creator = models.CharField(null=True, blank=True, max_length=50, verbose_name='创建人')
     handle_time = models.DateTimeField(verbose_name='审核时间')
     handler_name = models.CharField(max_length=50, verbose_name='审核人')
     finish_time = models.DateTimeField(verbose_name='保修完成时间')
@@ -127,9 +127,8 @@ class MaintenanceInfo(BaseModel):
     charge_status = models.CharField(default='', max_length=30, verbose_name='收费状态')
     charge_amount = models.IntegerField(default=0, verbose_name='收费金额')
     charge_memory = models.TextField(default='', verbose_name='收费说明')
-    repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
     tocustomer_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)
-    toproduct_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新产品信息状态', default=0)
+    toproduct_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
 
     class Meta:
         verbose_name = '保修单'
@@ -145,3 +144,73 @@ class MaintenanceInfo(BaseModel):
                 return 'verify_field error, must have mandatory field: "{}""'.format(i)
         else:
             return None
+
+
+class MaintenanceHandlingInfo(BaseModel):
+    ODER_STATUS = (
+        (0, '未审核'),
+        (1, '已处理'),
+        (2, '无效'),
+        (3, '异常'),
+    )
+
+    REPEAT_TAG_STATUS = (
+        (0, '正常'),
+        (1, '未处理'),
+        (2, '产品'),
+        (3, '维修'),
+    )
+
+    maintenance_order_id = models.CharField(max_length=50, verbose_name='保修单号')
+    warehouse = models.CharField(max_length=50, verbose_name='收发仓库')
+    maintenance_type = models.CharField(max_length=50, verbose_name='保修类型')
+    fault_type = models.CharField(max_length=50, verbose_name='故障类型')
+    machine_sn = models.CharField(max_length=50, verbose_name='序列号')
+    appraisal = models.CharField(max_length=200, verbose_name='保修结束语')
+    shop = models.CharField(max_length=60, verbose_name='关联店铺')
+    ori_create_time = models.DateTimeField(null=True, blank=True, verbose_name='创建时间')
+    finish_time = models.DateTimeField(verbose_name='保修完成时间')
+    buyer_nick = models.CharField(max_length=200, verbose_name='客户网名')
+    sender_name = models.CharField(max_length=100, verbose_name='寄件客户姓名')
+    sender_mobile = models.CharField(max_length=50, verbose_name='寄件客户手机')
+    sender_area = models.CharField(max_length=50, verbose_name='寄件客户省市县')
+    goods_name = models.CharField(max_length=150, verbose_name='保修货品名称')
+    is_guarantee = models.CharField(max_length=50, verbose_name='是否在保修期内')
+    finish_date = models.DateField(verbose_name='保修完成日期')
+    finish_month = models.DateField(verbose_name='保修完成月度')
+    finish_year = models.DateField(verbose_name='保修完成年度')
+    repeat_time_range = models.IntegerField(default=0, verbose_name='近三十天维修量')
+    handling_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)
+    repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
+
+    class Meta:
+        verbose_name = '单据'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.maintenance_order_id
+
+
+class MaintenanceSummary(BaseModel):
+    finish_date = models.DateField(verbose_name='保修完成日期')
+    order_count = models.IntegerField(default=0, verbose_name='完成保修数量')
+    thirty_day_count = models.IntegerField(default=0, verbose_name='近三十天维修量')
+    repeat_count = models.IntegerField(default=0, verbose_name='30天二次维修量')
+
+    class Meta:
+        verbose_name = '单据'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.finish_date
+
+
+
+
+
+
+
+
+
+
+

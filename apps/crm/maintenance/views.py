@@ -292,15 +292,39 @@ class MaintenanceUpload(View):
 
 class MaintenanceOverview(View):
     def get(self, request):
+        m_total = {}
         today = datetime.datetime.now().date()
-        weekdelta = datetime.datetime.now().date() - datetime.timedelta(weeks=1)
+        weekdelta = datetime.datetime.now().date() - datetime.timedelta(weeks=3)
         maintenance_quantity = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today)
         print(maintenance_quantity)
 
-        test = maintenance_quantity.values("finish_time").aggregate(Count('maintenance_order_id'))
+        test = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today).values("finish_time").annotate(quantity=Count('maintenance_order_id')).values("finish_time", "quantity").order_by("finish_time")
         print(test)
+
+        _rt_summary_quantity = {}
+        for date_data in test:
+            date_str = date_data["finish_time"].strftime("%Y-%m-%d")
+            quantity = date_data["quantity"]
+            if _rt_summary_quantity.get(date_str, None) is None:
+                _rt_summary_quantity[date_str] = quantity
+            else:
+                _rt_summary_quantity[date_str] += quantity
+        print(_rt_summary_quantity)
+        rt_summary_quantity_d = []
+        rt_summary_quantity_q = []
+        for d, q in _rt_summary_quantity.items():
+            rt_summary_quantity_d.append(d)
+            rt_summary_quantity_q.append(q)
+        print(rt_summary_quantity_d)
+        print(rt_summary_quantity_q)
+
+        m_total["rt_summary_quantity_d"] = rt_summary_quantity_d
+        m_total["rt_summary_quantity_q"] = rt_summary_quantity_q
+
+
+
         return render(request, "crm/maintenance/overview.html", {
-            "maintenance_quantity": maintenance_quantity,
+            "m_total": m_total,
         })
 
     def post(self, request):
