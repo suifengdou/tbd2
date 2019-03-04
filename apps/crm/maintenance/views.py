@@ -10,7 +10,7 @@ import csv, datetime, codecs, re
 from django.shortcuts import render, redirect
 from django.views.generic.base import View
 from django.http import HttpResponse, StreamingHttpResponse
-from django.db.models import Q
+from django.db.models import Q, Sum, Count, Avg
 from django.utils.six import moves
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 import pandas as pd
@@ -36,14 +36,17 @@ class MaintenanceList(View):
 
         if search_keywords:
             all_service_orders = MaintenanceInfo.objects.filter(
-                Q(maintenance_order_id=search_keywords) | Q(send_logistics_no=search_keywords) | Q(sender_mobile=search_keywords)
+                Q(maintenance_order_id=search_keywords) | Q(send_logistics_no=search_keywords) | Q\
+                    (sender_mobile=search_keywords)
             )
         else:
 
             if order_tag == '0':
-                all_service_orders = MaintenanceInfo.objects.filter(handlingstatus=str(0)).values(*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
+                all_service_orders = MaintenanceInfo.objects.filter(handlingstatus=str(0)).values\
+                    (*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
             else:
-                all_service_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
+                all_service_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by\
+                    ('maintenance_order_id')
 
         try:
             page = request.GET.get('page', 1)
@@ -286,8 +289,19 @@ class MaintenanceUpload(View):
                 report_dic["false"] += 1
         return report_dic
 
-    pass
-
 
 class MaintenanceOverview(View):
-    pass
+    def get(self, request):
+        today = datetime.datetime.now().date()
+        weekdelta = datetime.datetime.now().date() - datetime.timedelta(weeks=1)
+        maintenance_quantity = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today)
+        print(maintenance_quantity)
+
+        test = maintenance_quantity.values("finish_time").aggregate(Count('maintenance_order_id'))
+        print(test)
+        return render(request, "crm/maintenance/overview.html", {
+            "maintenance_quantity": maintenance_quantity,
+        })
+
+    def post(self, request):
+        pass

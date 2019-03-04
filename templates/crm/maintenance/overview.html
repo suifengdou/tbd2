@@ -23,26 +23,26 @@
         <!-- 导入每个具体模块的第三方模块css -->
 
 
-<style>
+    <style>
 
-.icofont{
-display:inline-block;
-width:36px;
-height:36px;/*占个位**/
-color:#e95d4e;
-font-size:36px;
-}
-.icofont:after,.icon::after{
-display:inline-block;
-content:"";/*在这里调用字符*/
-width:5px;
-height:5px;
-margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
-}
+        .icofont{
+        display:inline-block;
+        width:36px;
+        height:36px;/*占个位**/
+        color:#e95d4e;
+        font-size:36px;
+        }
+        .icofont:after,.icon::after{
+        display:inline-block;
+        content:"";/*在这里调用字符*/
+        width:5px;
+        height:5px;
+        margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
+        }
 
 
 
-</style>
+    </style>
 
 
 
@@ -94,49 +94,7 @@ margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
 
         <div class="tab-pane" id="contacts" role="tabpanel">
             <div class="row">
-                <div class="col-xl-2">
-                    <!-- user contact card left side start -->
-                    <div class="card">
-                        <div class="card-header contact-user">
-                            <h5 class="m-l-10">功能模块</h5>
-                        </div>
-                        <div class="card-block">
-                            <ul class="list-group list-contacts">
-                                <li class="list-group-item active"><a href="{% url 'crm_orders:overview' %}">全部更新信息概述</a></li>
-                                <li class="list-group-item"><a href="{% url 'crm_orders:otc' %}">客户信息更新</a></li>
-                                <li class="list-group-item"><a href="#">时间积分卡更新</a></li>
-                                <li class="list-group-item"><a href="#">区域积分卡更新</a></li>
-                                <li class="list-group-item"><a href="#">购买力积分卡更新</a></li>
-                            </ul>
-                        </div>
 
-                        <div class="card-block groups-contact">
-                            <div class="card-header contact-user">
-                                <h5 class="m-l-10">待处理一览</h5>
-                            </div>
-                            <ul class="list-group">
-                                <li class="list-group-item justify-content-between">
-                                    订单未更新数量
-                                    <span class="badge badge-primary badge-pill">30</span>
-                                </li>
-                                <li class="list-group-item justify-content-between">
-                                    时间积分待处理
-                                    <span class="badge badge-success badge-pill">20</span>
-                                </li>
-                                <li class="list-group-item justify-content-between">
-                                    区域积分待处理
-                                    <span class="badge badge-info badge-pill">100</span>
-                                </li>
-                                <li class="list-group-item justify-content-between">
-                                    购买力积分待处理
-                                    <span class="badge badge-danger badge-pill">50</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                    </div>
-                    <!-- user contact card left side end -->
-                </div>
                 <div class="col-xl-10">
                     <div class="row">
                         <div class="col-sm-12">
@@ -152,74 +110,23 @@ margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
                                             <div class="card-header">
                                                 <div class="service-header">
                                                     <a href="#">
-                                                        <h5 class="card-header-text"></h5>
+                                                        <h5 class="card-header-text">30天中央维修</h5>
                                                     </a>
                                                 </div>
 
                                             </div>
                                             <div class="card-block">
                                                 <div class="row">
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部订单</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-green f-36">56</span>
-                                                                <p class="m-b-0">全部订单数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-green">
-                                                                <h6 class="text-white m-b-0">已完成订单数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
 
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部客户</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-blue f-36">56</span>
-                                                                <p class="m-b-0">全部客户数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-blue">
-                                                                <h6 class="text-white m-b-0">未完成数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                <div id="m_quantity" style="min-width: 910px; height: 500px; margin: 0 auto"></div>
 
-                                                    <div class="col-md-6 col-lg-2">
-
-                                                        <div class="big-icon">
-                                                            <i class="icofont icofont-favourite"></i>
-                                                            <span style="font-size: x-large">特别提示</span>
-                                                        </div>
-
-
-
-
-                                                        <div class="card bg-c-pink order-card">
-                                                            <div class="card-block">
-                                                                <h6>需要处理订单数</h6>
-                                                                <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
-                                                                <p class="m-b-0"><span class="f-right"></span></p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                </div>
 
                                                     <!-- end of col-sm-8 -->
                                                 </div>
                                                 <!-- end of row -->
                                             </div>
                                             <!-- end of card-block -->
-                                        </div>
                                     </div>
 
                                     <div class="col-md-12">
@@ -227,74 +134,24 @@ margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
                                             <div class="card-header">
                                                 <div class="service-header">
                                                     <a href="#">
-                                                        <h5 class="card-header-text"></h5>
+                                                        <h5 class="card-header-text">30天中央维修</h5>
                                                     </a>
                                                 </div>
 
                                             </div>
                                             <div class="card-block">
                                                 <div class="row">
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部订单</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-green f-36">56</span>
-                                                                <p class="m-b-0">全部订单数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-green">
-                                                                <h6 class="text-white m-b-0">已完成订单数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
 
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部客户</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-blue f-36">56</span>
-                                                                <p class="m-b-0">全部客户数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-blue">
-                                                                <h6 class="text-white m-b-0">未完成数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-md-6 col-lg-2">
-
-                                                        <div class="big-icon">
-                                                            <i class="icofont icofont-favourite"></i>
-                                                            <span style="font-size: x-large">特别提示</span>
-                                                        </div>
+                                                <div id="m_goods" style="min-width: 910px; height: 500px; margin: 0 auto"></div>
 
 
-
-
-                                                        <div class="card bg-c-pink order-card">
-                                                            <div class="card-block">
-                                                                <h6>需要处理订单数</h6>
-                                                                <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
-                                                                <p class="m-b-0"><span class="f-right"></span></p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                </div>
 
                                                     <!-- end of col-sm-8 -->
                                                 </div>
                                                 <!-- end of row -->
                                             </div>
                                             <!-- end of card-block -->
-                                        </div>
                                     </div>
 
                                     <div class="col-md-12">
@@ -302,74 +159,24 @@ margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
                                             <div class="card-header">
                                                 <div class="service-header">
                                                     <a href="#">
-                                                        <h5 class="card-header-text"></h5>
+                                                        <h5 class="card-header-text">30天中央维修</h5>
                                                     </a>
                                                 </div>
 
                                             </div>
                                             <div class="card-block">
                                                 <div class="row">
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部订单</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-green f-36">56</span>
-                                                                <p class="m-b-0">全部订单数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-green">
-                                                                <h6 class="text-white m-b-0">已完成订单数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
 
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部客户</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-blue f-36">56</span>
-                                                                <p class="m-b-0">全部客户数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-blue">
-                                                                <h6 class="text-white m-b-0">未完成数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="col-md-6 col-lg-2">
-
-                                                        <div class="big-icon">
-                                                            <i class="icofont icofont-favourite"></i>
-                                                            <span style="font-size: x-large">特别提示</span>
-                                                        </div>
+                                                <div id="m_repeat" style="min-width: 910px; height: 500px; margin: 0 auto"></div>
 
 
-
-
-                                                        <div class="card bg-c-pink order-card">
-                                                            <div class="card-block">
-                                                                <h6>需要处理订单数</h6>
-                                                                <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
-                                                                <p class="m-b-0"><span class="f-right"></span></p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                </div>
 
                                                     <!-- end of col-sm-8 -->
                                                 </div>
                                                 <!-- end of row -->
                                             </div>
                                             <!-- end of card-block -->
-                                        </div>
                                     </div>
 
                                     <div class="col-md-12">
@@ -377,81 +184,51 @@ margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
                                             <div class="card-header">
                                                 <div class="service-header">
                                                     <a href="#">
-                                                        <h5 class="card-header-text"></h5>
+                                                        <h5 class="card-header-text">30天中央维修</h5>
                                                     </a>
                                                 </div>
 
                                             </div>
                                             <div class="card-block">
                                                 <div class="row">
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部订单</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-green f-36">56</span>
-                                                                <p class="m-b-0">全部订单数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-green">
-                                                                <h6 class="text-white m-b-0">已完成订单数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
 
-                                                    <div class="col-md-6 col-lg-5">
-                                                        <div class="card statustic-card">
-                                                            <div class="card-header">
-                                                                <h5>全部客户</h5>
-                                                            </div>
-                                                            <div class="card-block text-center">
-                                                                <span class="d-block text-c-blue f-36">56</span>
-                                                                <p class="m-b-0">全部客户数</p>
-                                                                <div class="progress">
-                                                                    <div class="progress-bar bg-c-yellow" style="width:56%"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="card-footer bg-c-blue">
-                                                                <h6 class="text-white m-b-0">未完成数: 22</h6>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                <div id="m_repeat_reason" style="min-width: 910px; height: 500px; margin: 0 auto"></div>
 
-                                                    <div class="col-md-6 col-lg-2">
-
-                                                        <div class="big-icon">
-                                                            <i class="icofont icofont-favourite"></i>
-                                                            <span style="font-size: x-large">特别提示</span>
-                                                        </div>
-
-
-
-
-                                                        <div class="card bg-c-pink order-card">
-                                                            <div class="card-block">
-                                                                <h6>需要处理订单数</h6>
-                                                                <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
-                                                                <p class="m-b-0"><span class="f-right"></span></p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                </div>
 
                                                     <!-- end of col-sm-8 -->
                                                 </div>
                                                 <!-- end of row -->
                                             </div>
                                             <!-- end of card-block -->
-                                        </div>
                                     </div>
+
 
                                 </div>
+
+                            </div>
                             </div>
                             <!-- contact data table card end -->
                         </div>
                     </div>
+                <div class="col-xl-2">
+                    <!-- user contact card left side start -->
+                    <div class="card">
+                        <div class="card-header contact-user">
+                            <h5 class="m-l-10">时间范围</h5>
+                        </div>
+                        <div class="card-block">
+                            <ul class="list-group list-contacts">
+                                <li class="list-group-item active"><a href="#">30天</a></li>
+                                <li class="list-group-item"><a href="#">60天</a></li>
+                                <li class="list-group-item"><a href="#">90天</a></li>
+                            </ul>
+                        </div>
+
+
+                    </div>
+                    <!-- user contact card left side end -->
+                </div>
                 </div>
             </div>
         </div>
@@ -494,40 +271,604 @@ margin-left:-16px;/*position:absolute什么的也可以，看具体情况*/
     <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
     <script src="{% static 'assets/js/jquery.mCustomScrollbar.concat.min.js' %}"></script>
 
-
+    <script src="{% static 'bower_components/highcharts/js/highcharts.js' %}"></script>
+    <script src="{% static 'bower_components/highcharts/js/exporting.js' %}"></script>
+    <script src="{% static 'bower_components/highcharts/js/drilldown.js' %}"></script>
+    <script src="{% static 'bower_components/highcharts/js/highcharts-zh-CN.js' %}"></script>
         <!-- 导入每个具体模块的第三方模块js-->
+    <script>
 
-<!--
-        <script type="text/javascript">
+    Highcharts.chart('m_quantity',{
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: '月平均降雨量'
+    },
+    subtitle: {
+        text: '数据来源: WorldClimate.com'
+    },
+    xAxis: {
+        categories: [
+            '一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: '降雨量 (mm)'
+        }
+    },
+    tooltip: {
+        // head + 每个 point + footer 拼接成完整的 table
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+        '<td style="padding:0"><b>{point.y:.1f} mm</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            borderWidth: 0
+        }
+    },
+    series: [{
+        name: '东京',
+        data: [49.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4]
+    }]
+});
 
-            function tocustomers(current_elem, num){
-                $.ajax({
-                    cache: false,
-                    type: "POST",
-                    url: "",
-                    data: {"tocustomers": num},
-                    async: true,
-                    beforeSend: function(xhr, settings){
-                        xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
-                    },
-                    success: function(data){
-                        if(data.status == "fail"){
-                            $("#tocustomerret").text(data.message)
-                        }
-                        else if(data.status == "success"){
-                            $("#tocustomerret").text(data.message)
-                        }
+    Highcharts.chart('m_goods', {
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '2015年1月-5月，各浏览器的市场份额'
+            },
+            subtitle: {
+                text: '点击可查看具体的版本数据，数据来源: <a href="https://netmarketshare.com">netmarketshare.com</a>.'
+            },
+            xAxis: {
+                type: 'category'
+            },
+            yAxis: {
+                title: {
+                    text: '总的市场份额'
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y:.1f}%'
                     }
-                });
-            };
-
-            $("#toustomerbt").on("click", function() {
-            var num = $(this).prev().attr("value");
-            tocustomers($(this), num);
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b> of total<br/>'
+            },
+            series: [{
+                name: '浏览器品牌',
+                colorByPoint: true,
+                data: [{
+                    name: 'Microsoft Internet Explorer',
+                    y: 56.33,
+                    drilldown: 'Microsoft Internet Explorer'
+                }, {
+                    name: 'Chrome',
+                    y: 24.03,
+                    drilldown: 'Chrome'
+                }, {
+                    name: 'Firefox',
+                    y: 10.38,
+                    drilldown: 'Firefox'
+                }, {
+                    name: 'Safari',
+                    y: 4.77,
+                    drilldown: 'Safari'
+                }, {
+                    name: 'Opera',
+                    y: 0.91,
+                    drilldown: 'Opera'
+                }, {
+                    name: 'Proprietary or Undetectable',
+                    y: 0.2,
+                    drilldown: null
+                }]
+            }],
+            drilldown: {
+                series: [{
+                    name: 'Microsoft Internet Explorer',
+                    id: 'Microsoft Internet Explorer',
+                    data: [
+                        [
+                            'v11.0',
+                            24.13
+                        ],
+                        [
+                            'v8.0',
+                            17.2
+                        ],
+                        [
+                            'v9.0',
+                            8.11
+                        ],
+                        [
+                            'v10.0',
+                            5.33
+                        ],
+                        [
+                            'v6.0',
+                            1.06
+                        ],
+                        [
+                            'v7.0',
+                            0.5
+                        ]
+                    ]
+                }, {
+                    name: 'Chrome',
+                    id: 'Chrome',
+                    data: [
+                        [
+                            'v40.0',
+                            5
+                        ],
+                        [
+                            'v41.0',
+                            4.32
+                        ],
+                        [
+                            'v42.0',
+                            3.68
+                        ],
+                        [
+                            'v39.0',
+                            2.96
+                        ],
+                        [
+                            'v36.0',
+                            2.53
+                        ],
+                        [
+                            'v43.0',
+                            1.45
+                        ],
+                        [
+                            'v31.0',
+                            1.24
+                        ],
+                        [
+                            'v35.0',
+                            0.85
+                        ],
+                        [
+                            'v38.0',
+                            0.6
+                        ],
+                        [
+                            'v32.0',
+                            0.55
+                        ],
+                        [
+                            'v37.0',
+                            0.38
+                        ],
+                        [
+                            'v33.0',
+                            0.19
+                        ],
+                        [
+                            'v34.0',
+                            0.14
+                        ],
+                        [
+                            'v30.0',
+                            0.14
+                        ]
+                    ]
+                }, {
+                    name: 'Firefox',
+                    id: 'Firefox',
+                    data: [
+                        [
+                            'v35',
+                            2.76
+                        ],
+                        [
+                            'v36',
+                            2.32
+                        ],
+                        [
+                            'v37',
+                            2.31
+                        ],
+                        [
+                            'v34',
+                            1.27
+                        ],
+                        [
+                            'v38',
+                            1.02
+                        ],
+                        [
+                            'v31',
+                            0.33
+                        ],
+                        [
+                            'v33',
+                            0.22
+                        ],
+                        [
+                            'v32',
+                            0.15
+                        ]
+                    ]
+                }, {
+                    name: 'Safari',
+                    id: 'Safari',
+                    data: [
+                        [
+                            'v8.0',
+                            2.56
+                        ],
+                        [
+                            'v7.1',
+                            0.77
+                        ],
+                        [
+                            'v5.1',
+                            0.42
+                        ],
+                        [
+                            'v5.0',
+                            0.3
+                        ],
+                        [
+                            'v6.1',
+                            0.29
+                        ],
+                        [
+                            'v7.0',
+                            0.26
+                        ],
+                        [
+                            'v6.2',
+                            0.17
+                        ]
+                    ]
+                }, {
+                    name: 'Opera',
+                    id: 'Opera',
+                    data: [
+                        [
+                            'v12.x',
+                            0.34
+                        ],
+                        [
+                            'v28',
+                            0.24
+                        ],
+                        [
+                            'v27',
+                            0.17
+                        ],
+                        [
+                            'v29',
+                            0.16
+                        ]
+                    ]
+                }]
+            }
         });
 
+    Highcharts.chart('m_repeat',{
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: '月平均降雨量'
+    },
+    subtitle: {
+        text: '数据来源: WorldClimate.com'
+    },
+    xAxis: {
+        categories: [
+            '一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: '降雨量 (mm)'
+        }
+    },
+    tooltip: {
+        // head + 每个 point + footer 拼接成完整的 table
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+        '<td style="padding:0"><b>{point.y:.1f} mm</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            borderWidth: 0
+        }
+    },
+    series: [{
+        name: '东京',
+        data: [49.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4]
+    }, {
+        name: '纽约',
+        data: [83.6, 78.8, 98.5, 93.4, 106.0, 84.5, 105.0, 104.3, 91.2, 83.5, 106.6, 92.3]
+    }, {
+        name: '伦敦',
+        data: [48.9, 38.8, 39.3, 41.4, 47.0, 48.3, 59.0, 59.6, 52.4, 65.2, 59.3, 51.2]
+    }, {
+        name: '柏林',
+        data: [42.4, 33.2, 34.5, 39.7, 52.6, 75.5, 57.4, 60.4, 47.6, 39.1, 46.8, 51.1]
+    }]
+});
 
-        </script>
+    Highcharts.chart('m_repeat_reason', {
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '2015年1月-5月，各浏览器的市场份额'
+            },
+            subtitle: {
+                text: '点击可查看具体的版本数据，数据来源: <a href="https://netmarketshare.com">netmarketshare.com</a>.'
+            },
+            xAxis: {
+                type: 'category'
+            },
+            yAxis: {
+                title: {
+                    text: '总的市场份额'
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y:.1f}%'
+                    }
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b> of total<br/>'
+            },
+            series: [{
+                name: '浏览器品牌',
+                colorByPoint: true,
+                data: [{
+                    name: 'Microsoft Internet Explorer',
+                    y: 56.33,
+                    drilldown: 'Microsoft Internet Explorer'
+                }, {
+                    name: 'Chrome',
+                    y: 24.03,
+                    drilldown: 'Chrome'
+                }, {
+                    name: 'Firefox',
+                    y: 10.38,
+                    drilldown: 'Firefox'
+                }, {
+                    name: 'Safari',
+                    y: 4.77,
+                    drilldown: 'Safari'
+                }, {
+                    name: 'Opera',
+                    y: 0.91,
+                    drilldown: 'Opera'
+                }, {
+                    name: 'Proprietary or Undetectable',
+                    y: 0.2,
+                    drilldown: null
+                }]
+            }],
+            drilldown: {
+                series: [{
+                    name: 'Microsoft Internet Explorer',
+                    id: 'Microsoft Internet Explorer',
+                    data: [
+                        [
+                            'v11.0',
+                            24.13
+                        ],
+                        [
+                            'v8.0',
+                            17.2
+                        ],
+                        [
+                            'v9.0',
+                            8.11
+                        ],
+                        [
+                            'v10.0',
+                            5.33
+                        ],
+                        [
+                            'v6.0',
+                            1.06
+                        ],
+                        [
+                            'v7.0',
+                            0.5
+                        ]
+                    ]
+                }, {
+                    name: 'Chrome',
+                    id: 'Chrome',
+                    data: [
+                        [
+                            'v40.0',
+                            5
+                        ],
+                        [
+                            'v41.0',
+                            4.32
+                        ],
+                        [
+                            'v42.0',
+                            3.68
+                        ],
+                        [
+                            'v39.0',
+                            2.96
+                        ],
+                        [
+                            'v36.0',
+                            2.53
+                        ],
+                        [
+                            'v43.0',
+                            1.45
+                        ],
+                        [
+                            'v31.0',
+                            1.24
+                        ],
+                        [
+                            'v35.0',
+                            0.85
+                        ],
+                        [
+                            'v38.0',
+                            0.6
+                        ],
+                        [
+                            'v32.0',
+                            0.55
+                        ],
+                        [
+                            'v37.0',
+                            0.38
+                        ],
+                        [
+                            'v33.0',
+                            0.19
+                        ],
+                        [
+                            'v34.0',
+                            0.14
+                        ],
+                        [
+                            'v30.0',
+                            0.14
+                        ]
+                    ]
+                }, {
+                    name: 'Firefox',
+                    id: 'Firefox',
+                    data: [
+                        [
+                            'v35',
+                            2.76
+                        ],
+                        [
+                            'v36',
+                            2.32
+                        ],
+                        [
+                            'v37',
+                            2.31
+                        ],
+                        [
+                            'v34',
+                            1.27
+                        ],
+                        [
+                            'v38',
+                            1.02
+                        ],
+                        [
+                            'v31',
+                            0.33
+                        ],
+                        [
+                            'v33',
+                            0.22
+                        ],
+                        [
+                            'v32',
+                            0.15
+                        ]
+                    ]
+                }, {
+                    name: 'Safari',
+                    id: 'Safari',
+                    data: [
+                        [
+                            'v8.0',
+                            2.56
+                        ],
+                        [
+                            'v7.1',
+                            0.77
+                        ],
+                        [
+                            'v5.1',
+                            0.42
+                        ],
+                        [
+                            'v5.0',
+                            0.3
+                        ],
+                        [
+                            'v6.1',
+                            0.29
+                        ],
+                        [
+                            'v7.0',
+                            0.26
+                        ],
+                        [
+                            'v6.2',
+                            0.17
+                        ]
+                    ]
+                }, {
+                    name: 'Opera',
+                    id: 'Opera',
+                    data: [
+                        [
+                            'v12.x',
+                            0.34
+                        ],
+                        [
+                            'v28',
+                            0.24
+                        ],
+                        [
+                            'v27',
+                            0.17
+                        ],
+                        [
+                            'v29',
+                            0.16
+                        ]
+                    ]
+                }]
+            }
+        });
 
--->
+    </script>
+
     {% endblock %}
