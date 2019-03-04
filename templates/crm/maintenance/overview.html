@@ -56,17 +56,16 @@
         <div class="page-header card">
             <div class="card-block">
                 <h5 class="m-b-10">CRM</h5>
-                <p class="text-muted m-b-10">lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+                <p class="text-muted m-b-10">客户关系管理</p>
                 <ul class="breadcrumb-title b-t-default p-t-10">
                     <li class="breadcrumb-item">
                         <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
                     </li>
-                    <li class="breadcrumb-item"><a href="#!">订单系统</a>
-
-                        <!-- 京东服务单内部面包屑 -->
-
+                    <li class="breadcrumb-item"><a href="#!">中央维修</a>
                     </li>
-                    <li class="breadcrumb-item"><a href="#!">订单中控台</a>
+                    <li class="breadcrumb-item"><a href="#!">中央维修单</a>
+                    </li>
+                    <li class="breadcrumb-item"><a href="#!">单据中控台</a>
                     </li>
                 </ul>
             </div>
@@ -76,15 +75,19 @@
                 <div class="tab-header card">
                     <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
                         <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'crm_orders:overview' %}" >订单中控台</a>
+                            <a class="nav-link active" href="{% url 'crm_maintenance:overview' %}" >单据中控台</a>
                             <div class="slide"></div>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'crm_orders:list' %}" >订单明细</a>
+                            <a class="nav-link" href="{% url 'crm_maintenance:list' %}" >单据明细</a>
                             <div class="slide"></div>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'crm_orders:upload' %}" >订单导入</a>
+                            <a class="nav-link" href="{% url 'crm_maintenance:handlinglist' %}">工作台</a>
+                            <div class="slide"></div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'crm_maintenance:upload' %}" >单据导入</a>
                             <div class="slide"></div>
                         </li>
                     </ul>

@@ -28,8 +28,8 @@ class MaintenanceInfo(BaseModel):
         '关联订单号': 'null',
         '关联店铺': 'shop',
         '购买时间': 'purchase_time',
-        '创建时间': 'create_time',
-        '创建人': 'creator',
+        '创建时间': 'ori_create_time',
+        '创建人': 'ori_creator',
         '审核时间': 'handle_time',
         '审核人': 'handler_name',
         '保修完成时间': 'finish_time',
@@ -65,7 +65,7 @@ class MaintenanceInfo(BaseModel):
         '是否在保修期内': 'is_guarantee'
     }
 
-    VERIFY_FIELD = ['maintenance_order_id', 'warehouse', 'completer', 'shop', 'create_time', 'creator',
+    VERIFY_FIELD = ['maintenance_order_id', 'warehouse', 'completer', 'shop', 'ori_create_time', 'ori_creator',
                     'handle_time', 'finish_time', 'buyer_nick', 'sender_mobile', 'return_mobile',
                     'goods_id', 'goods_abbreviation', 'is_guarantee']
 
@@ -175,12 +175,12 @@ class MaintenanceHandlingInfo(BaseModel):
     sender_mobile = models.CharField(max_length=50, verbose_name='寄件客户手机')
     sender_area = models.CharField(max_length=50, verbose_name='寄件客户省市县')
     goods_name = models.CharField(max_length=150, verbose_name='保修货品名称')
-    is_guarantee = models.CharField(max_length=50, verbose_name='是否在保修期内')
+    is_guarantee = models.CharField(max_length=50, verbose_name='是否在保')
     finish_date = models.DateField(verbose_name='保修完成日期')
     finish_month = models.DateField(verbose_name='保修完成月度')
     finish_year = models.DateField(verbose_name='保修完成年度')
     repeat_time_range = models.IntegerField(default=0, verbose_name='近三十天维修量')
-    handling_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)
+    handling_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='操作状态', default=0)
     repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
 
     class Meta:

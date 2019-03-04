@@ -8,14 +8,16 @@
 from django.conf.urls import url
 
 
-from apps.crm.maintenance.views import MaintenanceList, MaintenanceOverview, MaintenanceUpload
+from apps.crm.maintenance.views import MaintenanceList, MaintenanceOverview, MaintenanceUpload, MaintenanceHandlinglist
 
 
 urlpatterns = [
     url(r'^list/$', MaintenanceList.as_view(), name='list'),
-    # url(r'^operate/$', OperateOrder.as_view(), name='operate'),
+    # url(r'^operate/$', Main.as_view(), name='operate'),
     url(r'^overview/$', MaintenanceOverview.as_view(), name='overview'),
     url(r'^upload/$', MaintenanceUpload.as_view(), name='upload'),
+    url(r'^handlinglist/$', MaintenanceHandlinglist.as_view(), name='handlinglist'),
+
 
 
 ]

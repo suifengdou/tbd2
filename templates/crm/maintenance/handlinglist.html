@@ -43,7 +43,7 @@
                     </li>
                     <li class="breadcrumb-item"><a href="#!">中央维修单</a>
                     </li>
-                    <li class="breadcrumb-item"><a href="#!">单据明细</a>
+                    <li class="breadcrumb-item"><a href="#!">工作台</a>
                     </li>
 
                 </ul>
@@ -54,21 +54,24 @@
         <div class="tab-header card">
             <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:overview' %}" >订单中控台</a>
+                    <a class="nav-link" href="{% url 'crm_maintenance:overview' %}" >单据中控台</a>
                     <div class="slide"></div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" href="{% url 'crm_maintenance:list' %}" >单据明细</a>
+                    <a class="nav-link" href="{% url 'crm_maintenance:list' %}" >单据明细</a>
                     <div class="slide"></div>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:handlinglist' %}">工作台</a>
+
+                 <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'crm_maintenance:handlinglist' %}" >工作台</a>
                     <div class="slide"></div>
                 </li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'crm_maintenance:upload' %}" >单据导入</a>
                     <div class="slide"></div>
                 </li>
+
             </ul>
         </div>
         <!-- tab header end -->
@@ -144,48 +147,54 @@
                         <thead>
                         <tr class="table-primary">
 
-
+                            <th>操作状态</th>
                             <th>维修单号</th>
-                            <th>维修单状态</th>
-                            <th>店铺</th>
-                            <th>购买日期</th>
+                            <th>序列号</th>
+                            <th>保修结束语</th>
                             <th>完成时间</th>
-                            <th>网名</th>
-                            <th>寄件人电话</th>
-                            <th>货品ID</th>
-                            <th>货品名称</th>
-                            <th>故障描述</th>
-                            <th>是否过保</th>
-                            <th>传CRM状态</th>
-                            <th>传产品状态</th>
-
+                            <th>寄件客户手机</th>
+                            <th>重复维修标记</th>
+                            <th>是否在保</th>
+                            <th>重复维修标记</th>
 
                         </tr>
                         </thead>
                         <tbody>
-                        {% for order in all_service_orders.object_list %}
+                        {% for service_order in all_service_orders.object_list %}
                             <tr>
+
+
+                                <!-- 单据状态开始 -->
+                                {% if service_order.handlingstatus == '0' %}<th scope="row">未处理</th>
+                                {% else %}<th scope="row">已处理</th>
+                                {% endif %}
+                                <!-- 单据状态结束 -->
+
 
                                 <td>
                                     <label class="check-task">
-                                        <span class="task-title-sp">{{ order.maintenance_order_id }}</span>
+                                        <span class="task-title-sp">{{ service_order.express_id }}</span>
                                     </label>
                                 </td>
-                                <td>{{ order.order_status }}</td>
-                                <td>{{ order.shop }}</td>
-                                <td>{{ order.purchase_time }}</td>
-                                <td>{{ order.finish_time|date:"Y-m-d H:i:s" }}</td>
-                                <td><span style="word-break:normal;width:100px;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.buyer_nick }}</span></td>
-                                <td>{{ order.sender_mobile }}</td>
-                                <td>{{ order.goods_id }}</td>
-                                <td>{{ order.goods_name }}</td>
-                                <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.description }}</span></td>
-                                <td>{{ order.is_guarantee }}</td>
-                                <td>{{ order.tocustomer_status }}</td>
-                                <td>{{ order.toproduct_status }}</td>
+
+                                <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ service_order.information }}</span></td>
+                                <td>{{ service_order.consignor }}</td>
+                                <!-- 操作按钮开始 -->
+                                {% if service_order.handlingstatus == '0' %}
+                                    <td><a class="audit btn btn-primary" data-id="{{ service_order.id }}">审核</a></td>
+                                {% else %}
+                                    <td>已处理</td>
+                                {% endif %}
+                                <!-- 操作按钮结束 -->
+                                <td>{{ service_order.feedback_time }}</td>
+                                <td>{{ service_order.remark }}</td>
+                                <td>{{ service_order.creator }}</td>
+                                <td>{{ service_order.create_time|date:"Y-m-d H:i:s" }}</td>
+
                             </tr>
                         {% endfor %}
                         </tbody>
+
                     </table>
                 </div>
             </div>
@@ -422,6 +431,49 @@
 
       });
 
+        </script>
+
+        <script type="text/javascript">
+
+        function audit_order(current_elem, id){
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "{% url "ext_exp_sf:operate" %}",
+                data: {"id": id},
+                async: true,
+                beforeSend: function(xhr, settings){
+                    xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                },
+                success: function(data){
+                    if(data.status == "fail"){
+                        location.href="/users/login"
+                    }
+                    else if(data.status == "success"){
+                        current_elem.text("已处理")
+                    }
+                }
+
+            });
+
+        };
+
+        $(".audit").on("click", function() {
+            var id = $(this).attr("data-id");
+
+            audit_order($(this), id);
+        });
+
+        $(".check-task").dblclick(function(){
+
+            if($(this).parent().hasClass("done-task")){
+                $(this).parent().removeClass("done-task");
+            }else{
+                $(this).parent().addClass("done-task");
+                $(this).parent().parent().addClass("bg-info");
+            }
+
+        })
         </script>
 
 

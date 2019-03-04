@@ -247,98 +247,22 @@
                                         <span class="pcoded-mcaret"></span>
                                     </a>
                                     <ul class="pcoded-submenu">
-                                        <li class=" ">
+                                        <li class="{% if index_tag == 'crm_orders' %}active{% endif %}">
                                             <a href="{% url 'crm_orders:overview' %}">
                                                 <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
                                                 <span class="pcoded-mtext">订单系统</span>
                                                 <span class="pcoded-mcaret"></span>
                                             </a>
                                         </li>
-                                        <li class="pcoded-hasmenu">
-                                            <a href="javascript:void(0)">
+
+                                        <li class="{% if index_tag == 'crm_maintenance_orders' %}active{% endif %}">
+                                            <a href="{% url 'crm_maintenance:overview' %}">
                                                 <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
                                                 <span class="pcoded-mtext">中央维修</span>
                                                 <span class="pcoded-mcaret"></span>
                                             </a>
-                                            <ul class="pcoded-submenu">
-                                                <li class="{% if index_tag == 'crm_maintenance_orders' %}active{% endif %}">
-                                                    <a href="{% url 'crm_maintenance:list' %}">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">中央维修单</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">话务服务</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">评价信息</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">客户资料系统</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">客户积分卡</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">客户标签</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">客户关怀维护系统</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">客户行为系统</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-
-                                                <li class=" ">
-                                                    <a href="dt-ext-buttons-html-5-data-export.html">
-                                                        <span class="pcoded-micon"><i class="ti-angle-right"></i></span>
-                                                        <span class="pcoded-mtext">客户分层系统</span>
-                                                        <span class="pcoded-mcaret"></span>
-                                                    </a>
-                                                </li>
-
-
-
-                                            </ul>
                                         </li>
+
 
                                     </ul>
                                 </li>

@@ -15,7 +15,7 @@ from django.utils.six import moves
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 import pandas as pd
 
-from apps.crm.maintenance.models import MaintenanceInfo
+from apps.crm.maintenance.models import MaintenanceInfo, MaintenanceHandlingInfo, MaintenanceSummary
 from .forms import UploadFileForm
 # Create your views here.
 
@@ -104,8 +104,8 @@ class MaintenanceUpload(View):
         "保修结束语": "appraisal",
         "关联店铺": "shop",
         "购买时间": "purchase_time",
-        "创建时间": "create_time",
-        "创建人": "creator",
+        "创建时间": "ori_create_time",
+        "创建人": "ori_creator",
         "审核时间": "handle_time",
         "审核人": "handler_name",
         "保修完成时间": "finish_time",
@@ -321,11 +321,39 @@ class MaintenanceOverview(View):
         m_total["rt_summary_quantity_d"] = rt_summary_quantity_d
         m_total["rt_summary_quantity_q"] = rt_summary_quantity_q
 
-
-
         return render(request, "crm/maintenance/overview.html", {
             "m_total": m_total,
+            "index_tag": "crm_maintenance_orders",
         })
 
     def post(self, request):
         pass
+
+
+class MaintenanceHandlinglist(View):
+    def get(self, request):
+        order_tag = request.GET.get("order_tag", "1")
+        search_keywords = request.GET.get("search_keywords", None)
+        num = request.GET.get("num", 10)
+        num = int(num)
+        download_tag = request.GET.get("download_tag", None)
+
+        if num > 50:
+            num = 50
+
+        if search_keywords:
+            all_orders = MaintenanceHandlingInfo.objects.filter(
+                Q(maintenance_order_id=search_keywords) | Q(sender_mobile=search_keywords)
+            )
+        else:
+            if order_tag == "0":
+                all_orders = MaintenanceHandlingInfo.objects.filter(handling_status=str(0)).values(
+                    *self.__class__.QUERY_FIELD).all().order_by("-")
+                )
+
+
+        return render(request, 'crm/maintenance/handlinglist.html', {
+            "index_tag": "crm_maintenance_orders",
+
+        })
+    pass
