@@ -30,19 +30,19 @@
 
         <div class="page-header card">
             <div class="card-block">
-                <h5 class="m-b-10">京东FBP售后服务单</h5>
+                <h5 class="m-b-10">销售订单</h5>
                 <p class="text-muted m-b-10">lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
                 <ul class="breadcrumb-title b-t-default p-t-10">
                     <li class="breadcrumb-item">
                         <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
                     </li>
-                    <li class="breadcrumb-item"><a href="#!">京东FBP售后服务单</a>
+                    <li class="breadcrumb-item"><a href="#!">销售订单</a>
 
                         <!-- 京东服务单内部面包屑 -->
 
 
             </li>
-            <li class="breadcrumb-item"><a href="#!">服务单导入</a>
+            <li class="breadcrumb-item"><a href="#!">销售订单导入</a>
             </li>
 
 
@@ -55,15 +55,15 @@
                 <div class="tab-header card">
                     <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'crm_orders:overview' %}" >服务单概览</a>
+                            <a class="nav-link" href="{% url 'crm_orders:overview' %}" >销售订单概览</a>
                             <div class="slide"></div>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'crm_orders:list' %}" >服务单明细</a>
+                            <a class="nav-link" href="{% url 'crm_orders:list' %}" >销售订单明细</a>
                             <div class="slide"></div>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'crm_orders:upload' %}" >服务单导入</a>
+                            <a class="nav-link active" href="{% url 'crm_orders:upload' %}" >销售订单导入</a>
                             <div class="slide"></div>
                         </li>
                     </ul>
@@ -80,7 +80,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5>选择文件</h5>
-                    <span>下载京东后台的售后订单，然后导入。</span>
+                    <span>下载销售订单，然后导入。</span>
                 </div>
                 <div class="card-block">
                     <form id="main" method="post"  action="{% url 'crm_orders:upload' %}" enctype='multipart/form-data' novalidate="">

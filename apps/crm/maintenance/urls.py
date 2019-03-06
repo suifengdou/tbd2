@@ -7,8 +7,8 @@
 
 from django.conf.urls import url
 
-
-from apps.crm.maintenance.views import MaintenanceList, MaintenanceOverview, MaintenanceUpload, MaintenanceHandlinglist
+from apps.crm.maintenance.views import MaintenanceList, MaintenanceOverview, MaintenanceUpload, MaintenanceHandlinglist, \
+    MaintenanceToWork, MaintenanceSignRepeat
 
 
 urlpatterns = [
@@ -17,6 +17,8 @@ urlpatterns = [
     url(r'^overview/$', MaintenanceOverview.as_view(), name='overview'),
     url(r'^upload/$', MaintenanceUpload.as_view(), name='upload'),
     url(r'^handlinglist/$', MaintenanceHandlinglist.as_view(), name='handlinglist'),
+    url(r'^towork/$', MaintenanceToWork.as_view(), name='towork'),
+    url(r'^signrepeat/$', MaintenanceSignRepeat.as_view(), name='signrepeat'),
 
 
 

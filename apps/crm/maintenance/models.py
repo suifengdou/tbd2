@@ -128,7 +128,7 @@ class MaintenanceInfo(BaseModel):
     charge_amount = models.IntegerField(default=0, verbose_name='收费金额')
     charge_memory = models.TextField(default='', verbose_name='收费说明')
     tocustomer_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)
-    toproduct_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
+    towork_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
 
     class Meta:
         verbose_name = '保修单'
@@ -159,6 +159,7 @@ class MaintenanceHandlingInfo(BaseModel):
         (1, '未处理'),
         (2, '产品'),
         (3, '维修'),
+        (4, '客服'),
     )
 
     maintenance_order_id = models.CharField(max_length=50, verbose_name='保修单号')
@@ -179,7 +180,9 @@ class MaintenanceHandlingInfo(BaseModel):
     finish_date = models.DateField(verbose_name='保修完成日期')
     finish_month = models.DateField(verbose_name='保修完成月度')
     finish_year = models.DateField(verbose_name='保修完成年度')
-    repeat_time_range = models.IntegerField(default=0, verbose_name='近三十天维修量')
+    province = models.CharField(null=True, blank=True, max_length=50, verbose_name='省份')
+    city = models.CharField(null=True, blank=True, max_length=50, verbose_name='城市')
+    district = models.CharField(null=True, blank=True, max_length=50, verbose_name='区县')
     handling_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='操作状态', default=0)
     repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
 

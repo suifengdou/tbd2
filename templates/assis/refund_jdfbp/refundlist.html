@@ -82,27 +82,57 @@
                     <table id="table" class="table table-styling table-bordered">
 
                         <div class="row">
-                            <div class="col-md-3">
-                                <a href="?order_tag=1&num={{ num }}" id="total" class="btn btn-primary btn-square">全部服务单</a>
-                                <a href="?order_tag=0&num={{ num }}" id="pending" class="btn btn-primary btn-square">未审核服务单</a>
+                        <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+
+                        <a href="?order_tag=1&num={{ num }}" id="total"
+                           class="btn btn-primary btn-round">全部服务单</a>
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+                        <a href="?order_tag=0&num={{ num }}" id="pending"
+                           class="btn btn-primary btn-round">未审核服务单</a>
+
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+
+
+                        <form class="form-search pull-right" method="GET" action="">
+                            <input name="search_keywords" class="input-medium search-query" type="text"
+                                   placeholder="订单号/快递单号/服务单号">
+                            <button type="submit" class="btn btn-success btn-square" contenteditable="true">查找
+                            </button>
+                        </form>
+
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+
+
+                        <!-- datepicker sign start -->
+
+                        <form class="form-search pull-right" method="GET"
+                              action="{% url 'crm_maintenance:list' %}?order_tag={{ order_tag }}&num={{ num }}">
+                            <div class="c-datepicker-date-editor J-datepicker-range-betweenMonth mt10">
+                                <i class="c-datepicker-range__icon kxiconfont icon-clock"></i>
+                                <input placeholder="开始日期" name="start_time" class="c-datepicker-data-input" value="">
+                                <span class="c-datepicker-range-separator">-</span>
+                                <input placeholder="结束日期" name="end_time" class="c-datepicker-data-input" value="">
                             </div>
-                            <div class="col-md-3">
-                                <a href="?order_tag={{ order_tag }}&num={{ num }}&download_tag=1" id="pending" class="btn btn-primary btn-square">下载服务单</a>
-                            </div>
-                            <div class="col-md-4">
-                                 <form class="form-search pull-right" method="GET" action="{% url 'ass_ref_jdfbp:refundlist' %}">
-                                    <input name="search_keywords" class="input-medium search-query" type="text" placeholder="订单号/快递单号/服务单号">
-                                    <button type="submit" class="btn btn-success btn-square" contenteditable="true">单号查找</button>
-                                </form>
-                            </div>
-                            <div class="col-md-2">
-                                 <form class="form-search pull-right" method="GET" action="{% url 'ass_ref_jdfbp:refundlist' %}">
-                                    <input name="num" class="input-medium search-query" type="text" placeholder="分页数量">
-                                     <input name="order_tag" class="input-medium search-query" type="text" style="display:none" value="{{ order_tag }}">
-                                    <button type="submit" class="btn btn-success btn-square" contenteditable="true">提交</button>
-                                </form>
-                            </div>
-                        </div>
+                            <span>&nbsp;</span>
+                            <button type="submit" class="btn btn-info btn-round right" contenteditable="true">提交
+                            </button>
+                        </form>
+
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+
+                        <a href="?order_tag={{ order_tag }}&num={{ num }}&download_tag=1" id="pending"
+                           class="btn btn-primary btn-square">下载订单</a>
+                        {% if download_error %}<a>{{ download_error }}</a>{% endif %}
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+                        <form class="form-search pull-right" method="GET" action="{% url 'ass_ref_jdfbp:refundlist' %}">
+                            <input name="num" class="input-medium search-query" type="text" placeholder="分页数量">
+                            <input name="order_tag" class="input-medium search-query" type="text" style="display:none"
+                                   value="{{ order_tag }}">
+                            <button type="submit" class="btn btn-success btn-square" contenteditable="true">提交</button>
+                        </form>
+
+
+                    </div>
 
                         <div class="row"><p></p></div>
 

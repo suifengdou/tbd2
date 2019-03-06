@@ -1,18 +1,21 @@
-    {% extends 'mother.html' %}
+{% extends 'mother.html' %}
 
-    {% block title %}CRM{% endblock %}
+{% block title %}CRM{% endblock %}
 
-    {% load staticfiles %}
+{% load staticfiles %}
 
-    {% block css %}
+{% block css %}
     <!-- Date-time picker css -->
-    <link rel="stylesheet" type="text/css" href="{% static 'assets/pages/advance-elements/css/bootstrap-datetimepicker.css' %}">
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'assets/pages/advance-elements/css/bootstrap-datetimepicker.css' %}">
     <!-- Date-range picker css  -->
-    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/bootstrap-daterangepicker/css/daterangepicker.css' %}" />
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'bower_components/bootstrap-daterangepicker/css/daterangepicker.css' %}"/>
     <!-- Date-Dropper css -->
-    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datedropper/css/datedropper.min.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datedropper/css/datedropper.min.css' %}"/>
     <!-- Data Table Css -->
-    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}">
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}">
     <!-- themify-icons line icon -->
     <link rel="stylesheet" type="text/css" href="{% static 'assets/icon/themify-icons/themify-icons.css' %}">
     <!-- ico font -->
@@ -22,227 +25,238 @@
     <!--datedropper-->
     <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datepicker/css/datepicker.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datepicker/css/iconfont.css' %}">
-        <!-- 导入每个具体模块的第三方模块css -->
+    <!-- 导入每个具体模块的第三方模块css -->
 
 
 
-    {% endblock %}
+{% endblock %}
 
 
-    {% block content %}
+{% block content %}
 
-        <div class="page-header card">
-            <div class="card-block">
-                <h5 class="m-b-10">CRM</h5>
-                <p class="text-muted m-b-10">lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
-                <ul class="breadcrumb-title b-t-default p-t-10">
-                    <li class="breadcrumb-item">
-                        <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
-                    </li>
-                    <li class="breadcrumb-item"><a href="#!">中央维修</a>
-                    </li>
-                    <li class="breadcrumb-item"><a href="#!">中央维修单</a>
-                    </li>
-                    <li class="breadcrumb-item"><a href="#!">工作台</a>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
-        <!-- tab header start -->
-        <div class="tab-header card">
-            <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:overview' %}" >单据中控台</a>
-                    <div class="slide"></div>
+    <div class="page-header card">
+        <div class="card-block">
+            <h5 class="m-b-10">CRM</h5>
+            <p class="text-muted m-b-10">lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+            <ul class="breadcrumb-title b-t-default p-t-10">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:list' %}" >单据明细</a>
-                    <div class="slide"></div>
+                <li class="breadcrumb-item"><a href="#!">中央维修</a>
                 </li>
-
-                 <li class="nav-item">
-                    <a class="nav-link active" href="{% url 'crm_maintenance:handlinglist' %}" >工作台</a>
-                    <div class="slide"></div>
+                <li class="breadcrumb-item"><a href="#!">中央维修单</a>
                 </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:upload' %}" >单据导入</a>
-                    <div class="slide"></div>
+                <li class="breadcrumb-item"><a href="#!">工作台</a>
                 </li>
 
             </ul>
         </div>
-        <!-- tab header end -->
+    </div>
 
-        <div class="card">
+    <!-- tab header start -->
+    <div class="tab-header card">
+        <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'crm_maintenance:overview' %}">单据中控台</a>
+                <div class="slide"></div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'crm_maintenance:list' %}">单据明细</a>
+                <div class="slide"></div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'crm_maintenance:handlinglist' %}">工作台</a>
+                <div class="slide"></div>
+            </li>
 
-            <div class="tab-header">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'crm_maintenance:upload' %}">单据导入</a>
+                <div class="slide"></div>
+            </li>
 
-            </div>
+        </ul>
+    </div>
+    <!-- tab header end -->
 
-            <div class="card-block table-border-style">
-                <div class="table-responsive">
-                    <table id="table" class="table table-styling table-bordered">
-                        <!--/* 表格上部的标签和功能区域。*/-->
-                        <div class="row">
-                            <div class="col-md-2">
-                                <a href="?order_tag=1&num={{ num }}" id="total" class="btn btn-primary btn-square">全部服务单</a>
-                                <a href="?order_tag=0&num={{ num }}" id="pending" class="btn btn-primary btn-square">未审核服务单</a>
-                            </div>
-                            <div class="col-md-2">
-                                <a href="?order_tag={{ order_tag }}&num={{ num }}&download_tag=1" id="pending" class="btn btn-primary btn-square">下载订单</a>
-                                {% if download_error %}<a>{{ download_error }}</a>{% endif %}
-                            </div>
-                            <div class="col-md-2">
-                                <form class="form-search pull-right" method="GET" action="">
-                                    <input name="search_keywords" class="input-medium search-query" type="text" placeholder="订单号/快递单号/服务单号">
-                                    <button type="submit" class="btn btn-success btn-square" contenteditable="true">单号查找</button>
-                                </form>
-                            </div>
+    <div class="card">
 
-                                <!-- datepicker sign start -->
-                            <div class="col-md-4">
-                                <form class="form-search pull-right" method="GET" action="{% url 'crm_maintenance:list' %}?order_tag={{ order_tag }}&num={{ num }}">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="c-datepicker-date-editor J-datepicker-range-betweenMonth mt10">
-                                            <i class="c-datepicker-range__icon kxiconfont icon-clock"></i>
-                                            <input placeholder="开始日期" name="start_time" class="c-datepicker-data-input" value="">
-                                            <span class="c-datepicker-range-separator">-</span>
-                                            <input placeholder="结束日期" name="end_time" class="c-datepicker-data-input" value="">
-                                        </div>
-
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button type="submit" class="btn btn-success btn-square right" contenteditable="true">提交</button>
-                                    </div>
-
-                                </div>
-
-
-
-                                </form>
-                            </div>
-
-                            <div class="col-md-2">
-                                <form class="form-search pull-right" method="GET" action="{% url 'ass_ref_jdfbp:refundlist' %}">
-                                    <input name="num" class="input-medium search-query" type="text" placeholder="分页数量">
-                                    <input name="order_tag" class="input-medium search-query" type="text" style="display:none" value="{{ order_tag }}">
-                                    <button type="submit" class="btn btn-success btn-square" contenteditable="true">提交</button>
-                                </form>
-                            </div>
-
-
-
-                        </div>
-                                <!-- datepicker sign end -->
-
-
-                        <!--/* 增加一个空白行，让标签和表格有一定的分隔 */ -->
-                        <div class="row"><p></p></div>
-
-
-                        <thead>
-                        <tr class="table-primary">
-
-                            <th>操作状态</th>
-                            <th>维修单号</th>
-                            <th>序列号</th>
-                            <th>保修结束语</th>
-                            <th>完成时间</th>
-                            <th>寄件客户手机</th>
-                            <th>重复维修标记</th>
-                            <th>是否在保</th>
-                            <th>重复维修标记</th>
-
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for service_order in all_service_orders.object_list %}
-                            <tr>
-
-
-                                <!-- 单据状态开始 -->
-                                {% if service_order.handlingstatus == '0' %}<th scope="row">未处理</th>
-                                {% else %}<th scope="row">已处理</th>
-                                {% endif %}
-                                <!-- 单据状态结束 -->
-
-
-                                <td>
-                                    <label class="check-task">
-                                        <span class="task-title-sp">{{ service_order.express_id }}</span>
-                                    </label>
-                                </td>
-
-                                <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ service_order.information }}</span></td>
-                                <td>{{ service_order.consignor }}</td>
-                                <!-- 操作按钮开始 -->
-                                {% if service_order.handlingstatus == '0' %}
-                                    <td><a class="audit btn btn-primary" data-id="{{ service_order.id }}">审核</a></td>
-                                {% else %}
-                                    <td>已处理</td>
-                                {% endif %}
-                                <!-- 操作按钮结束 -->
-                                <td>{{ service_order.feedback_time }}</td>
-                                <td>{{ service_order.remark }}</td>
-                                <td>{{ service_order.creator }}</td>
-                                <td>{{ service_order.create_time|date:"Y-m-d H:i:s" }}</td>
-
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-
-                    </table>
-                </div>
-            </div>
-
-
-            <div class="row">
-                <div class="col-md-4"></div>
-                <div class="col-md-4">
-                    <nav>
-                        <ul class="pagination">
-                            {% if all_service_orders.has_previous %}
-                                <li><label class="badge badge-warning"><a href="?{{ all_service_orders.previous_page_number.querystring }}">上一页</a></label></li>
-                            {% endif %}
-
-                            {% for page in all_service_orders.pages %}
-                                {% if page %}
-                                    {% ifequal page all_service_orders.number %}
-                                        <li class="active"><label class="badge badge-info"><a href="?{{ page.querystring }}">{{ page }}</a></label></li>
-                                    {% else %}
-                                        <li><label class="badge badge-warning"><a href="?{{ page.querystring }}" class="page">{{ page }}</a></label></li>
-                                    {% endifequal %}
-                                {% else %}
-                                    <li class="none"><label class="badge badge-warning"><a href="">...</a></label></li>
-                                {% endif %}
-                            {% endfor %}
-                            {% if all_service_orders.has_next %}
-                                <li><label class="badge badge-warning"><a href="?{{ all_service_orders.next_page_number.querystring }}">下一页</a></label></li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
-                <div class="col-md-4"></div>
-            </div>
-
-
+        <div class="tab-header">
 
         </div>
 
-    {% endblock %}
+        <div class="card-block table-border-style">
+            <div class="table-responsive">
+                <table id="table" class="table table-styling table-bordered">
+                    <!--/* 表格上部的标签和功能区域。*/-->
+
+                    <!-- datepicker sign end -->
+
+
+                    <div class="row">
+                        <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+
+                        <a href="?order_tag=1&num={{ num }}" id="total"
+                           class="btn btn-primary btn-round">全部服务单</a>
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+                        <a href="?order_tag=0&num={{ num }}" id="pending"
+                           class="btn btn-primary btn-round">未审核服务单</a>
+
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+
+
+                        <form class="form-search pull-right" method="GET" action="">
+                            <input name="search_keywords" class="input-medium search-query" type="text"
+                                   placeholder="订单号/快递单号/服务单号">
+                            <button type="submit" class="btn btn-success btn-square" contenteditable="true">查找
+                            </button>
+                        </form>
+
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+
+
+                        <!-- datepicker sign start -->
+
+                        <form class="form-search pull-right" method="GET"
+                              action="{% url 'crm_maintenance:list' %}?order_tag={{ order_tag }}&num={{ num }}">
+                            <div class="c-datepicker-date-editor J-datepicker-range-betweenMonth mt10">
+                                <i class="c-datepicker-range__icon kxiconfont icon-clock"></i>
+                                <input placeholder="开始日期" name="start_time" class="c-datepicker-data-input" value="">
+                                <span class="c-datepicker-range-separator">-</span>
+                                <input placeholder="结束日期" name="end_time" class="c-datepicker-data-input" value="">
+                            </div>
+                            <span>&nbsp;</span>
+                            <button type="submit" class="btn btn-info btn-round right" contenteditable="true">提交
+                            </button>
+                        </form>
+
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+
+                        <a href="?order_tag={{ order_tag }}&num={{ num }}&download_tag=1" id="pending"
+                           class="btn btn-primary btn-square">下载订单</a>
+                        {% if download_error %}<a>{{ download_error }}</a>{% endif %}
+                        <span>&nbsp;&nbsp;&nbsp;</span>
+                        <form class="form-search pull-right" method="GET" action="{% url 'ass_ref_jdfbp:refundlist' %}">
+                            <input name="num" class="input-medium search-query" type="text" placeholder="分页数量">
+                            <input name="order_tag" class="input-medium search-query" type="text" style="display:none"
+                                   value="{{ order_tag }}">
+                            <button type="submit" class="btn btn-success btn-square" contenteditable="true">提交</button>
+                        </form>
+
+
+                    </div>
+
+
+                    <!--/* 增加一个空白行，让标签和表格有一定的分隔 */ -->
+                    <div class="row"><p></p></div>
+
+
+                    <thead>
+                    <tr class="table-primary">
+
+                        <th>操作状态</th>
+                        <th>维修单号</th>
+                        <th>序列号</th>
+                        <th>保修结束语</th>
+                        <th>完成时间</th>
+                        <th>寄件客户手机</th>
+                        <th>重复维修标记</th>
+                        <th>是否在保</th>
+                        <th>重复维修标记</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for service_order in all_service_orders.object_list %}
+                        <tr>
+
+
+                            <!-- 单据状态开始 -->
+                            {% if service_order.handlingstatus == '0' %}
+                                <th scope="row">未处理</th>
+                            {% else %}
+                                <th scope="row">已处理</th>
+                            {% endif %}
+                            <!-- 单据状态结束 -->
+
+
+                            <td>
+                                <label class="check-task">
+                                    <span class="task-title-sp">{{ service_order.express_id }}</span>
+                                </label>
+                            </td>
+
+                            <td><span
+                                    style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ service_order.information }}</span>
+                            </td>
+                            <td>{{ service_order.consignor }}</td>
+                            <!-- 操作按钮开始 -->
+                            {% if service_order.handlingstatus == '0' %}
+                                <td><a class="audit btn btn-primary" data-id="{{ service_order.id }}">审核</a></td>
+                            {% else %}
+                                <td>已处理</td>
+                            {% endif %}
+                            <!-- 操作按钮结束 -->
+                            <td>{{ service_order.feedback_time }}</td>
+                            <td>{{ service_order.remark }}</td>
+                            <td>{{ service_order.creator }}</td>
+                            <td>{{ service_order.create_time|date:"Y-m-d H:i:s" }}</td>
+
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-4"></div>
+            <div class="col-md-4">
+                <nav>
+                    <ul class="pagination">
+                        {% if all_service_orders.has_previous %}
+                            <li><label class="badge badge-warning"><a
+                                    href="?{{ all_service_orders.previous_page_number.querystring }}">上一页</a></label>
+                            </li>
+                        {% endif %}
+
+                        {% for page in all_service_orders.pages %}
+                            {% if page %}
+                                {% ifequal page all_service_orders.number %}
+                                    <li class="active"><label class="badge badge-info"><a
+                                            href="?{{ page.querystring }}">{{ page }}</a></label></li>
+                                {% else %}
+                                    <li><label class="badge badge-warning"><a href="?{{ page.querystring }}"
+                                                                              class="page">{{ page }}</a></label></li>
+                                {% endifequal %}
+                            {% else %}
+                                <li class="none"><label class="badge badge-warning"><a href="">...</a></label></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if all_service_orders.has_next %}
+                            <li><label class="badge badge-warning"><a
+                                    href="?{{ all_service_orders.next_page_number.querystring }}">下一页</a></label></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            <div class="col-md-4"></div>
+        </div>
+
+
+    </div>
+
+{% endblock %}
 
 
 
-    {% block js %}
+{% block js %}
     <!-- Date-range picker js -->
-    <script  src="{% static 'bower_components/bootstrap-daterangepicker/js/daterangepicker.js' %}"></script>
+    <script src="{% static 'bower_components/bootstrap-daterangepicker/js/daterangepicker.js' %}"></script>
 
     <!-- Date-dropper js -->
-    <script  src="{% static 'bower_components/datedropper/js/datedropper.min.js' %}"></script>
+    <script src="{% static 'bower_components/datedropper/js/datedropper.min.js' %}"></script>
 
     <!-- data-table js -->
     <script src="{% static 'bower_components/datatables.net/js/jquery.dataTables.min.js' %}"></script>
@@ -254,7 +268,7 @@
     <script src="{% static 'assets/pages/ckeditor/ckeditor.js' %}"></script>
 
     <!-- echart js -->
-    <script src="{% static 'assets/pages/chart/echarts/js/echarts-all.js' %}" ></script>
+    <script src="{% static 'assets/pages/chart/echarts/js/echarts-all.js' %}"></script>
     <script src="{% static 'assets/pages/user-profile.js' %}"></script>
     <script src="{% static 'assets/js/pcoded.min.js' %}"></script>
     <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
@@ -262,10 +276,10 @@
 
     <script src="{% static 'bower_components/bootstrap-table/bootstrap-table.js' %}" rel="stylesheet"></script>
     <script src="{% static 'bower_components/bootstrap-table/locale/bootstrap-table-zh-CN.js' %}"></script>
-        <!-- 导入每个具体模块的第三方模块js-->
+    <!-- 导入每个具体模块的第三方模块js-->
 
     <!-- Todo js -->
-    <script  src="{% static 'assets/pages/todo/todo.js' %}"></script>
+    <script src="{% static 'assets/pages/todo/todo.js' %}"></script>
     <script src="{% static 'assets/js/pcoded.min.js' %}"></script>
     <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
     <script src="{% static 'assets/js/jquery.mCustomScrollbar.concat.min.js' %}"></script>
@@ -275,181 +289,186 @@
     <script src="{% static 'bower_components/datepicker/js/datepicker.all.min.js' %}"></script>
 
 
-        <script>
+    <script>
 
 
-      $(function(){
-        var DATAPICKERAPI = {
-          // 默认input显示当前月,自己获取后填充
-          activeMonthRange: function () {
-            return {
-              begin: moment().set({ 'date': 1, 'hour': 0, 'minute': 0, 'second': 0 }).format('YYYY-MM-DD HH:mm:ss'),
-              end: moment().set({ 'hour': 23, 'minute': 59, 'second': 59 }).format('YYYY-MM-DD HH:mm:ss')
-            }
-          },
-          shortcutMonth: function () {
-            // 当月
-            var nowDay = moment().get('date');
-            var prevMonthFirstDay = moment().subtract(1, 'months').set({ 'date': 1 });
-            var prevMonthDay = moment().diff(prevMonthFirstDay, 'days');
-            return {
-              now: '-' + nowDay + ',0',
-              prev: '-' + prevMonthDay + ',-' + nowDay
-            }
-          },
-          // 注意为函数：快捷选项option:只能同一个月份内的
-          rangeMonthShortcutOption1: function () {
-            var result = DATAPICKERAPI.shortcutMonth();
-            return [{
-              name: '昨天',
-              day: '-1,-1',
-              time: '00:00:00,23:59:59'
-            }, {
-              name: '这一月',
-              day: result.now,
-              time: '00:00:00,'
-            }, {
-              name: '上一月',
-              day: result.prev,
-              time: '00:00:00,23:59:59'
-            }];
-          },
-          // 快捷选项option
-          rangeShortcutOption1: [{
-            name: '最近一周',
-            day: '-7,0'
-          }, {
-            name: '最近一个月',
-            day: '-30,0'
-          }, {
-            name: '最近三个月',
-            day: '-90, 0'
-          }],
-          singleShortcutOptions1: [{
-            name: '今天',
-            day: '0'
-          }, {
-            name: '昨天',
-            day: '-1',
-            time: '00:00:00'
-          }, {
-            name: '一周前',
-            day: '-7'
-          }]
-        };
+        $(function () {
+            var DATAPICKERAPI = {
+                // 默认input显示当前月,自己获取后填充
+                activeMonthRange: function () {
+                    return {
+                        begin: moment().set({
+                            'date': 1,
+                            'hour': 0,
+                            'minute': 0,
+                            'second': 0
+                        }).format('YYYY-MM-DD HH:mm:ss'),
+                        end: moment().set({'hour': 23, 'minute': 59, 'second': 59}).format('YYYY-MM-DD HH:mm:ss')
+                    }
+                },
+                shortcutMonth: function () {
+                    // 当月
+                    var nowDay = moment().get('date');
+                    var prevMonthFirstDay = moment().subtract(1, 'months').set({'date': 1});
+                    var prevMonthDay = moment().diff(prevMonthFirstDay, 'days');
+                    return {
+                        now: '-' + nowDay + ',0',
+                        prev: '-' + prevMonthDay + ',-' + nowDay
+                    }
+                },
+                // 注意为函数：快捷选项option:只能同一个月份内的
+                rangeMonthShortcutOption1: function () {
+                    var result = DATAPICKERAPI.shortcutMonth();
+                    return [{
+                        name: '昨天',
+                        day: '-1,-1',
+                        time: '00:00:00,23:59:59'
+                    }, {
+                        name: '这一月',
+                        day: result.now,
+                        time: '00:00:00,'
+                    }, {
+                        name: '上一月',
+                        day: result.prev,
+                        time: '00:00:00,23:59:59'
+                    }];
+                },
+                // 快捷选项option
+                rangeShortcutOption1: [{
+                    name: '最近一周',
+                    day: '-7,0'
+                }, {
+                    name: '最近一个月',
+                    day: '-30,0'
+                }, {
+                    name: '最近三个月',
+                    day: '-90, 0'
+                }],
+                singleShortcutOptions1: [{
+                    name: '今天',
+                    day: '0'
+                }, {
+                    name: '昨天',
+                    day: '-1',
+                    time: '00:00:00'
+                }, {
+                    name: '一周前',
+                    day: '-7'
+                }]
+            };
 
-          //年月日单个
-          $('.J-datepicker-day').datePicker({
-            hasShortcut: true,
-            format:'YYYY-MM-DD',
-            shortcutOptions: [{
-              name: '今天',
-              day: '0'
-            }, {
-              name: '昨天',
-              day: '-1'
-            }, {
-              name: '一周前',
-              day: '-7'
-            }]
-          });
+            //年月日单个
+            $('.J-datepicker-day').datePicker({
+                hasShortcut: true,
+                format: 'YYYY-MM-DD',
+                shortcutOptions: [{
+                    name: '今天',
+                    day: '0'
+                }, {
+                    name: '昨天',
+                    day: '-1'
+                }, {
+                    name: '一周前',
+                    day: '-7'
+                }]
+            });
 
-          //年月日范围
-          $('.J-datepicker-range-day').datePicker({
-            hasShortcut: true,
-            format: 'YYYY-MM-DD',
-            isRange: true,
-            shortcutOptions: DATAPICKERAPI.rangeShortcutOption1
-          });
+            //年月日范围
+            $('.J-datepicker-range-day').datePicker({
+                hasShortcut: true,
+                format: 'YYYY-MM-DD',
+                isRange: true,
+                shortcutOptions: DATAPICKERAPI.rangeShortcutOption1
+            });
 
-          //十分年月日单个
-          $('.J-datepickerTime-single').datePicker({
-            format: 'YYYY-MM-DD HH:mm'
-          });
+            //十分年月日单个
+            $('.J-datepickerTime-single').datePicker({
+                format: 'YYYY-MM-DD HH:mm'
+            });
 
-          //十分年月日范围
-          $('.J-datepickerTime-range').datePicker({
-            format: 'YYYY-MM-DD HH:mm',
-            isRange: true
-          });
+            //十分年月日范围
+            $('.J-datepickerTime-range').datePicker({
+                format: 'YYYY-MM-DD HH:mm',
+                isRange: true
+            });
 
-          //时分秒年月日范围，包含最大最小值
-          $('.J-datepicker-range').datePicker({
-            hasShortcut: true,
-            min: '2018-01-01 06:00:00',
-            max: '2019-04-29 20:59:59',
-            isRange: true,
-            shortcutOptions: [{
-              name: '昨天',
-              day: '-1,-1',
-              time: '00:00:00,23:59:59'
-            },{
-              name: '最近一周',
-              day: '-7,0',
-              time:'00:00:00,'
-            }, {
-              name: '最近一个月',
-              day: '-30,0',
-              time: '00:00:00,'
-            }, {
-              name: '最近三个月',
-              day: '-90, 0',
-              time: '00:00:00,'
-            }],
-            hide: function () {
-              console.info(this.$input.eq(0).val(), this.$input.eq(1).val())
-            }
-          });
-          //时分秒年月日范围，限制只能选择同一月，比如2018-10-01到2018-10-30
-          $('.J-datepicker-range-betweenMonth').datePicker({
-            isRange: true,
-            between:'month',
-            hasShortcut: true,
-            shortcutOptions: DATAPICKERAPI.rangeMonthShortcutOption1()
-          });
+            //时分秒年月日范围，包含最大最小值
+            $('.J-datepicker-range').datePicker({
+                hasShortcut: true,
+                min: '2018-01-01 06:00:00',
+                max: '2019-04-29 20:59:59',
+                isRange: true,
+                shortcutOptions: [{
+                    name: '昨天',
+                    day: '-1,-1',
+                    time: '00:00:00,23:59:59'
+                }, {
+                    name: '最近一周',
+                    day: '-7,0',
+                    time: '00:00:00,'
+                }, {
+                    name: '最近一个月',
+                    day: '-30,0',
+                    time: '00:00:00,'
+                }, {
+                    name: '最近三个月',
+                    day: '-90, 0',
+                    time: '00:00:00,'
+                }],
+                hide: function () {
+                    console.info(this.$input.eq(0).val(), this.$input.eq(1).val())
+                }
+            });
+            //时分秒年月日范围，限制只能选择同一月，比如2018-10-01到2018-10-30
+            $('.J-datepicker-range-betweenMonth').datePicker({
+                isRange: true,
+                between: 'month',
+                hasShortcut: true,
+                shortcutOptions: DATAPICKERAPI.rangeMonthShortcutOption1()
+            });
 
-          //时分秒年月日范围，限制开始结束相隔天数小于30天
-          $('.J-datepicker-range-between30').datePicker({
-            isRange: true,
-            between: 30
-          });
+            //时分秒年月日范围，限制开始结束相隔天数小于30天
+            $('.J-datepicker-range-between30').datePicker({
+                isRange: true,
+                between: 30
+            });
 
-          //年月单个
-          $('.J-yearMonthPicker-single').datePicker({
-            format: 'YYYY-MM',
-            min: '2018-01',
-            max: '2019-04'
-          });
+            //年月单个
+            $('.J-yearMonthPicker-single').datePicker({
+                format: 'YYYY-MM',
+                min: '2018-01',
+                max: '2019-04'
+            });
 
-          //选择年
-          $('.J-yearPicker-single').datePicker({
-            format: 'YYYY',
-            min: '2018',
-            max: '2020'
-          });
+            //选择年
+            $('.J-yearPicker-single').datePicker({
+                format: 'YYYY',
+                min: '2018',
+                max: '2020'
+            });
 
 
-      });
+        });
 
-        </script>
+    </script>
 
-        <script type="text/javascript">
+    <script type="text/javascript">
 
-        function audit_order(current_elem, id){
+        function audit_order(current_elem, id) {
             $.ajax({
                 cache: false,
                 type: "POST",
                 url: "{% url "ext_exp_sf:operate" %}",
                 data: {"id": id},
                 async: true,
-                beforeSend: function(xhr, settings){
+                beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
                 },
-                success: function(data){
-                    if(data.status == "fail"){
-                        location.href="/users/login"
+                success: function (data) {
+                    if (data.status == "fail") {
+                        location.href = "/users/login"
                     }
-                    else if(data.status == "success"){
+                    else if (data.status == "success") {
                         current_elem.text("已处理")
                     }
                 }
@@ -458,26 +477,26 @@
 
         };
 
-        $(".audit").on("click", function() {
+        $(".audit").on("click", function () {
             var id = $(this).attr("data-id");
 
             audit_order($(this), id);
         });
 
-        $(".check-task").dblclick(function(){
+        $(".check-task").dblclick(function () {
 
-            if($(this).parent().hasClass("done-task")){
+            if ($(this).parent().hasClass("done-task")) {
                 $(this).parent().removeClass("done-task");
-            }else{
+            } else {
                 $(this).parent().addClass("done-task");
                 $(this).parent().parent().addClass("bg-info");
             }
 
         })
-        </script>
+    </script>
 
 
-    {% endblock %}
+{% endblock %}
 
 
 

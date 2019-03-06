@@ -22,7 +22,7 @@ from .forms import UploadFileForm
 class MaintenanceList(View):
     QUERY_FIELD = ["maintenance_order_id", "order_status", "shop", "purchase_time",
                    "finish_time", "buyer_nick", "sender_mobile", "goods_id", "goods_name",
-                   "description", "is_guarantee", "tocustomer_status", "toproduct_status"]
+                   "description", "is_guarantee", "tocustomer_status", "towork_status"]
 
     def get(self, request):
         order_tag = request.GET.get("order_tag", '1')
@@ -45,8 +45,7 @@ class MaintenanceList(View):
                 all_service_orders = MaintenanceInfo.objects.filter(handlingstatus=str(0)).values\
                     (*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
             else:
-                all_service_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by\
-                    ('maintenance_order_id')
+                all_service_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
 
         try:
             page = request.GET.get('page', 1)
@@ -349,11 +348,79 @@ class MaintenanceHandlinglist(View):
             if order_tag == "0":
                 all_orders = MaintenanceHandlingInfo.objects.filter(handling_status=str(0)).values(
                     *self.__class__.QUERY_FIELD).all().order_by("-")
-                )
+
 
 
         return render(request, 'crm/maintenance/handlinglist.html', {
             "index_tag": "crm_maintenance_orders",
 
+
         })
     pass
+
+
+class MaintenanceToWork(View):
+    QUERY_FIELD = ['maintenance_order_id', 'warehouse', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal',
+                   'shop', 'ori_create_time', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile',
+                   'sender_area', 'goods_name', 'is_guarantee']
+
+    def post(self, request):
+        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
+        command_id = request.POST.get("towork", None)
+
+        if command_id == '1':
+            pending_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).filter(toproduct_status="0")
+            for order in pending_orders:
+                # 创建一个工作台订单对象，
+                handling_order = MaintenanceHandlingInfo()
+                # 对原单字段进行直接赋值操作。
+                for key in self.__class__.QUERY_FIELD:
+                    if hasattr(handling_order, key):
+                        setattr(handling_order, key, getattr(order, key))
+                # 处理省市区
+                _pre_area = order.sender_area.split(" ")
+                if len(_pre_area) == 3:
+                    handling_order.province = _pre_area[0]
+                    handling_order.city = _pre_area[1]
+                    handling_order.district = _pre_area[2]
+                elif len(_pre_area) == 2:
+                    handling_order.province = _pre_area[0]
+                    handling_order.city = _pre_area[1]
+                else:
+                    pass
+
+                # 处理日期的年月日
+                _pre_time = order.finish_time
+                handling_order.finish_date = _pre_time.strftime("%m-%d")
+                handling_order.finish_month = _pre_time.strftime("%Y-%m")
+                handling_order.finish_year = _pre_time.strftime("%Y")
+
+                try:
+                    handling_order.save()
+                    report_dic_towork["successful"] += 1
+                    try:
+                        order.towork_status = 1
+                        order.save()
+                        report_dic_towork["ori_successful"] += 1
+                    except Exception as e:
+                        report_dic_towork["error"].append(e)
+                        report_dic_towork["ori_order_error"] += 1
+                except Exception as e:
+                    report_dic_towork["error"].append(e)
+                    report_dic_towork["false"] += 1
+            return render(request, "crm/maintenance/upload.html", {
+                "index_tag": "crm_maintenance_orders",
+            })
+
+        else:
+            pass
+
+
+
+
+
+
+
+class MaintenanceSignRepeat(View):
+    def post(self, request):
+        pass
