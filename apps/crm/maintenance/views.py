@@ -138,12 +138,38 @@ class MaintenanceUpload(View):
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
     def get(self, request):
+        elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+        total_num = MaintenanceInfo.objects.all().count()
+        pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+        repeat_num = MaintenanceHandlingInfo.objects.all().count()
+        unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+        print(elements)
+
+        elements["total_num"] = total_num
+        elements["pending_num"] = pending_num
+        elements["repeat_num"] = repeat_num
+        elements["unresolved_num"] = unresolved_num
+        print(elements)
 
         return render(request, "crm/maintenance/upload.html", {
             "index_tag": "crm_maintenance_orders",
+            "elements": elements,
         })
 
     def post(self, request):
+        elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+        total_num = MaintenanceInfo.objects.all().count()
+        pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+        repeat_num = MaintenanceHandlingInfo.objects.all().count()
+        unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+        elements["total_num"] = total_num
+        elements["pending_num"] = pending_num
+        elements["repeat_num"] = repeat_num
+        elements["unresolved_num"] = unresolved_num
 
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
@@ -153,12 +179,14 @@ class MaintenanceUpload(View):
                 return render(request, "crm/maintenance/upload.html", {
                     "messages": _result,
                     "index_tag": "crm_maintenance_orders",
+                    "element": elements,
                 })
             # 判断是字典的话，就直接返回字典结果到前端页面。
             elif isinstance(_result, dict):
                 return render(request, "crm/maintenance/upload.html", {
                     "report_dic": _result,
                     "index_tag": "crm_maintenance_orders",
+                    "element": elements,
                 })
 
         else:
@@ -166,6 +194,7 @@ class MaintenanceUpload(View):
         return render(request, "crm/maintenance/upload.html", {
             "messages": form,
             "index_tag": "crm_maintenance_orders",
+            "element": elements,
         })
 
     def handle_upload_file(self, _file):
@@ -365,20 +394,26 @@ class MaintenanceToWork(View):
                    'sender_area', 'goods_name', 'is_guarantee']
 
     def post(self, request):
+        # 定义递交工作台订单的报告字典，以及整体的数据的报告字典
         report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
         command_id = request.POST.get("towork", None)
+        elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
 
         if command_id == '1':
-            pending_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).filter(toproduct_status="0")
+            pending_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).filter(towork_status="0")
             for order in pending_orders:
                 # 创建一个工作台订单对象，
                 handling_order = MaintenanceHandlingInfo()
                 # 对原单字段进行直接赋值操作。
                 for key in self.__class__.QUERY_FIELD:
                     if hasattr(handling_order, key):
-                        setattr(handling_order, key, getattr(order, key))
+                        re_val = order.get(key, None)
+                        if re_val is None:
+                            report_dic_towork["error"] = "递交订单出现了不可预料的内部错误！"
+                        else:
+                            setattr(handling_order, key, re_val)
                 # 处理省市区
-                _pre_area = order.sender_area.split(" ")
+                _pre_area = order["sender_area"].split(" ")
                 if len(_pre_area) == 3:
                     handling_order.province = _pre_area[0]
                     handling_order.city = _pre_area[1]
@@ -388,9 +423,15 @@ class MaintenanceToWork(View):
                     handling_order.city = _pre_area[1]
                 else:
                     pass
+                # 处理产品名称
+                _pre_goods_name = re.findall(r'([A-Z][\w\s-]+)', order["goods_name"])
+                if _pre_goods_name:
+                    handling_order.goods_type = _pre_goods_name[0]
+                else:
+                    handling_order.goods_type = "未知"
 
                 # 处理日期的年月日
-                _pre_time = order.finish_time
+                _pre_time = order["finish_time"]
                 handling_order.finish_date = _pre_time.strftime("%m-%d")
                 handling_order.finish_month = _pre_time.strftime("%Y-%m")
                 handling_order.finish_year = _pre_time.strftime("%Y")
@@ -399,8 +440,9 @@ class MaintenanceToWork(View):
                     handling_order.save()
                     report_dic_towork["successful"] += 1
                     try:
-                        order.towork_status = 1
-                        order.save()
+                        ori_order = MaintenanceInfo.objects.get(maintenance_order_id=order["maintenance_order_id"])
+                        ori_order.towork_status = 1
+                        ori_order.save()
                         report_dic_towork["ori_successful"] += 1
                     except Exception as e:
                         report_dic_towork["error"].append(e)
@@ -408,12 +450,46 @@ class MaintenanceToWork(View):
                 except Exception as e:
                     report_dic_towork["error"].append(e)
                     report_dic_towork["false"] += 1
+
+            # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
+            total_num = MaintenanceInfo.objects.all().count()
+            pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+            repeat_num = MaintenanceHandlingInfo.objects.all().count()
+            unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+            elements["total_num"] = total_num
+            elements["pending_num"] = pending_num
+            elements["repeat_num"] = repeat_num
+            elements["unresolved_num"] = unresolved_num
+
+            print(report_dic_towork)
+
             return render(request, "crm/maintenance/upload.html", {
                 "index_tag": "crm_maintenance_orders",
+                "elements": elements,
+                "report_dic_towork": report_dic_towork,
             })
 
         else:
-            pass
+
+            total_num = MaintenanceInfo.objects.all().count()
+            pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+            repeat_num = MaintenanceHandlingInfo.objects.all().count()
+            unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+            elements["total_num"] = total_num
+            elements["pending_num"] = pending_num
+            elements["repeat_num"] = repeat_num
+            elements["unresolved_num"] = unresolved_num
+            report_dic_towork['error'] = '请联系管理员，出现了内部错误'
+
+            render(request, '', {
+                "report_dic_towork": report_dic_towork,
+                "elements": elements,
+            })
+
 
 
 

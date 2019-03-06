@@ -87,6 +87,7 @@
         <!-- Image upload card start -->
 
         <!-- Page-body end -->
+
         <div class="card">
             <div class="card-header">
                 <h5>递交维修单到工作台</h5>
@@ -101,12 +102,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">特别提示</span>
+                                <span style="font-size: x-large">全部维修单数</span>
                             </div>
                             <div class="card bg-c-green order-card">
                                 <div class="card-block">
-                                    <h6>已处理维修单数</h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
+                                    <h6></h6>
+                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.total_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
                             </div>
@@ -114,12 +115,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">特别提示</span>
+                                <span style="font-size: x-large">未递交维修单数</span>
                             </div>
                             <div class="card bg-c-pink order-card">
                                 <div class="card-block">
-                                    <h6>未处理维修单数</h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
+                                    <h6></h6>
+                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.pending_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
                             </div>
@@ -127,12 +128,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">特别提示</span>
+                                <span style="font-size: x-large">有单子必须先干掉未递交</span>
                             </div>
                             <div class="card-block">
-                                <h6>已处理维修单数</h6>
+                                <h6></h6>
                                 <input type="text" name="towork" value="1" style="display:none">
-                                <button type="submit" class="btn btn-out btn-primary btn-square">提交</button>
+                                <button type="submit" class="btn btn-out btn-primary btn-square">点我干他</button>
                             </div>
 
                         </div>
@@ -143,10 +144,11 @@
         </div>
 
         <!-- tab content start -->
+
         <div class="tab-content">
 
             <!-- tab pane info start -->
-            <div class="tab-pane active" id="binfo" role="tabpanel" aria-expanded="true">
+            <div class="tab-pane active" role="tabpanel" aria-expanded="true">
                 <!-- info card start -->
                 <div class="card">
                     <div class="card-header">
@@ -172,7 +174,7 @@
                                     <div class="card-block">
                                         <div class="row">
                                             <div class="col-sm-12">
-                                                <p class="task-detail">最终导入成功条数：<b>{{ report_dic.successful }}</b>条。
+                                                <p class="task-detail">最终导入成功条数：<b>{{ report_dic_towork.successful }}</b>条。
                                                 </p>
                                             </div>
                                             <!-- end of col-sm-8 -->
@@ -201,9 +203,9 @@
                                     <div class="card-block">
                                         <div class="row">
                                             <div class="col-sm-12">
-                                                <p class="task-detail">最终导入失败条数：<b>{{ report_dic.false }}</b>条。</p>
-                                                {% if report_dic.error %}<p class="task-detail">
-                                                    错误信息：{{ report_dic.error }}</p>{% endif %}
+                                                <p class="task-detail">最终导入失败条数：<b>{{ report_dic_towork.false }}</b>条。</p>
+                                                {% if report_dic_towork.error %}<p class="task-detail">
+                                                    错误信息：{{ report_dic_towork.error }}</p>{% endif %}
                                             </div>
                                             <!-- end of col-sm-8 -->
                                         </div>
@@ -223,7 +225,7 @@
                                     <div class="card-header">
                                         <div class="service-header">
                                             <a href="#">
-                                                <h2 class="card-header-text">无效数据丢弃</h2>
+                                                <h2 class="card-header-text">更新源数据成功数</h2>
                                             </a>
                                         </div>
                                         <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
@@ -234,7 +236,7 @@
                                     <div class="card-block">
                                         <div class="row">
                                             <div class="col-sm-12">
-                                                <p class="task-detail">最终丢弃无效数据：<b>{{ report_dic.discard }}</b>条。
+                                                <p class="task-detail">最终更新源数据成功数：<b>{{ report_dic_towork.ori_successful }}</b>条。
                                                 </p>
                                             </div>
                                             <!-- end of col-sm-8 -->
@@ -252,7 +254,7 @@
                                     <div class="card-header">
                                         <div class="service-header">
                                             <a href="#">
-                                                <h2 class="card-header-text">重复数据丢弃</h2>
+                                                <h2 class="card-header-text">更新源数据失败数</h2>
                                             </a>
                                         </div>
                                         <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
@@ -263,7 +265,7 @@
                                     <div class="card-block">
                                         <div class="row">
                                             <div class="col-sm-12">
-                                                <p class="task-detail">最终丢弃重复数据：<b>{{ report_dic.repeated }}</b>条。
+                                                <p class="task-detail">最终更新源数据失败数：<b>{{ report_dic_towork.ori_order_error }}</b>条。
                                                 </p>
                                             </div>
                                             <!-- end of col-sm-8 -->
@@ -286,6 +288,7 @@
 
 
         </div>
+
         <!-- tab content end -->
 
         <div class="card">
@@ -307,7 +310,7 @@
                             <div class="card bg-c-green order-card">
                                 <div class="card-block">
                                     <h6>已处理维修单数</h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
+                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.repeat_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
                             </div>
@@ -320,7 +323,7 @@
                             <div class="card bg-c-pink order-card">
                                 <div class="card-block">
                                     <h6>未处理维修单数</h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>1641</span></h2>
+                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.unresolved_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
                             </div>
@@ -346,7 +349,7 @@
         <div class="tab-content">
 
             <!-- tab pane info start -->
-            <div class="tab-pane active" id="binfo" role="tabpanel" aria-expanded="true">
+            <div class="tab-pane active"  role="tabpanel" aria-expanded="true">
                 <!-- info card start -->
                 <div class="card">
                     <div class="card-header">

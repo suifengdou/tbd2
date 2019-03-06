@@ -177,14 +177,15 @@ class MaintenanceHandlingInfo(BaseModel):
     sender_area = models.CharField(max_length=50, verbose_name='寄件客户省市县')
     goods_name = models.CharField(max_length=150, verbose_name='保修货品名称')
     is_guarantee = models.CharField(max_length=50, verbose_name='是否在保')
-    finish_date = models.DateField(verbose_name='保修完成日期')
-    finish_month = models.DateField(verbose_name='保修完成月度')
-    finish_year = models.DateField(verbose_name='保修完成年度')
+    finish_date = models.CharField(max_length=20, verbose_name='保修完成日期')
+    finish_month = models.CharField(max_length=20, verbose_name='保修完成月度')
+    finish_year = models.CharField(max_length=20, verbose_name='保修完成年度')
     province = models.CharField(null=True, blank=True, max_length=50, verbose_name='省份')
     city = models.CharField(null=True, blank=True, max_length=50, verbose_name='城市')
     district = models.CharField(null=True, blank=True, max_length=50, verbose_name='区县')
     handling_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='操作状态', default=0)
     repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
+    goods_type = models.CharField(null=True, max_length=60, verbose_name='保修货品型号')
 
     class Meta:
         verbose_name = '单据'
