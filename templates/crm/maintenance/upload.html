@@ -57,11 +57,11 @@
                     <div class="slide"></div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:list' %}">服务单明细</a>
+                    <a class="nav-link" href="{% url 'crm_maintenance:list' %}">原始服务单明细</a>
                     <div class="slide"></div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'crm_maintenance:handlinglist' %}">工作台</a>
+                    <a class="nav-link" href="{% url 'crm_maintenance:handlinglist' %}">服务单明细</a>
                     <div class="slide"></div>
                 </li>
                 <li class="nav-item">
@@ -145,10 +145,12 @@
 
         <!-- tab content start -->
 
+        {% if report_dic_towork %}
+
         <div class="tab-content">
 
             <!-- tab pane info start -->
-            <div class="tab-pane active" role="tabpanel" aria-expanded="true">
+            <div class="tab-pane active"  aria-expanded="true">
                 <!-- info card start -->
                 <div class="card">
                     <div class="card-header">
@@ -157,8 +159,10 @@
                     <div class="card-block">
                         <div class="row">
 
+
+
                             <!-- 导入成功标签开始 -->
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card b-l-success business-info services m-b-20">
                                     <div class="card-header">
                                         <div class="service-header">
@@ -187,7 +191,7 @@
                             <!-- 导入成功标签结束 -->
 
                             <!-- 导入失败标签开始 -->
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card b-l-danger business-info services m-b-20">
                                     <div class="card-header">
                                         <div class="service-header">
@@ -204,8 +208,6 @@
                                         <div class="row">
                                             <div class="col-sm-12">
                                                 <p class="task-detail">最终导入失败条数：<b>{{ report_dic_towork.false }}</b>条。</p>
-                                                {% if report_dic_towork.error %}<p class="task-detail">
-                                                    错误信息：{{ report_dic_towork.error }}</p>{% endif %}
                                             </div>
                                             <!-- end of col-sm-8 -->
                                         </div>
@@ -216,11 +218,39 @@
                             </div>
                             <!-- 导入失败标签结束 -->
 
+                            <!-- 导入失败标签开始 -->
+                            <div class="col-md-4">
+                                <div class="card b-l-danger business-info services m-b-20">
+                                    <div class="card-header">
+                                        <div class="service-header">
+                                            <a href="#">
+                                                <h2 class="card-header-text">丢弃重复</h2>
+                                            </a>
+                                        </div>
+                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
+                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
+                                              role="tooltip">
+                                         </span>
+                                    </div>
+                                    <div class="card-block">
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <p class="task-detail">最终丢弃重复条数：<b>{{ report_dic_towork.repeat_num }}</b>条。
+                                                </p>
+                                            </div>
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+                            </div>
+                            <!-- 导入失败标签结束 -->
                         </div>
                         <div class="row">
 
                             <!-- 无效数据标签开始 -->
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card b-l-warning business-info services m-b-20">
                                     <div class="card-header">
                                         <div class="service-header">
@@ -249,7 +279,7 @@
                             <!-- 无效数据标签结束 -->
 
                             <!-- 重复数据标签开始 -->
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card b-l-info business-info services m-b-20">
                                     <div class="card-header">
                                         <div class="service-header">
@@ -277,6 +307,39 @@
                             </div>
                             <!-- 重复数据标签结束 -->
 
+                            <!-- 重复数据标签开始 -->
+                            <div class="col-md-4">
+                                <div class="card b-l-info business-info services m-b-20">
+                                    <div class="card-header">
+                                        <div class="service-header">
+                                            <a href="#">
+                                                <h2 class="card-header-text">递交数据内部错误</h2>
+                                            </a>
+                                        </div>
+                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
+                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
+                                              role="tooltip">
+                                         </span>
+                                    </div>
+                                    <div class="card-block">
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <p class="task-detail">
+                                                    内部错误列表：
+                                                {% if report_dic_towork.error %}<p class="task-detail">
+                                                    错误信息：{{ report_dic_towork.error }}</p>
+                                                {% endif %}
+                                                </p>
+                                            </div>
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+                            </div>
+                            <!-- 重复数据标签结束 -->
+
                         </div>
                     </div>
                 </div>
@@ -289,6 +352,7 @@
 
         </div>
 
+        {% endif %}
         <!-- tab content end -->
 
         <div class="card">
@@ -297,7 +361,7 @@
                 <span>导入的维修单需要先递交工作台才能处理</span>
             </div>
             <div class="card-block">
-                <form id="signrepeat" method="post" action="{% url 'crm_maintenance:signrepeat' %}"
+                <form id="signrepeat" name="signrepeat" method="post" action="{% url 'crm_maintenance:signrepeat' %}"
                       novalidate="">
                     {% csrf_token %}
 
@@ -335,6 +399,7 @@
                             </div>
                             <div class="card-block">
                                 <h6>开始计算二次维修</h6>
+                                <input type="text" name="signrepeat" value="1" style="display:none">
                                 <button type="submit" class="btn btn-out btn-primary btn-square">提交</button>
                             </div>
 
@@ -349,7 +414,7 @@
         <div class="tab-content">
 
             <!-- tab pane info start -->
-            <div class="tab-pane active"  role="tabpanel" aria-expanded="true">
+            <div class="tab-pane active"  aria-expanded="true">
                 <!-- info card start -->
                 <div class="card">
                     <div class="card-header">

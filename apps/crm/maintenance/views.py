@@ -283,6 +283,8 @@ class MaintenanceUpload(View):
             maintenance_order_id = str(row["maintenance_order_id"])
             order_status = str(row["order_status"])
             purchase_time = str(row['purchase_time'])
+            sender_mobile = str(row['sender_mobile'])
+            return_mobile = str(row['return_mobile'])
 
             # 状态不是已完成，就丢弃这个订单，计数为丢弃订单
             if order_status != '已完成':
@@ -299,6 +301,12 @@ class MaintenanceUpload(View):
 
             elif purchase_time == '0000-00-00 00:00:00':
                 row['purchase_time'] = '0001-01-01 00:00:00'
+
+            elif "." in sender_mobile:
+                row["sender_mobile"] = sender_mobile.split(".")[0]
+
+            elif "." in return_mobile:
+                row['return_mobile'] = return_mobile.split(".")[0]
 
             for k, v in row.items():
 
@@ -359,6 +367,10 @@ class MaintenanceOverview(View):
 
 
 class MaintenanceHandlinglist(View):
+    QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
+                   "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
+                   "create_time"]
+
     def get(self, request):
         order_tag = request.GET.get("order_tag", "1")
         search_keywords = request.GET.get("search_keywords", None)
@@ -377,15 +389,43 @@ class MaintenanceHandlinglist(View):
             if order_tag == "0":
                 all_orders = MaintenanceHandlingInfo.objects.filter(handling_status=str(0)).values(
                     *self.__class__.QUERY_FIELD).all().order_by("-")
+            else:
+                all_orders = MaintenanceHandlingInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
 
+        try:
+            page = request.GET.get('page', 1)
+        except PageNotAnInteger:
+            page = 1
 
+        p = Paginator(all_orders, num, request=request)
+        order = p.page(page)
 
-        return render(request, 'crm/maintenance/handlinglist.html', {
+        if download_tag:
+
+            # 导出文件取名
+            now = datetime.datetime.now()
+            now = str(now)
+            name = now.replace(':', '')
+
+            response = HttpResponse(content_type="text/csv")
+            response["Content-Disposition"] = 'attachment; filename="{}.csv"'.format(name)
+
+            response.write(codecs.BOM_UTF8)
+            writer = csv.writer(response)
+            writer.writerow(['保修单号', '店铺', '结束语', '完成时间', '网名', '寄件人电话', '货品型号', '货品名称',
+                             '是否在保', '重复维修标记', '机器SN'])
+            for order in all_orders:
+                writer.writerow([order['maintenance_order_id'], order['shop'], order['appraisal'], order['finish_time'],
+                                 order['buyer_nick'], order['sender_mobile'], order['goods_type'], order['goods_name'],
+                                 order['is_guarantee'], order['repeat_tag'], order['machine_sn']])
+            return response
+
+        return render(request, "crm/maintenance/handlinglist.html", {
+            "all_orders": order,
             "index_tag": "crm_maintenance_orders",
-
-
+            "num": str(num),
+            "order_tag": str(order_tag)
         })
-    pass
 
 
 class MaintenanceToWork(View):
@@ -395,7 +435,7 @@ class MaintenanceToWork(View):
 
     def post(self, request):
         # 定义递交工作台订单的报告字典，以及整体的数据的报告字典
-        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
+        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "repeat_num": 0, "error": []}
         command_id = request.POST.get("towork", None)
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
 
@@ -404,6 +444,19 @@ class MaintenanceToWork(View):
             for order in pending_orders:
                 # 创建一个工作台订单对象，
                 handling_order = MaintenanceHandlingInfo()
+
+                repetition = MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order["maintenance_order_id"])
+                if repetition:
+                    report_dic_towork["repeat_num"] += 1
+                    try:
+                        ori_order = MaintenanceInfo.objects.get(maintenance_order_id=order["maintenance_order_id"])
+                        ori_order.towork_status = 1
+                        ori_order.save()
+                        report_dic_towork["ori_successful"] += 1
+                    except Exception as e:
+                        report_dic_towork["error"].append(e)
+                        report_dic_towork["ori_order_error"] += 1
+                    continue
                 # 对原单字段进行直接赋值操作。
                 for key in self.__class__.QUERY_FIELD:
                     if hasattr(handling_order, key):
@@ -432,7 +485,7 @@ class MaintenanceToWork(View):
 
                 # 处理日期的年月日
                 _pre_time = order["finish_time"]
-                handling_order.finish_date = _pre_time.strftime("%m-%d")
+                handling_order.finish_date = _pre_time.strftime("%Y-%m-%d")
                 handling_order.finish_month = _pre_time.strftime("%Y-%m")
                 handling_order.finish_year = _pre_time.strftime("%Y")
 
@@ -492,11 +545,115 @@ class MaintenanceToWork(View):
 
 
 
-
-
-
-
-
 class MaintenanceSignRepeat(View):
     def post(self, request):
-        pass
+        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
+        command_id = request.POST.get("signrepeat", None)
+        elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+
+
+
+
+
+
+
+        #
+        # today = datetime.datetime.now().date()
+        # weekdelta = datetime.datetime.now().date() - datetime.timedelta(weeks=3)
+        # maintenance_quantity = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today)
+        # print(maintenance_quantity)
+        #
+        # test = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today).aggregate(
+        #     "machine_sn").values("machine_sn")
+        # print(test)
+        #
+        if command_id == '1':
+            # date_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate("finish_date")
+            # print(date_range)
+            days_range = MaintenanceHandlingInfo.objects.values("finish_date").annotate(machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
+
+            days = []
+            for day in days_range:
+                print(day["finish_date"])
+                days.append(day["finish_date"].strftime("%Y-%m-%d"))
+            print(days)
+            print(min(days))
+
+            a = min(days)
+            a_day = datetime.datetime.strptime(a, "%Y-%m-%d")
+            print(a_day)
+
+            delta = datetime.timedelta(days=1)
+            b = a_day + delta
+            print(b)
+            print(b.strftime("%Y-%m-%d"))
+
+
+            print(max(days))
+
+
+            print(days)
+
+            pass
+
+        #
+        #
+        #         try:
+        #             handling_order.save()
+        #             report_dic_towork["successful"] += 1
+        #             try:
+        #                 ori_order = MaintenanceInfo.objects.get(maintenance_order_id=order["maintenance_order_id"])
+        #                 ori_order.towork_status = 1
+        #                 ori_order.save()
+        #                 report_dic_towork["ori_successful"] += 1
+        #             except Exception as e:
+        #                 report_dic_towork["error"].append(e)
+        #                 report_dic_towork["ori_order_error"] += 1
+        #         except Exception as e:
+        #             report_dic_towork["error"].append(e)
+        #             report_dic_towork["false"] += 1
+        #
+        #     整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
+        #     total_num = MaintenanceInfo.objects.all().count()
+        #     pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+        #
+        #     repeat_num = MaintenanceHandlingInfo.objects.all().count()
+        #     unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+        #
+        #     elements["total_num"] = total_num
+        #     elements["pending_num"] = pending_num
+        #     elements["repeat_num"] = repeat_num
+        #     elements["unresolved_num"] = unresolved_num
+        #
+        #     print(report_dic_towork)
+
+        #     return render(request, "crm/maintenance/upload.html", {
+        #         "index_tag": "crm_maintenance_orders",
+        #         "elements": elements,
+        #         "report_dic_towork": report_dic_towork,
+        #     })
+        #
+        # else:
+        #
+        #     total_num = MaintenanceInfo.objects.all().count()
+        #     pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+        #
+        #     repeat_num = MaintenanceHandlingInfo.objects.all().count()
+        #     unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+        #
+        #     elements["total_num"] = total_num
+        #     elements["pending_num"] = pending_num
+        #     elements["repeat_num"] = repeat_num
+        #     elements["unresolved_num"] = unresolved_num
+        #     report_dic_towork['error'] = '请联系管理员，出现了内部错误'
+        #
+        #     render(request, '', {
+        #         "report_dic_towork": report_dic_towork,
+        #         "elements": elements,
+        #     })
+
+
+
+
+class MaintenanceWorkList(View):
+    pass
