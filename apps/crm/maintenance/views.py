@@ -547,7 +547,7 @@ class MaintenanceToWork(View):
 
 class MaintenanceSignRepeat(View):
     def post(self, request):
-        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
+        report_dic_totag = {"successful": 0, "tag_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
         command_id = request.POST.get("signrepeat", None)
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
 
@@ -570,29 +570,82 @@ class MaintenanceSignRepeat(View):
         if command_id == '1':
             # date_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate("finish_date")
             # print(date_range)
-            days_range = MaintenanceHandlingInfo.objects.values("finish_date").annotate(machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
-
+            days_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate(machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
             days = []
             for day in days_range:
-                print(day["finish_date"])
-                days.append(day["finish_date"].strftime("%Y-%m-%d"))
-            print(days)
-            print(min(days))
+                days.append(day["finish_date"])
 
-            a = min(days)
-            a_day = datetime.datetime.strptime(a, "%Y-%m-%d")
-            print(a_day)
+            min_date = min(days)
+            max_date = max(days) + datetime.timedelta(days=1)
+            current_date = min_date
+
+            while current_date < max_date:
+                current_date = min_date - datetime.timedelta(days=1)
+                _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
+                maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
+
+                total_num = maintenance_msn.count()
+
+                machine_sns = []
+                for machine_sn in maintenance_msn:
+                    _pre_msn = machine_sn["machine_sn"].upper().strip()
+
+                    if re.match(r'^[\w]', _pre_msn):
+                        machine_sns.append(machine_sn["machine_sn"])
+
+                current_date = min_date + datetime.timedelta(days=1)
+                current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time=current_date)
+
+                for current_order in current_orders:
+                    if current_order.machine_sn in machine_sns:
+                        current_order.repeat_tag = 1
+                        current_order.handling_status = 1
+                        report_dic_totag["tag_successful"]
+
+
+                    else:
+                        current_order.handling_status = 1
+
+                    current_order.save()
+                    report_dic_totag["successful"] += 1
+                current_summary = MaintenanceSummary()
+                current_summary.finish_date = current_date
+                current_summary.thirty_day_count = total_num
+                current_summary.repeat_count = report_dic_totag["tag_successful"]
+
+
+                current_date = min_date + datetime.timedelta(days=1)
+
+
+
+
+            # days = []
+            # for day in days_range:
+            #     print(day["finish_date"])
+            #     days.append(day["finish_date"].strftime("%Y-%m-%d"))
+            # print(days)
+            # print(min(days))
+
+            # a = min(days)
+            # a_day = datetime.datetime.strptime(a, "%Y-%m-%d")
+            # # print(a_day)
+            # delta = datetime.timedelta(days=1)
+            # b = a_day + delta
+            # print(b)
+            # print(b.strftime("%Y-%m-%d"))
+            # print(max(days))
+
+
+
+
 
             delta = datetime.timedelta(days=1)
-            b = a_day + delta
-            print(b)
-            print(b.strftime("%Y-%m-%d"))
+
+            print(delta)
 
 
-            print(max(days))
 
 
-            print(days)
 
             pass
 
