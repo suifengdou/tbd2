@@ -483,6 +483,12 @@ class MaintenanceToWork(View):
                 else:
                     handling_order.goods_type = "未知"
 
+                # 处理货品sn码，
+                if re.match(r'^[\w]+$',order["machine_sn"].strip(" ")):
+                    handling_order.machine_sn = order["machine_sn"].upper().strip(" ")
+                else:
+                    handling_order.machine_sn = ""
+
                 # 处理日期的年月日
                 _pre_time = order["finish_time"]
                 handling_order.finish_date = _pre_time.strftime("%Y-%m-%d")
@@ -547,7 +553,7 @@ class MaintenanceToWork(View):
 
 class MaintenanceSignRepeat(View):
     def post(self, request):
-        report_dic_totag = {"successful": 0, "tag_successful": 0, "false": 0, "ori_order_error": 0, "error": []}
+        report_dic_totag = {"successful": 0, "tag_successful": 0, "false": 0, "torepeatsave": 0, "error": []}
         command_id = request.POST.get("signrepeat", None)
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
 
@@ -568,8 +574,7 @@ class MaintenanceSignRepeat(View):
         # print(test)
         #
         if command_id == '1':
-            # date_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate("finish_date")
-            # print(date_range)
+            # 按照未处理的标记，查询出表单对未处理订单。对订单的时间进行处理。
             days_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate(machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
             days = []
             for day in days_range:
@@ -580,38 +585,44 @@ class MaintenanceSignRepeat(View):
             current_date = min_date
 
             while current_date < max_date:
+                # 当前天减去一天，作为前一天，作为前三十天到基准时间。
                 current_date = min_date - datetime.timedelta(days=1)
                 _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
+                # 查询近三十天到所有sn码，准备进行匹配查询。
                 maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
 
                 total_num = maintenance_msn.count()
-
+                # 创建sn码列表，汇总所有近三十天的sn码加入到列表中，
                 machine_sns = []
                 for machine_sn in maintenance_msn:
-                    _pre_msn = machine_sn["machine_sn"].upper().strip()
+                    _pre_msn = maintenance_msn["machine_sn"].upper().strip()
 
                     if re.match(r'^[\w]', _pre_msn):
-                        machine_sns.append(machine_sn["machine_sn"])
-
+                        machine_sns.append(maintenance_msn["machine_sn"])
+                # 恢复为当前天，查询当前天到sn码，准备进行查询。
                 current_date = min_date + datetime.timedelta(days=1)
                 current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time=current_date)
-
+                # 查询当前天的订单对象集。准备进行循环处理。
                 for current_order in current_orders:
                     if current_order.machine_sn in machine_sns:
                         current_order.repeat_tag = 1
                         current_order.handling_status = 1
-                        report_dic_totag["tag_successful"]
-
+                        report_dic_totag["tag_successful"] += 1
 
                     else:
                         current_order.handling_status = 1
 
                     current_order.save()
                     report_dic_totag["successful"] += 1
+
+                # 创建二次维修率的表单对象，对当前天的数据进行保存，未来不再重复计算。
                 current_summary = MaintenanceSummary()
                 current_summary.finish_date = current_date
                 current_summary.thirty_day_count = total_num
                 current_summary.repeat_count = report_dic_totag["tag_successful"]
+
+                current_summary.save()
+                report_dic_totag["torepeatsave"] += 1
 
 
                 current_date = min_date + datetime.timedelta(days=1)
