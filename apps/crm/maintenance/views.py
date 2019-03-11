@@ -484,7 +484,7 @@ class MaintenanceToWork(View):
                     handling_order.goods_type = "未知"
 
                 # 处理货品sn码，
-                if re.match(r'^[\w]+$',order["machine_sn"].strip(" ")):
+                if re.match(r'^[0-9a-zA-Z]{8,}', order["machine_sn"].strip(" ")):
                     handling_order.machine_sn = order["machine_sn"].upper().strip(" ")
                 else:
                     handling_order.machine_sn = ""
@@ -544,7 +544,8 @@ class MaintenanceToWork(View):
             elements["unresolved_num"] = unresolved_num
             report_dic_towork['error'] = '请联系管理员，出现了内部错误'
 
-            render(request, '', {
+            return render(request, 'crm/maintenance/upload.html', {
+                "index_tag": "crm_maintenance_orders",
                 "report_dic_towork": report_dic_towork,
                 "elements": elements,
             })
@@ -557,164 +558,102 @@ class MaintenanceSignRepeat(View):
         command_id = request.POST.get("signrepeat", None)
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
 
-
-
-
-
-
-
-        #
-        # today = datetime.datetime.now().date()
-        # weekdelta = datetime.datetime.now().date() - datetime.timedelta(weeks=3)
-        # maintenance_quantity = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today)
-        # print(maintenance_quantity)
-        #
-        # test = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today).aggregate(
-        #     "machine_sn").values("machine_sn")
-        # print(test)
-        #
         if command_id == '1':
             # 按照未处理的标记，查询出表单对未处理订单。对订单的时间进行处理。
             days_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate(machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
-            days = []
-            for day in days_range:
-                days.append(day["finish_date"])
+            if days_range:
+                days = []
+                for day in days_range:
+                    days.append(day["finish_date"])
 
-            min_date = min(days)
-            max_date = max(days) + datetime.timedelta(days=1)
-            current_date = min_date
+                min_date = min(days)
+                max_date = max(days) + datetime.timedelta(days=1)
+                current_date = min_date
 
-            while current_date < max_date:
-                # 当前天减去一天，作为前一天，作为前三十天到基准时间。
-                current_date = min_date - datetime.timedelta(days=1)
-                _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
-                # 查询近三十天到所有sn码，准备进行匹配查询。
-                maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
+                while current_date < max_date:
+                    # 当前天减去一天，作为前一天，作为前三十天到基准时间。
+                    current_date = current_date - datetime.timedelta(days=1)
+                    _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
+                    # 查询近三十天到所有sn码，准备进行匹配查询。
+                    maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
 
-                total_num = maintenance_msn.count()
-                # 创建sn码列表，汇总所有近三十天的sn码加入到列表中，
-                machine_sns = []
-                for machine_sn in maintenance_msn:
-                    _pre_msn = maintenance_msn["machine_sn"].upper().strip()
+                    total_num = maintenance_msn.count()
+                    # 创建sn码列表，汇总所有近三十天的sn码加入到列表中，
+                    machine_sns = []
+                    for machine_sn in maintenance_msn:
+                        _pre_msn = machine_sn["machine_sn"].upper().strip()
 
-                    if re.match(r'^[\w]', _pre_msn):
-                        machine_sns.append(maintenance_msn["machine_sn"])
-                # 恢复为当前天，查询当前天到sn码，准备进行查询。
-                current_date = min_date + datetime.timedelta(days=1)
-                current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time=current_date)
-                # 查询当前天的订单对象集。准备进行循环处理。
-                for current_order in current_orders:
-                    if current_order.machine_sn in machine_sns:
-                        current_order.repeat_tag = 1
-                        current_order.handling_status = 1
-                        report_dic_totag["tag_successful"] += 1
+                        if re.match(r'^[\w]', _pre_msn):
+                            machine_sns.append(_pre_msn)
+                    # 恢复为当前天，查询当前天到sn码，准备进行查询。
+                    current_date = current_date + datetime.timedelta(days=1)
+                    next_date = current_date + datetime.timedelta(days=1)
+                    current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=current_date, finish_time__lte=next_date)
+                    # 查询当前天的订单对象集。准备进行循环处理。
+                    for current_order in current_orders:
+                        if current_order.machine_sn in machine_sns:
+                            current_order.repeat_tag = 1
+                            current_order.handling_status = 1
+                            report_dic_totag["tag_successful"] += 1
 
-                    else:
-                        current_order.handling_status = 1
+                        else:
+                            current_order.handling_status = 1
 
-                    current_order.save()
-                    report_dic_totag["successful"] += 1
+                        current_order.save()
+                        report_dic_totag["successful"] += 1
 
-                # 创建二次维修率的表单对象，对当前天的数据进行保存，未来不再重复计算。
-                current_summary = MaintenanceSummary()
-                current_summary.finish_date = current_date
-                current_summary.thirty_day_count = total_num
-                current_summary.repeat_count = report_dic_totag["tag_successful"]
+                    # 创建二次维修率的表单对象，对当前天的数据进行保存，未来不再重复计算。
+                    current_summary = MaintenanceSummary()
+                    current_summary.finish_date = current_date
+                    current_summary.order_count = current_orders.count()
+                    current_summary.thirty_day_count = total_num
+                    current_summary.repeat_count = report_dic_totag["tag_successful"]
 
-                current_summary.save()
-                report_dic_totag["torepeatsave"] += 1
-
-
-                current_date = min_date + datetime.timedelta(days=1)
-
-
+                    current_summary.save()
+                    report_dic_totag["torepeatsave"] += 1
 
 
-            # days = []
-            # for day in days_range:
-            #     print(day["finish_date"])
-            #     days.append(day["finish_date"].strftime("%Y-%m-%d"))
-            # print(days)
-            # print(min(days))
-
-            # a = min(days)
-            # a_day = datetime.datetime.strptime(a, "%Y-%m-%d")
-            # # print(a_day)
-            # delta = datetime.timedelta(days=1)
-            # b = a_day + delta
-            # print(b)
-            # print(b.strftime("%Y-%m-%d"))
-            # print(max(days))
+                    current_date = current_date + datetime.timedelta(days=1)
 
 
+                # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
+                total_num = MaintenanceInfo.objects.all().count()
+                pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+                repeat_num = MaintenanceHandlingInfo.objects.all().count()
+                unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+                elements["total_num"] = total_num
+                elements["pending_num"] = pending_num
+                elements["repeat_num"] = repeat_num
+                elements["unresolved_num"] = unresolved_num
+
+                return render(request, 'crm/maintenance/upload.html', {
+                    "index_tag": "crm_maintenance_orders",
+                    "report_dic_totag": report_dic_totag,
+                    "elements": elements,
+                })
+            else:
+                # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
+                total_num = MaintenanceInfo.objects.all().count()
+                pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+                repeat_num = MaintenanceHandlingInfo.objects.all().count()
+                unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+                elements["total_num"] = total_num
+                elements["pending_num"] = pending_num
+                elements["repeat_num"] = repeat_num
+                elements["unresolved_num"] = unresolved_num
+
+                return render(request, '', {
+                    "index_tag": "crm_maintenance_orders",
+                    "elements": elements,
+
+                })
 
 
 
-            delta = datetime.timedelta(days=1)
-
-            print(delta)
-
-
-
-
-
-            pass
-
-        #
-        #
-        #         try:
-        #             handling_order.save()
-        #             report_dic_towork["successful"] += 1
-        #             try:
-        #                 ori_order = MaintenanceInfo.objects.get(maintenance_order_id=order["maintenance_order_id"])
-        #                 ori_order.towork_status = 1
-        #                 ori_order.save()
-        #                 report_dic_towork["ori_successful"] += 1
-        #             except Exception as e:
-        #                 report_dic_towork["error"].append(e)
-        #                 report_dic_towork["ori_order_error"] += 1
-        #         except Exception as e:
-        #             report_dic_towork["error"].append(e)
-        #             report_dic_towork["false"] += 1
-        #
-        #     整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
-        #     total_num = MaintenanceInfo.objects.all().count()
-        #     pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
-        #
-        #     repeat_num = MaintenanceHandlingInfo.objects.all().count()
-        #     unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
-        #
-        #     elements["total_num"] = total_num
-        #     elements["pending_num"] = pending_num
-        #     elements["repeat_num"] = repeat_num
-        #     elements["unresolved_num"] = unresolved_num
-        #
-        #     print(report_dic_towork)
-
-        #     return render(request, "crm/maintenance/upload.html", {
-        #         "index_tag": "crm_maintenance_orders",
-        #         "elements": elements,
-        #         "report_dic_towork": report_dic_towork,
-        #     })
-        #
-        # else:
-        #
-        #     total_num = MaintenanceInfo.objects.all().count()
-        #     pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
-        #
-        #     repeat_num = MaintenanceHandlingInfo.objects.all().count()
-        #     unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
-        #
-        #     elements["total_num"] = total_num
-        #     elements["pending_num"] = pending_num
-        #     elements["repeat_num"] = repeat_num
-        #     elements["unresolved_num"] = unresolved_num
-        #     report_dic_towork['error'] = '请联系管理员，出现了内部错误'
-        #
-        #     render(request, '', {
-        #         "report_dic_towork": report_dic_towork,
-        #         "elements": elements,
-        #     })
 
 
 
