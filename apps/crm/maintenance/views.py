@@ -160,9 +160,52 @@ class MaintenanceUpload(View):
 
     def post(self, request):
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            _result = self.handle_upload_file(request.FILES['file'])
+            # 如果返回的是错误信息，就是字符串格式，直接执行下面的路径
+            if isinstance(_result, str):
+
+                total_num = MaintenanceInfo.objects.all().count()
+                pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+                repeat_num = MaintenanceHandlingInfo.objects.all().count()
+                unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+                elements["total_num"] = total_num
+                elements["pending_num"] = pending_num
+                elements["repeat_num"] = repeat_num
+                elements["unresolved_num"] = unresolved_num
+
+                return render(request, "crm/maintenance/upload.html", {
+                    "messages": _result,
+                    "index_tag": "crm_maintenance_orders",
+                    "elements": elements,
+                })
+            # 判断是字典的话，就直接返回字典结果到前端页面。
+            elif isinstance(_result, dict):
+
+                total_num = MaintenanceInfo.objects.all().count()
+                pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+                repeat_num = MaintenanceHandlingInfo.objects.all().count()
+                unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+                elements["total_num"] = total_num
+                elements["pending_num"] = pending_num
+                elements["repeat_num"] = repeat_num
+                elements["unresolved_num"] = unresolved_num
+
+                return render(request, "crm/maintenance/upload.html", {
+                    "report_dic": _result,
+                    "index_tag": "crm_maintenance_orders",
+                    "elements": elements,
+                })
+
+        else:
+            form = UploadFileForm()
+
         total_num = MaintenanceInfo.objects.all().count()
         pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
-
         repeat_num = MaintenanceHandlingInfo.objects.all().count()
         unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
 
@@ -171,30 +214,10 @@ class MaintenanceUpload(View):
         elements["repeat_num"] = repeat_num
         elements["unresolved_num"] = unresolved_num
 
-        form = UploadFileForm(request.POST, request.FILES)
-        if form.is_valid():
-            _result = self.handle_upload_file(request.FILES['file'])
-            # 如果返回的是错误信息，就是字符串格式，直接执行下面的路径
-            if isinstance(_result, str):
-                return render(request, "crm/maintenance/upload.html", {
-                    "messages": _result,
-                    "index_tag": "crm_maintenance_orders",
-                    "element": elements,
-                })
-            # 判断是字典的话，就直接返回字典结果到前端页面。
-            elif isinstance(_result, dict):
-                return render(request, "crm/maintenance/upload.html", {
-                    "report_dic": _result,
-                    "index_tag": "crm_maintenance_orders",
-                    "element": elements,
-                })
-
-        else:
-            form = UploadFileForm()
         return render(request, "crm/maintenance/upload.html", {
             "messages": form,
             "index_tag": "crm_maintenance_orders",
-            "element": elements,
+            "elements": elements,
         })
 
     def handle_upload_file(self, _file):
@@ -285,6 +308,7 @@ class MaintenanceUpload(View):
             purchase_time = str(row['purchase_time'])
             sender_mobile = str(row['sender_mobile'])
             return_mobile = str(row['return_mobile'])
+            handle_time = str(row['handle_time'])
 
             # 状态不是已完成，就丢弃这个订单，计数为丢弃订单
             if order_status != '已完成':
@@ -301,6 +325,9 @@ class MaintenanceUpload(View):
 
             elif purchase_time == '0000-00-00 00:00:00':
                 row['purchase_time'] = '0001-01-01 00:00:00'
+
+            elif handle_time == '0000-00-00 00:00:00':
+                row['handle_time'] = '0001-01-01 00:00:00'
 
             elif "." in sender_mobile:
                 row["sender_mobile"] = sender_mobile.split(".")[0]
@@ -551,7 +578,6 @@ class MaintenanceToWork(View):
             })
 
 
-
 class MaintenanceSignRepeat(View):
     def post(self, request):
         report_dic_totag = {"successful": 0, "tag_successful": 0, "false": 0, "torepeatsave": 0, "error": []}
@@ -581,7 +607,7 @@ class MaintenanceSignRepeat(View):
                     # 创建sn码列表，汇总所有近三十天的sn码加入到列表中，
                     machine_sns = []
                     for machine_sn in maintenance_msn:
-                        _pre_msn = machine_sn["machine_sn"].upper().strip()
+                        _pre_msn = machine_sn["machine_sn"].upper().strip(" ")
 
                         if re.match(r'^[\w]', _pre_msn):
                             machine_sns.append(_pre_msn)
@@ -595,7 +621,6 @@ class MaintenanceSignRepeat(View):
                             current_order.repeat_tag = 1
                             current_order.handling_status = 1
                             report_dic_totag["tag_successful"] += 1
-
                         else:
                             current_order.handling_status = 1
 
@@ -603,18 +628,21 @@ class MaintenanceSignRepeat(View):
                         report_dic_totag["successful"] += 1
 
                     # 创建二次维修率的表单对象，对当前天的数据进行保存，未来不再重复计算。
-                    current_summary = MaintenanceSummary()
-                    current_summary.finish_date = current_date
-                    current_summary.order_count = current_orders.count()
-                    current_summary.thirty_day_count = total_num
-                    current_summary.repeat_count = report_dic_totag["tag_successful"]
+                    verify_condition = MaintenanceSummary.objects.filter(finish_date=current_date)
 
-                    current_summary.save()
+                    if verify_condition.exists():
+                        report_dic_totag['error'].append("%s 已经计算过二次维修，重新递交了这个日期的保修单" % (current_date))
+                    else:
+                        current_summary = MaintenanceSummary()
+                        current_summary.finish_date = current_date
+                        current_summary.order_count = current_orders.count()
+                        current_summary.thirty_day_count = total_num
+                        current_summary.repeat_count = report_dic_totag["tag_successful"]
+
+                        current_summary.save()
                     report_dic_totag["torepeatsave"] += 1
 
-
                     current_date = current_date + datetime.timedelta(days=1)
-
 
                 # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
                 total_num = MaintenanceInfo.objects.all().count()
@@ -646,11 +674,30 @@ class MaintenanceSignRepeat(View):
                 elements["repeat_num"] = repeat_num
                 elements["unresolved_num"] = unresolved_num
 
-                return render(request, '', {
+                return render(request, 'crm/maintenance/upload.html', {
                     "index_tag": "crm_maintenance_orders",
                     "elements": elements,
 
                 })
+        else:
+            report_dic_totag['error'] = "出现了内部错误，请联系管理员"
+            # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
+            total_num = MaintenanceInfo.objects.all().count()
+            pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
+
+            repeat_num = MaintenanceHandlingInfo.objects.all().count()
+            unresolved_num = MaintenanceHandlingInfo.objects.filter(handling_status=0).count()
+
+            elements["total_num"] = total_num
+            elements["pending_num"] = pending_num
+            elements["repeat_num"] = repeat_num
+            elements["unresolved_num"] = unresolved_num
+
+            return render(request, 'crm/maintenance/upload.html', {
+                "index_tag": "crm_maintenance_orders",
+                "report_dic_totag": report_dic_totag,
+                "elements": elements,
+            })
 
 
 
@@ -659,4 +706,8 @@ class MaintenanceSignRepeat(View):
 
 
 class MaintenanceWorkList(View):
-    pass
+    def get(self, request):
+
+        return render(request, 'crm/maintenance/repeatlist.html', {
+            "index_tag": "crm_maintenance_orders",
+        })
