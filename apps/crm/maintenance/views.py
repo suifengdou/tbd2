@@ -19,12 +19,13 @@ from apps.crm.maintenance.models import MaintenanceInfo, MaintenanceHandlingInfo
 from .forms import UploadFileForm
 # Create your views here.
 
+
 class MaintenanceList(View):
     QUERY_FIELD = ["maintenance_order_id", "order_status", "shop", "purchase_time",
                    "finish_time", "buyer_nick", "sender_mobile", "goods_id", "goods_name",
                    "description", "is_guarantee", "tocustomer_status", "towork_status"]
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         order_tag = request.GET.get("order_tag", '1')
         search_keywords = request.GET.get("search_keywords", None)
         num = request.GET.get("num", 10)
@@ -42,10 +43,11 @@ class MaintenanceList(View):
         else:
 
             if order_tag == '0':
-                all_service_orders = MaintenanceInfo.objects.filter(handlingstatus=str(0)).values\
+                all_service_orders = MaintenanceInfo.objects.filter(handlingstatus=str(0)).values \
                     (*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
             else:
-                all_service_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
+                all_service_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by(
+                    'maintenance_order_id')
 
         try:
             page = request.GET.get('page', 1)
@@ -137,7 +139,7 @@ class MaintenanceUpload(View):
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
         total_num = MaintenanceInfo.objects.all().count()
         pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
@@ -356,16 +358,39 @@ class MaintenanceUpload(View):
 class MaintenanceOverview(View):
     def get(self, request):
         m_total = {}
-        today = datetime.datetime.now().date()
-        weekdelta = datetime.datetime.now().date() - datetime.timedelta(weeks=3)
-        maintenance_quantity = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today)
-        print(maintenance_quantity)
+        weeks_num = request.GET.get("weeks_num", None)
+        if weeks_num is None:
+            start_time = request.GET.get("start_time", None)
+            end_time = request.GET.get("end_time", None)
+            if start_time:
+                try:
+                    if ":" in start_time:
+                        start_time = time.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+                        time.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+                except:
+                    weeks_num = 1
+                    m_total["time_error"] = "时间选择错误"
 
-        test = MaintenanceInfo.objects.filter(finish_time__gte=weekdelta, finish_time__lte=today).values("finish_time").annotate(quantity=Count('maintenance_order_id')).values("finish_time", "quantity").order_by("finish_time")
-        print(test)
+
+
+        # 确定当前天，判断是否是以当前时间为基准。
+        today = datetime.datetime.now().date()
+        # 确定当前时间间隔（直接前端取值）
+        week_delta = datetime.datetime.now().date() - datetime.timedelta(weeks=3)
+
+        # 数据库进行查询块，决定数据范围和数据内容。
+        # 首先查询handling表格的数据
+        maintenance_quantity = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=week_delta,
+                                                                            finish_time__lte=today)
+        # 然后查询二次维修量的表格
+        repeat_quantity = MaintenanceSummary.objects.all().filter(finish_time__gte=week_delta,
+                                                                            finish_time__lte=today)
+        # 计算maintenance的完成时间维度的数量
+        summary_quantity = maintenance_quantity.values("finish_time").annotate(
+            quantity=Count('maintenance_order_id')).values("finish_time", "quantity").order_by("finish_time")
 
         _rt_summary_quantity = {}
-        for date_data in test:
+        for date_data in summary_quantity:
             date_str = date_data["finish_time"].strftime("%Y-%m-%d")
             quantity = date_data["quantity"]
             if _rt_summary_quantity.get(date_str, None) is None:
@@ -380,9 +405,153 @@ class MaintenanceOverview(View):
             rt_summary_quantity_q.append(q)
         print(rt_summary_quantity_d)
         print(rt_summary_quantity_q)
-
+        # 把维修数量做到汇总字典中
         m_total["rt_summary_quantity_d"] = rt_summary_quantity_d
         m_total["rt_summary_quantity_q"] = rt_summary_quantity_q
+
+        # 维修型号下钻图
+        total_num = maintenance_quantity.count()
+        goods_type_num = maintenance_quantity.values("goods_type").annotate(
+            quantity=Count("maintenance_order_id")).values("goods_type", "quantity").order_by("-quantity")
+
+        # 型号数量占比数据
+        goods_type_total = []
+        # 下钻型号原因数据
+        reason_goods_total = []
+        # 型号数量数据
+        goods_type_total_q = []
+        # 下钻型号原因数量数据
+        reason_goods_total_q = []
+
+        for good_num in goods_type_num:
+            goods_type_title = {"name": good_num["goods_type"],
+                                "y": float('%.2f' % (good_num["quantity"] / total_num * 100)),
+                                "drilldown": good_num["goods_type"]}
+
+            if goods_type_title["y"] < 1:
+                break
+            goods_type_title_q = {"name": good_num["goods_type"],
+                                  "y": int(good_num["quantity"]),
+                                  "drilldown": good_num["goods_type"]
+                                  }
+            # 型号数量比例，和型号绝对数量循环录入到列表中
+            goods_type_total.append(goods_type_title)
+            goods_type_total_q.append(goods_type_title_q)
+            # 具体型号的原因下钻数据，name,id,data(是一个列表），需要单独操作data
+            reason_good = {"name": good_num["goods_type"], "id": good_num["goods_type"]}
+            reason_good_q = {"name": good_num["goods_type"], "id": good_num["goods_type"]}
+            # 特别创建data列表
+            reason_good_data = []
+            reason_good_data_q = []
+            # 查出对应型号的对应保修单的对应故障原因的对应数量
+            reason_nums = maintenance_quantity.filter(goods_type=good_num["goods_type"]).values("appraisal").annotate(
+                quantity=Count("maintenance_order_id")).values("appraisal", "quantity").order_by("-quantity")
+
+            reason_nums_total = good_num["quantity"]
+
+            for reason in reason_nums:
+                # 原因创建一个小列表
+                reason_num = [reason["appraisal"], float("%.2f" % (reason["quantity"]/reason_nums_total*100))]
+                reason_num_q = [reason["appraisal"], int(reason["quantity"])]
+                # 归属到原因的大列表中。
+                reason_good_data.append(reason_num)
+                reason_good_data_q.append(reason_num_q)
+            reason_good["data"] = reason_good_data
+            reason_good_q["data"] = reason_good_data_q
+            reason_goods_total.append(reason_good)
+            reason_goods_total_q.append(reason_good_q)
+
+        # 把型号占比下钻图数据占比整合到total字典。
+        m_total["goods_type_total"] = goods_type_total
+        m_total["reason_goods_total"] = reason_goods_total
+        # 把型号占比下钻图绝对数据整合到total字典。
+        m_total["goods_type_total_q"] = goods_type_total_q
+        m_total["reason_goods_total_q"] = reason_goods_total_q
+
+        # 二次维修率数据
+        _pre_repeat_num = repeat_quantity.values("finish_time", "order_count", "thirty_day_count",
+                                                 "repeat_count").order_by("finish_time")
+        repeat_date = []
+        order_day_q = []
+        order_thirtyday_q = []
+        repeat_day_q = []
+        repeat_ratio = []
+        for repeat_data in _pre_repeat_num:
+            repeat_date.append(repeat_data["finish_time"].strftime("%Y-%m-%d"))
+            order_day_q.append(int(repeat_data["order_count"]))
+            order_thirtyday_q.append(int(repeat_data["thirty_day_count"]))
+            repeat_day_q.append(int(repeat_data["repeat_count"]))
+            repeat_ratio.append(float("%.2f"%(repeat_data["repeat_count"]/repeat_data["thirty_day_count"]*100)))
+        m_total["repeat_date"] = repeat_date
+        m_total["order_day_q"] = order_day_q
+        m_total["order_thirtyday_q"] = order_thirtyday_q
+        m_total["repeat_day_q"] = repeat_day_q
+        m_total["repeat_ratio"] = repeat_ratio
+
+        # 二次维修责任部门下钻图
+        # 二次维修型号下钻图。
+        responbility_departs = maintenance_quantity.filter(repeat_tag__in=[1, 2, 3, 4]).values("repeat_tag").annotate(
+            quantity=Count("maintenance_order_id")).values("repeat_tag", "quantity")
+        responbility_goods = maintenance_quantity.filter(repeat_tag__in=[1, 2, 3, 4]).values("goods_type").annotate(
+            quantity=Count("maintenance_order_id")).values("goods_type", "quantity").order_by("-quantity")
+        _pre_department = {
+            "1": "未处理",
+            "2": "产品",
+            "3": "维修",
+            "4": "客服"
+        }
+        responbility_depart_total = []
+        responbility_goods_total = []
+        repeat_goods_total = []
+        repeat_goods_reason_total = []
+        for respon_depart in responbility_departs:
+            responbility_depart_title = {
+                "name": _pre_department[respon_depart["repeat_tag"]],
+                "y": int(respon_depart["quantity"]),
+                "drilldown": _pre_department[respon_depart["repeat_tag"]]
+            }
+            responbility_depart_total.append(responbility_depart_title)
+
+            respon_goods = {
+                "name": _pre_department[respon_depart["repeat_tag"]],
+                "id": _pre_department[respon_depart["repeat_tag"]],
+            }
+            respon_goods_data = []
+            respon_goods_num = maintenance_quantity.filter(repeat_tag=respon_depart["repeat_tag"]).values(
+                "goods_type").annotate(quantity=Count("maintenance_order_id")).values("goods_type",
+                                                                                      "quantity").order_by("-quantity")
+            for respon_good in respon_goods_num:
+                respon_good_data = [respon_good["goods_type"], int(respon_good["quantity"])]
+                respon_goods_data.append(respon_good_data)
+            respon_goods["data"] = respon_goods_data
+            repeat_goods_total.append(respon_goods)
+        # 把二次维修的下钻图加入到大字典中
+        m_total["responbility_depart_total"] = responbility_depart_total
+        m_total["repeat_goods_total"] = repeat_goods_total
+
+        for responbility_good in responbility_goods:
+            responbility_good_title = {
+                "name": responbility_good["goods_type"],
+                "y": int(responbility_good["quantity"]),
+                "drilldown": responbility_good["goods_type"]
+            }
+            responbility_goods_total.append(responbility_good_title)
+            respon_reasons = {
+                "name": responbility_good["goods_type"],
+                "id": responbility_good["goods_type"],
+            }
+            respon_reasons_data = []
+            respon_reasons_num = maintenance_quantity.exclude(repeat_tag=0).filter(
+                goods_type=responbility_good["goods_type"]).values("appraisal").annotate(
+                quantity=Count("maintenance_order_id")).values("appraisal", "quantity")
+            for respon_reason in respon_reasons_num:
+                respon_reason_data = [respon_reason["appraisal"], int(respon_reason["quantity"])]
+                respon_reasons_data.append(respon_reason_data)
+            respon_reasons["data"] = respon_reasons_data
+            repeat_goods_reason_total.append(respon_reasons)
+        # 把二次维修的下钻绝对数加入到大字典中，中央维修的图表就基本做完了
+        m_total["responbility_goods_total"] = responbility_goods_total
+        m_total["repeat_goods_reason_total"] = repeat_goods_reason_total
 
         return render(request, "crm/maintenance/overview.html", {
             "m_total": m_total,
@@ -396,14 +565,17 @@ class MaintenanceOverview(View):
 class MaintenanceHandlinglist(View):
     QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
                    "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
-                   "create_time"]
+                   "create_time", "id"]
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         order_tag = request.GET.get("order_tag", "1")
         search_keywords = request.GET.get("search_keywords", None)
         num = request.GET.get("num", 10)
         num = int(num)
         download_tag = request.GET.get("download_tag", None)
+        start_time = request.GET.get("start_time", None)
+        end_time = request.GET.get("end_time", None)
+
 
         if num > 50:
             num = 50
@@ -412,12 +584,17 @@ class MaintenanceHandlinglist(View):
             all_orders = MaintenanceHandlingInfo.objects.filter(
                 Q(maintenance_order_id=search_keywords) | Q(sender_mobile=search_keywords)
             )
+        elif start_time and end_time:
+            all_orders = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_time,
+                                                                finish_time__lte=end_time).order_by("-finish_time")
+
         else:
-            if order_tag == "0":
-                all_orders = MaintenanceHandlingInfo.objects.filter(handling_status=str(0)).values(
-                    *self.__class__.QUERY_FIELD).all().order_by("-")
+            if order_tag == "9":
+                all_orders = MaintenanceHandlingInfo.objects.filter(repeat_tag__in=[1, 2, 3, 4]).values(
+                    *self.__class__.QUERY_FIELD).all().order_by("-finish_time")
             else:
-                all_orders = MaintenanceHandlingInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('maintenance_order_id')
+                all_orders = MaintenanceHandlingInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by(
+                    'maintenance_order_id')
 
         try:
             page = request.GET.get('page', 1)
@@ -451,7 +628,9 @@ class MaintenanceHandlinglist(View):
             "all_orders": order,
             "index_tag": "crm_maintenance_orders",
             "num": str(num),
-            "order_tag": str(order_tag)
+            "order_tag": str(order_tag),
+            "start_time": start_time,
+            "end_time": end_time,
         })
 
 
@@ -462,7 +641,8 @@ class MaintenanceToWork(View):
 
     def post(self, request):
         # 定义递交工作台订单的报告字典，以及整体的数据的报告字典
-        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "repeat_num": 0, "error": []}
+        report_dic_towork = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "repeat_num": 0,
+                             "error": []}
         command_id = request.POST.get("towork", None)
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
 
@@ -586,7 +766,8 @@ class MaintenanceSignRepeat(View):
 
         if command_id == '1':
             # 按照未处理的标记，查询出表单对未处理订单。对订单的时间进行处理。
-            days_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate(machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
+            days_range = MaintenanceHandlingInfo.objects.values("finish_date").filter(handling_status=0).annotate(
+                machine_num=Count("finish_date")).values("finish_date", "machine_num").order_by("finish_date")
             if days_range:
                 days = []
                 for day in days_range:
@@ -601,7 +782,8 @@ class MaintenanceSignRepeat(View):
                     current_date = current_date - datetime.timedelta(days=1)
                     _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
                     # 查询近三十天到所有sn码，准备进行匹配查询。
-                    maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
+                    maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(
+                        finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
 
                     total_num = maintenance_msn.count()
                     # 创建sn码列表，汇总所有近三十天的sn码加入到列表中，
@@ -700,14 +882,71 @@ class MaintenanceSignRepeat(View):
             })
 
 
-
-
-
-
-
 class MaintenanceWorkList(View):
-    def get(self, request):
+    QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
+                   "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
+                   "create_time", "id"]
 
-        return render(request, 'crm/maintenance/repeatlist.html', {
+    def get(self, request: object) -> object:
+        num = request.GET.get("num", 10)
+        num = int(num)
+        download_tag = request.GET.get("download_tag", None)
+
+        if num > 50:
+            num = 50
+        # 提取所有未处理的二次维修记录的订单的机器sn。
+        orders_repeat = MaintenanceHandlingInfo.objects.filter(repeat_tag=str(1)).values("machine_sn")
+
+        # 取出未处理的二次维修记录的机器sn。
+        sns_repeat = []
+        for sn in orders_repeat:
+            sns_repeat.append(sn['machine_sn'])
+
+        # 根据机器sn，对二次维修的订单的相关订单进行提取。
+        all_orders = MaintenanceHandlingInfo.objects.filter(machine_sn__in=sns_repeat).values(
+            *self.__class__.QUERY_FIELD).all().order_by("machine_sn")
+        try:
+            page = request.GET.get('page', 1)
+        except PageNotAnInteger:
+            page = 1
+
+        p = Paginator(all_orders, num, request=request)
+        order = p.page(page)
+
+        if download_tag:
+
+            # 导出文件取名
+            now = datetime.datetime.now()
+            now = str(now)
+            name = now.replace(':', '')
+
+            response = HttpResponse(content_type="text/csv")
+            response["Content-Disposition"] = 'attachment; filename="{}.csv"'.format(name)
+
+            response.write(codecs.BOM_UTF8)
+            writer = csv.writer(response)
+            writer.writerow(['保修单号', '店铺', '结束语', '完成时间', '网名', '寄件人电话', '货品型号', '货品名称',
+                             '是否在保', '重复维修标记', '机器SN'])
+            for order in all_orders:
+                writer.writerow([order['maintenance_order_id'], order['shop'], order['appraisal'], order['finish_time'],
+                                 order['buyer_nick'], order['sender_mobile'], order['goods_type'], order['goods_name'],
+                                 order['is_guarantee'], order['repeat_tag'], order['machine_sn']])
+            return response
+
+        return render(request, "crm/maintenance/repeatlist.html", {
+            "all_orders": order,
             "index_tag": "crm_maintenance_orders",
+            "num": str(num),
         })
+
+    def post(self, request):
+        order_id = request.POST.get('id')
+        department = request.POST.get("department")
+        try:
+            service_order = MaintenanceHandlingInfo.objects.get(id=int(order_id))
+        except MaintenanceHandlingInfo.DoesNotExist:
+            return HttpResponse('{"status": "fail"}', content_type='application/json')
+
+        service_order.repeat_tag = department
+        service_order.save()
+        return HttpResponse('{"status": "success"}', content_type='application/json')

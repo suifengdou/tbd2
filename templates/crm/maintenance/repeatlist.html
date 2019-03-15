@@ -37,7 +37,7 @@
     <div class="page-header card">
         <div class="card-block">
             <h5 class="m-b-10">CRM</h5>
-            <p class="text-muted m-b-10">lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+            <p class="text-muted m-b-10">客户关系管理系统</p>
             <ul class="breadcrumb-title b-t-default p-t-10">
                 <li class="breadcrumb-item">
                     <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
@@ -95,50 +95,28 @@
                     <div class="row">
                         <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
-                        <a href="?order_tag=1&num={{ num }}" id="total"
-                           class="btn btn-primary btn-round">全部服务单</a>
+                        <a href="{% url 'crm_maintenance:handlinglist' %}" id="total"
+                           class="btn btn-primary btn-round">返回服务单明细</a>
                         <span>&nbsp;&nbsp;&nbsp;</span>
-                        <a href="?order_tag=0&num={{ num }}" id="pending"
-                           class="btn btn-primary btn-round">未审核服务单</a>
+                        <a href="{% url 'crm_maintenance:handlinglist' %}?order_tag=9&num={{ num }}" id="pending"
+                           class="btn btn-primary btn-round">查询二次维修单</a>
 
                         <span>&nbsp;&nbsp;&nbsp;</span>
 
-
-                        <form class="form-search pull-right" method="GET" action="">
-                            <input name="search_keywords" class="input-medium search-query" type="text"
-                                   placeholder="订单号/快递单号/服务单号">
-                            <button type="submit" class="btn btn-success btn-square" contenteditable="true">查找
-                            </button>
-                        </form>
 
                         <span>&nbsp;&nbsp;&nbsp;</span>
 
 
                         <!-- datepicker sign start -->
 
-                        <form class="form-search pull-right" method="GET"
-                              action="{% url 'crm_maintenance:list' %}?order_tag={{ order_tag }}&num={{ num }}">
-                            <div class="c-datepicker-date-editor J-datepicker-range-betweenMonth mt10">
-                                <i class="c-datepicker-range__icon kxiconfont icon-clock"></i>
-                                <input placeholder="开始日期" name="start_time" class="c-datepicker-data-input" value="">
-                                <span class="c-datepicker-range-separator">-</span>
-                                <input placeholder="结束日期" name="end_time" class="c-datepicker-data-input" value="">
-                            </div>
-                            <span>&nbsp;</span>
-                            <button type="submit" class="btn btn-info btn-round right" contenteditable="true">提交
-                            </button>
-                        </form>
-
                         <span>&nbsp;&nbsp;&nbsp;</span>
 
-                        <a href="?order_tag={{ order_tag }}&num={{ num }}&download_tag=1" id="pending"
+                        <a href="?num={{ num }}&download_tag=1" id="pending"
                            class="btn btn-primary btn-square">下载订单</a>
                         {% if download_error %}<a>{{ download_error }}</a>{% endif %}
                         <span>&nbsp;&nbsp;&nbsp;</span>
-                        <form class="form-search pull-right" method="GET" action="{% url 'ass_ref_jdfbp:refundlist' %}">
+                        <form class="form-search pull-right" method="GET" action="{% url 'crm_maintenance:worklist' %}">
                             <input name="num" class="input-medium search-query" type="text" placeholder="分页数量">
-                            <input name="order_tag" class="input-medium search-query" type="text" style="display:none"
-                                   value="{{ order_tag }}">
                             <button type="submit" class="btn btn-success btn-square" contenteditable="true">提交</button>
                         </form>
 
@@ -153,37 +131,34 @@
                     <thead>
                     <tr class="table-primary">
 
-                        <th>操作状态</th>
+                        <th id="check-task">操作状态</th>
                         <th>维修单号</th>
                         <th>保修结束语</th>
+                        <th>机器型号</th>
+                        <th>审核</th>
                         <th>机器SN</th>
                         <th>完成时间</th>
-                        <th>完成时间</th>
-                        <th>完成时间</th>
                         <th>寄件客户手机</th>
-                        <th>重复维修标记</th>
-                        <th>重复维修标记</th>
+                        <th>是否重复维修</th>
                         <th>是否在保</th>
-                        <th>重复维修标记</th>
+                        <th>创建人</th>
+                        <th>创建时间</th>
 
                     </tr>
                     </thead>
                     <tbody>
                     {% for order in all_orders.object_list %}
-                        <tr>
-
+                        <tr {% if order.repeat_tag == '1' %}{% else %}class="bg-info"{% endif %}>
 
                             <!-- 单据状态开始 -->
-                            {% if order.handling_status == '0' %}
-                                <th scope="row">未处理</th>
+                            {% if order.repeat_tag == '1' %}
+                                <td class="check-task" data-id="1" scope="row">未处理</td>
                             {% else %}
-                                <th scope="row">已处理</th>
+                                <td class="check-task" data-id="0" scope="row">已处理</td>
                             {% endif %}
                             <!-- 单据状态结束 -->
-
-
                             <td>
-                                <label class="check-task">
+                                <label >
                                     <span class="task-title-sp">{{ order.maintenance_order_id }}</span>
                                 </label>
                             </td>
@@ -191,18 +166,36 @@
                             <td><span
                                     style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.appraisal }}</span>
                             </td>
-                            <td>{{ order.machine_sn }}</td>
+
+                            <td>{{ order.goods_type }}</td>
                             <!-- 操作按钮开始 -->
-                            {% if order.handling_status == '0' %}
-                                <td><a class="audit btn btn-primary" data-id="{{ order.id }}">审核</a></td>
+                            {% if order.repeat_tag == '1' %}
+                                <td>
+                                    <span style="align: center">
+                                        <a class="audit btn btn-primary" data-id="{{ order.id }}" duty-depart="2">产品</a>
+                                    <a class="audit btn btn-primary" data-id="{{ order.id }}" duty-depart="3">维修</a>
+                                    <a class="audit btn btn-primary" data-id="{{ order.id }}" duty-depart="4">客服</a>
+                                    </span>
+
+                                </td>
                             {% else %}
-                                <td>已处理</td>
+                                <td >已处理</td>
                             {% endif %}
                             <!-- 操作按钮结束 -->
+
+                            <td>{{ order.machine_sn }}</td>
                             <td>{{ order.finish_time|date:"Y-m-d H:i:s" }}</td>
                             <td>{{ order.sender_mobile }}</td>
-                            <td>{{ order.repeat_tag }}</td>
-                            <td>{{ order.goods_type }}</td>
+
+                            <!-- 判断二次维修开始 -->
+                            {% if order.repeat_tag == '1' %}
+                                <td scope="row">是</td>
+                            {% else %}
+                                <td scope="row">否</td>
+                            {% endif %}
+                            <!-- 判断二次维修结束 -->
+
+                            <td>{{ order.is_guarantee }}</td>
                             <td>{{ order.creator }}</td>
                             <td>{{ order.create_time|date:"Y-m-d H:i:s" }}</td>
 
@@ -294,177 +287,15 @@
     <script src="{% static 'bower_components/datepicker/js/datepicker.all.min.js' %}"></script>
 
 
-    <script>
-
-
-        $(function () {
-            var DATAPICKERAPI = {
-                // 默认input显示当前月,自己获取后填充
-                activeMonthRange: function () {
-                    return {
-                        begin: moment().set({
-                            'date': 1,
-                            'hour': 0,
-                            'minute': 0,
-                            'second': 0
-                        }).format('YYYY-MM-DD HH:mm:ss'),
-                        end: moment().set({'hour': 23, 'minute': 59, 'second': 59}).format('YYYY-MM-DD HH:mm:ss')
-                    }
-                },
-                shortcutMonth: function () {
-                    // 当月
-                    var nowDay = moment().get('date');
-                    var prevMonthFirstDay = moment().subtract(1, 'months').set({'date': 1});
-                    var prevMonthDay = moment().diff(prevMonthFirstDay, 'days');
-                    return {
-                        now: '-' + nowDay + ',0',
-                        prev: '-' + prevMonthDay + ',-' + nowDay
-                    }
-                },
-                // 注意为函数：快捷选项option:只能同一个月份内的
-                rangeMonthShortcutOption1: function () {
-                    var result = DATAPICKERAPI.shortcutMonth();
-                    return [{
-                        name: '昨天',
-                        day: '-1,-1',
-                        time: '00:00:00,23:59:59'
-                    }, {
-                        name: '这一月',
-                        day: result.now,
-                        time: '00:00:00,'
-                    }, {
-                        name: '上一月',
-                        day: result.prev,
-                        time: '00:00:00,23:59:59'
-                    }];
-                },
-                // 快捷选项option
-                rangeShortcutOption1: [{
-                    name: '最近一周',
-                    day: '-7,0'
-                }, {
-                    name: '最近一个月',
-                    day: '-30,0'
-                }, {
-                    name: '最近三个月',
-                    day: '-90, 0'
-                }],
-                singleShortcutOptions1: [{
-                    name: '今天',
-                    day: '0'
-                }, {
-                    name: '昨天',
-                    day: '-1',
-                    time: '00:00:00'
-                }, {
-                    name: '一周前',
-                    day: '-7'
-                }]
-            };
-
-            //年月日单个
-            $('.J-datepicker-day').datePicker({
-                hasShortcut: true,
-                format: 'YYYY-MM-DD',
-                shortcutOptions: [{
-                    name: '今天',
-                    day: '0'
-                }, {
-                    name: '昨天',
-                    day: '-1'
-                }, {
-                    name: '一周前',
-                    day: '-7'
-                }]
-            });
-
-            //年月日范围
-            $('.J-datepicker-range-day').datePicker({
-                hasShortcut: true,
-                format: 'YYYY-MM-DD',
-                isRange: true,
-                shortcutOptions: DATAPICKERAPI.rangeShortcutOption1
-            });
-
-            //十分年月日单个
-            $('.J-datepickerTime-single').datePicker({
-                format: 'YYYY-MM-DD HH:mm'
-            });
-
-            //十分年月日范围
-            $('.J-datepickerTime-range').datePicker({
-                format: 'YYYY-MM-DD HH:mm',
-                isRange: true
-            });
-
-            //时分秒年月日范围，包含最大最小值
-            $('.J-datepicker-range').datePicker({
-                hasShortcut: true,
-                min: '2018-01-01 06:00:00',
-                max: '2019-04-29 20:59:59',
-                isRange: true,
-                shortcutOptions: [{
-                    name: '昨天',
-                    day: '-1,-1',
-                    time: '00:00:00,23:59:59'
-                }, {
-                    name: '最近一周',
-                    day: '-7,0',
-                    time: '00:00:00,'
-                }, {
-                    name: '最近一个月',
-                    day: '-30,0',
-                    time: '00:00:00,'
-                }, {
-                    name: '最近三个月',
-                    day: '-90, 0',
-                    time: '00:00:00,'
-                }],
-                hide: function () {
-                    console.info(this.$input.eq(0).val(), this.$input.eq(1).val())
-                }
-            });
-            //时分秒年月日范围，限制只能选择同一月，比如2018-10-01到2018-10-30
-            $('.J-datepicker-range-betweenMonth').datePicker({
-                isRange: true,
-                between: 'month',
-                hasShortcut: true,
-                shortcutOptions: DATAPICKERAPI.rangeMonthShortcutOption1()
-            });
-
-            //时分秒年月日范围，限制开始结束相隔天数小于30天
-            $('.J-datepicker-range-between30').datePicker({
-                isRange: true,
-                between: 30
-            });
-
-            //年月单个
-            $('.J-yearMonthPicker-single').datePicker({
-                format: 'YYYY-MM',
-                min: '2018-01',
-                max: '2019-04'
-            });
-
-            //选择年
-            $('.J-yearPicker-single').datePicker({
-                format: 'YYYY',
-                min: '2018',
-                max: '2020'
-            });
-
-
-        });
-
-    </script>
 
     <script type="text/javascript">
 
-        function audit_order(current_elem, id) {
+        function audit_order(current_elem, id, department) {
             $.ajax({
                 cache: false,
                 type: "POST",
-                url: "{% url "ext_exp_sf:operate" %}",
-                data: {"id": id},
+                url: "{% url "crm_maintenance:worklist" %}",
+                data: {"id": id, "department": department},
                 async: true,
                 beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
@@ -474,30 +305,23 @@
                         location.href = "/users/login"
                     }
                     else if (data.status == "success") {
-                        current_elem.text("已处理")
+
+                        current_elem.parent().text("已处理");
+
                     }
                 }
-
             });
 
         };
 
         $(".audit").on("click", function () {
             var id = $(this).attr("data-id");
+            var department = $(this).attr("duty-depart");
 
-            audit_order($(this), id);
+            audit_order($(this), id, department);
         });
 
-        $(".check-task").dblclick(function () {
 
-            if ($(this).parent().hasClass("done-task")) {
-                $(this).parent().removeClass("done-task");
-            } else {
-                $(this).parent().addClass("done-task");
-                $(this).parent().parent().addClass("bg-info");
-            }
-
-        })
     </script>
 
 

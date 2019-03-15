@@ -30,7 +30,7 @@ class RefundList(View):
     QUERY_FIELD = ["service_order_id", "order_id", "goods_name", "order_status",
                    "express_id", "express_company", "handlingstatus", "create_time", "id"]
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         order_tag = request.GET.get("order_tag", '1')
         search_keywords = request.GET.get("search_keywords", None)
         num = request.GET.get("num", 10)
@@ -105,7 +105,7 @@ class OperateOrder(View):
 
 
 class RefundOverView(View):
-    def get(self, request):
+    def get(self, request: object) -> object:
         finished_count = RefundResource.objects.filter(handlingstatus=1).count()
         pending_count = RefundResource.objects.filter(handlingstatus=0).count()
 
@@ -132,7 +132,7 @@ class RefundUpLoad(View):
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
 
-    def get(self, request):
+    def get(self, request: object) -> object:
 
         return render(request, "assis/refund_jdfbp/refundupload.html", {
             "index_tag": "ass_jdfbp_service",

@@ -31,7 +31,7 @@
         <div class="page-header card">
             <div class="card-block">
                 <h5 class="m-b-10">CRM</h5>
-                <p class="text-muted m-b-10">客户关系管理</p>
+                <p class="text-muted m-b-10">客户关系管理系统</p>
                 <ul class="breadcrumb-title b-t-default p-t-10">
                     <li class="breadcrumb-item">
                         <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
@@ -91,7 +91,7 @@
         <div class="card">
             <div class="card-header">
                 <h5>递交维修单到工作台</h5>
-                <span>导入的维修单需要递交工作台才能处理</span>
+                <span>导入的维修单需要先递交服务单明细，才能开始标记二次维修</span>
             </div>
             <div class="card-block">
                 <form id="toworkstation" method="post" action="{% url 'crm_maintenance:towork' %}"
@@ -128,12 +128,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">有单子必须先干掉未递交</span>
+                                <span style="font-size: x-large">递交之后才能计算</span>
                             </div>
                             <div class="card-block">
                                 <h6></h6>
                                 <input type="text" name="towork" value="1" style="display:none">
-                                <button type="submit" class="btn btn-out btn-primary btn-square">点我干他</button>
+                                <button type="submit" class="btn btn-out btn-primary btn-square">点我递交</button>
                             </div>
 
                         </div>
@@ -358,7 +358,7 @@
         <div class="card">
             <div class="card-header">
                 <h5>标记二次维修</h5>
-                <span>导入的维修单需要先递交工作台才能处理</span>
+                <span>导入的维修单需要递交工作台才能处理</span>
             </div>
             <div class="card-block">
                 <form id="signrepeat" name="signrepeat" method="post" action="{% url 'crm_maintenance:signrepeat' %}"
@@ -369,11 +369,11 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">特别提示</span>
+                                <span style="font-size: x-large">已经标记完成的维修单</span>
                             </div>
                             <div class="card bg-c-green order-card">
                                 <div class="card-block">
-                                    <h6>已处理维修单数</h6>
+                                    <h6></h6>
                                     <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.repeat_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
@@ -382,11 +382,11 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">特别提示</span>
+                                <span style="font-size: x-large">赶快标记维修单数量</span>
                             </div>
                             <div class="card bg-c-pink order-card">
                                 <div class="card-block">
-                                    <h6>未处理维修单数</h6>
+                                    <h6></h6>
                                     <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.unresolved_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
@@ -395,12 +395,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">特别提示</span>
+                                <span style="font-size: x-large">只有标记了才会有图表</span>
                             </div>
                             <div class="card-block">
-                                <h6>开始计算二次维修</h6>
+                                <h6> </h6>
                                 <input type="text" name="signrepeat" value="1" style="display:none">
-                                <button type="submit" class="btn btn-out btn-primary btn-square">提交</button>
+                                <button type="submit" class="btn btn-out btn-primary btn-square">点我标记</button>
                             </div>
 
                         </div>

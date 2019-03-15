@@ -32,7 +32,7 @@ class ConsignationList(View):
     QUERY_FIELD = ["application_time", "consignor", "information", "remark",\
                    "feedback_time", "express_id", "is_operate", "handlingstatus", "create_time", "id", "creator"]
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         order_tag = request.GET.get("order_tag", '1')
         search_keywords = request.GET.get("search_keywords", None)
         num = request.GET.get("num", 10)
@@ -104,7 +104,7 @@ class OperateOrder(View):
 
 
 class ConsignationOverView(View):
-    def get(self, request):
+    def get(self, request: object) -> object:
         finished_count = SFConsignation.objects.filter(handlingstatus=1).count()
         pending_count = SFConsignation.objects.filter(handlingstatus=0).count()
 
@@ -121,7 +121,7 @@ class ConsignationUpLoad(View):
                        '是否操作': 'is_operate', '反馈日期': 'feedback_time', '单号': 'express_id',}
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         return render(request, "external/sf_consignation/consignationupload.html", {
             "index_tag": "ext_sf_consignation",
         })

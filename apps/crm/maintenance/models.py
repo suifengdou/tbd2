@@ -196,7 +196,7 @@ class MaintenanceHandlingInfo(BaseModel):
 
 
 class MaintenanceSummary(BaseModel):
-    finish_date = models.DateTimeField(verbose_name='保修完成日期')
+    finish_time = models.DateTimeField(verbose_name='保修完成日期')
     order_count = models.IntegerField(default=0, verbose_name='完成保修数量')
     thirty_day_count = models.IntegerField(default=0, verbose_name='近三十天维修量')
     repeat_count = models.IntegerField(default=0, verbose_name='30天二次维修量')

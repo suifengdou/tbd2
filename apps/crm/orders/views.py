@@ -30,7 +30,7 @@ class OrderList(View):
     QUERY_FIELD = ["shop", "order_time", "receiver_name", "receiver_address", "receiver_mobile",
                    "payment", "goods_id", "goods_name", "real_quantity", "allocated_total_fee"]
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         order_tag = request.GET.get("order_tag", '1')
         search_keywords = request.GET.get("search_keywords", None)
         num = request.GET.get("num", 10)
@@ -162,7 +162,7 @@ class OrderUpload(View):
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
-    def get(self, request):
+    def get(self, request: object) -> object:
 
         return render(request, "crm/orders/upload.html", {
             "index_tag": "crm_orders",
@@ -348,7 +348,7 @@ class OrderOperate(View):
 class OrderOverview(View):
     tocustomers_num_obj = ToCustomerNum()
 
-    def get(self, request):
+    def get(self, request: object) -> object:
 
         return render(request, 'crm/orders/overview.html', {
             "tocustomers_num_obj": self.__class__.tocustomers_num_obj,
@@ -361,7 +361,7 @@ class OrderToCustomer(View):
 
     tocustomers_num_obj = ToCustomerNum()
 
-    def get(self, request):
+    def get(self, request: object) -> object:
         pending_num = OrderInfo.objects.filter(tocustomer_status=str(0)).count()
         return render(request, 'crm/orders/overview-tc.html', {
             "index_tag": "crm_orders",
@@ -598,7 +598,7 @@ class OrderToCustomer(View):
 
 
 class OrderToTendency(View):
-    def get(self, request):
+    def get(self, request: object) -> object:
         pass
 
     def post(self, request):

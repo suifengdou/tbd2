@@ -62,14 +62,14 @@ class IndexView(View):
     """
     TBD首页
     """
-    def get(self, request):
+    def get(self, request: object) -> object:
 
         return render(request, "index.html", {})
 
 
 
 class LoginView(View):
-    def get(self, request):
+    def get(self, request: object) -> object:
         return render(request, "auth/auth-sign-in-social.html", {})
 
     def post(self, request):
@@ -92,7 +92,7 @@ class LoginView(View):
 
 
 class LogoutView(View):
-    def get(self, request):
+    def get(self, request: object) -> object:
         logout(request)
         from django.urls import reverse
         return HttpResponseRedirect(reverse("index"))
@@ -102,7 +102,7 @@ class UserInfoView(View):
     """
     客户信息中心
     """
-    def get(self, request):
+    def get(self, request: object) -> object:
         return render(request, "auth/user-profile.html", {})
 
     def post(self, request):
