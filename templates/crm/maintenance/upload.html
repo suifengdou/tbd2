@@ -568,7 +568,7 @@
             <div class="card-block">
                 <form id="main" method="post" action="{% url 'crm_maintenance:upload' %}" enctype='multipart/form-data'
                       novalidate="">
-                    {% csrf_token %}
+
                     <div class="form-group row">
                         <label class="col-sm-2 col-form-label">选择导入的文件</label>
                         <label class="col-sm-10"></label>
@@ -588,6 +588,7 @@
                             <button type="submit" class="btn btn-primary m-b-0">提交</button>
                         </div>
                     </div>
+                    {% csrf_token %}
                 </form>
             </div>
         </div>

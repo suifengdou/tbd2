@@ -4,7 +4,7 @@
 # @Site    :
 # @Software: PyCharm
 # Create your views here.
-import csv, datetime, codecs, re
+import csv, datetime, codecs, re, time
 
 
 from django.shortcuts import render, redirect
@@ -356,38 +356,79 @@ class MaintenanceUpload(View):
 
 
 class MaintenanceOverview(View):
+
+    # 验证起始时间和截止时间
+    def is_valid_datetime(self, start_time, end_time):
+        try:
+            if ":" in start_time:
+                time.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+            if ":" in end_time:
+                time.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+            return True
+        except:
+            return False
+
+    # 确认起始时间和截止时间
+    def confirm_time(self, confirm_data):
+        # 如果不是快捷选择，就是自定义选择。
+        if confirm_data["week_num"] is None:
+            # 对于自定义选择，获取起始时间和截止时间，进行格式验证和逻辑验证
+            start_time = confirm_data["start_time"]
+            end_time = confirm_data["end_time"]
+            # 验证一下时间格式，如果成功。
+            if self.is_valid_datetime(start_time, end_time):
+                start_time = datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+                end_time = datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+                d_value = end_time - start_time
+                # 计算一下时间间隔，是否是两个月内。如果超出或者选择错误。
+                if d_value.days in range(1, 61):
+                    confirm_data["start_time"] = start_time.strftime("%Y-%m-%d %H:%M:%S")
+                    confirm_data["end_time"] = end_time.strftime("%Y-%m-%d %H:%M:%S")
+                    confirm_data["tag_date"] = 0
+                    return confirm_data
+                else:
+                    # 验证不符合规则，直接设置最近一周的快捷方式。
+                    confirm_data["week_num"] = 1
+                    confirm_data["error"] = "自定义的时间不能超过60天，或是负数，自动转换最近一周"
+
+            else:
+                # 验证不符合规则，直接设置最近一周的快捷方式。
+                confirm_data["week_num"] = 1
+                confirm_data["error"] = "自定义的时间格式错误，自动转换为最近一周"
+        # 直接按照快捷选择的周数进行实践确认。
+        confirm_data["tag_date"] = confirm_data["week_num"]
+        confirm_data["end_time"] = datetime.datetime.now().date().strftime("%Y-%m-%d %H:%M:%S")
+        confirm_data["start_time"] = (datetime.datetime.now().date() - datetime.timedelta(weeks=int(confirm_data["week_num"]))).strftime("%Y-%m-%d %H:%M:%S")
+        return confirm_data
+
     def get(self, request):
         m_total = {}
-        weeks_num = request.GET.get("weeks_num", None)
-        if weeks_num is None:
-            start_time = request.GET.get("start_time", None)
-            end_time = request.GET.get("end_time", None)
-            if start_time:
-                try:
-                    if ":" in start_time:
-                        start_time = time.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-                        time.strptime(end_time, "%Y-%m-%d %H:%M:%S")
-                except:
-                    weeks_num = 1
-                    m_total["time_error"] = "时间选择错误"
+        confirm_data = {
+            "week_num": request.GET.get("weeks_num", None),
+            "start_time": request.GET.get("start_time", None),
+            "end_time": request.GET.get("end_time", None)
+        }
+        confirm_data["start_time"] = confirm_data["start_time"].replace("T", " ") + ":00"
+        confirm_data["end_time"] = confirm_data["end_time"].replace("T", " ") + ":00"
+        confirm_data = self.confirm_time(confirm_data)
+        m_total["confirm_data"] = confirm_data
 
-
-
-        # 确定当前天，判断是否是以当前时间为基准。
-        today = datetime.datetime.now().date()
-        # 确定当前时间间隔（直接前端取值）
-        week_delta = datetime.datetime.now().date() - datetime.timedelta(weeks=3)
 
         # 数据库进行查询块，决定数据范围和数据内容。
         # 首先查询handling表格的数据
-        maintenance_quantity = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=week_delta,
-                                                                            finish_time__lte=today)
+        maintenance_quantity = MaintenanceHandlingInfo.objects.all().filter(
+            finish_time__gte=datetime.datetime.strptime(confirm_data["start_time"], "%Y-%m-%d %H:%M:%S"),
+            finish_time__lte=datetime.datetime.strptime(confirm_data["end_time"], "%Y-%m-%d %H:%M:%S"))
         # 然后查询二次维修量的表格
-        repeat_quantity = MaintenanceSummary.objects.all().filter(finish_time__gte=week_delta,
-                                                                            finish_time__lte=today)
+        repeat_quantity = MaintenanceSummary.objects.all().filter(
+            finish_time__gte=datetime.datetime.strptime(confirm_data["start_time"], "%Y-%m-%d %H:%M:%S"),
+            finish_time__lte=datetime.datetime.strptime(confirm_data["end_time"], "%Y-%m-%d %H:%M:%S"))
         # 计算maintenance的完成时间维度的数量
-        summary_quantity = maintenance_quantity.values("finish_time").annotate(
-            quantity=Count('maintenance_order_id')).values("finish_time", "quantity").order_by("finish_time")
+        summary_quantity = maintenance_quantity.filter(
+            finish_time__gte=datetime.datetime.strptime(confirm_data["start_time"], "%Y-%m-%d %H:%M:%S"),
+            finish_time__lte=datetime.datetime.strptime(confirm_data["end_time"], "%Y-%m-%d %H:%M:%S")).values(
+            "finish_time").annotate(quantity=Count('maintenance_order_id')).values("finish_time", "quantity").order_by(
+            "finish_time")
 
         _rt_summary_quantity = {}
         for date_data in summary_quantity:
@@ -397,14 +438,11 @@ class MaintenanceOverview(View):
                 _rt_summary_quantity[date_str] = quantity
             else:
                 _rt_summary_quantity[date_str] += quantity
-        print(_rt_summary_quantity)
         rt_summary_quantity_d = []
         rt_summary_quantity_q = []
         for d, q in _rt_summary_quantity.items():
             rt_summary_quantity_d.append(d)
             rt_summary_quantity_q.append(q)
-        print(rt_summary_quantity_d)
-        print(rt_summary_quantity_q)
         # 把维修数量做到汇总字典中
         m_total["rt_summary_quantity_d"] = rt_summary_quantity_d
         m_total["rt_summary_quantity_q"] = rt_summary_quantity_q
@@ -562,6 +600,8 @@ class MaintenanceOverview(View):
         pass
 
 
+
+
 class MaintenanceHandlinglist(View):
     QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
                    "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
@@ -656,10 +696,11 @@ class MaintenanceToWork(View):
                 if repetition:
                     report_dic_towork["repeat_num"] += 1
                     try:
-                        ori_order = MaintenanceInfo.objects.get(maintenance_order_id=order["maintenance_order_id"])
-                        ori_order.towork_status = 1
-                        ori_order.save()
-                        report_dic_towork["ori_successful"] += 1
+                        ori_orders = MaintenanceInfo.objects.all().filter(maintenance_order_id=order["maintenance_order_id"], towork_status=0)
+                        for ori_order in ori_orders:
+                            ori_order.towork_status = 1
+                            ori_order.save()
+                            report_dic_towork["ori_successful"] += 1
                     except Exception as e:
                         report_dic_towork["error"].append(e)
                         report_dic_towork["ori_order_error"] += 1
@@ -706,10 +747,11 @@ class MaintenanceToWork(View):
                     handling_order.save()
                     report_dic_towork["successful"] += 1
                     try:
-                        ori_order = MaintenanceInfo.objects.get(maintenance_order_id=order["maintenance_order_id"])
-                        ori_order.towork_status = 1
-                        ori_order.save()
-                        report_dic_towork["ori_successful"] += 1
+                        ori_orders = MaintenanceInfo.objects.all().filter(maintenance_order_id=order["maintenance_order_id"], towork_status=0)
+                        for ori_order in ori_orders:
+                            ori_order.towork_status = 1
+                            ori_order.save()
+                            report_dic_towork["ori_successful"] += 1
                     except Exception as e:
                         report_dic_towork["error"].append(e)
                         report_dic_towork["ori_order_error"] += 1
@@ -778,6 +820,7 @@ class MaintenanceSignRepeat(View):
                 current_date = min_date
 
                 while current_date < max_date:
+                    repeat_dic = {"repeat_num": 0}
                     # 当前天减去一天，作为前一天，作为前三十天到基准时间。
                     current_date = current_date - datetime.timedelta(days=1)
                     _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
@@ -803,6 +846,7 @@ class MaintenanceSignRepeat(View):
                             current_order.repeat_tag = 1
                             current_order.handling_status = 1
                             report_dic_totag["tag_successful"] += 1
+                            repeat_dic["repeat_num"] += 1
                         else:
                             current_order.handling_status = 1
 
@@ -810,16 +854,16 @@ class MaintenanceSignRepeat(View):
                         report_dic_totag["successful"] += 1
 
                     # 创建二次维修率的表单对象，对当前天的数据进行保存，未来不再重复计算。
-                    verify_condition = MaintenanceSummary.objects.filter(finish_date=current_date)
+                    verify_condition = MaintenanceSummary.objects.all().filter(finish_time=current_date)
 
                     if verify_condition.exists():
                         report_dic_totag['error'].append("%s 已经计算过二次维修，重新递交了这个日期的保修单" % (current_date))
                     else:
                         current_summary = MaintenanceSummary()
-                        current_summary.finish_date = current_date
+                        current_summary.finish_time = current_date
                         current_summary.order_count = current_orders.count()
                         current_summary.thirty_day_count = total_num
-                        current_summary.repeat_count = report_dic_totag["tag_successful"]
+                        current_summary.repeat_count = repeat_dic["repeat_num"]
 
                         current_summary.save()
                     report_dic_totag["torepeatsave"] += 1
@@ -943,10 +987,10 @@ class MaintenanceWorkList(View):
         order_id = request.POST.get('id')
         department = request.POST.get("department")
         try:
-            service_order = MaintenanceHandlingInfo.objects.get(id=int(order_id))
+            service_orders = MaintenanceHandlingInfo.objects.all().filter(id=int(order_id))
         except MaintenanceHandlingInfo.DoesNotExist:
             return HttpResponse('{"status": "fail"}', content_type='application/json')
-
-        service_order.repeat_tag = department
-        service_order.save()
+        for service_order in service_orders:
+            service_order.repeat_tag = department
+            service_order.save()
         return HttpResponse('{"status": "success"}', content_type='application/json')

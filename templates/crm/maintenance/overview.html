@@ -310,11 +310,11 @@
                     </div>
                     <div class="card-block">
                         <ul class="list-group list-contacts">
-                            <li class="list-group-item active"><a href="?weeks_num=1">最近1周</a></li>
-                            <li class="list-group-item"><a href="?weeks_num=2">最近2周</a></li>
-                            <li class="list-group-item"><a href="?weeks_num=4">最近4周（近1个月）</a></li>
-                            <li class="list-group-item"><a href="?weeks_num=8">最近8周（近2个月）</a></li>
-                            <li class="list-group-item"><a href="?weeks_num=12">最近12周（近3个月）</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "1" %}active{% endif %}"><a href="?weeks_num=1">最近1周</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "2" %}active{% endif %}"><a href="?weeks_num=2">最近2周</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "4" %}active{% endif %}"><a href="?weeks_num=4">最近4周（近1个月）</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "8" %}active{% endif %}"><a href="?weeks_num=8">最近8周（近2个月）</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "12" %}active{% endif %}"><a href="?weeks_num=12">最近12周（近3个月）</a></li>
                         </ul>
                     </div>
 
@@ -323,21 +323,21 @@
 
                 <div class="card">
                     <div class="card-header contact-user">
-                        <h5 class="m-l-10">自定义时间范围</h5>
+                        <h5 class="m-l-10 ui-accordion-header-active ui-state-active">自定义时间范围</h5>
                     </div>
                     <div class="card-block">
                         <form class="form-search pull right" method="GET" action="{% url 'crm_maintenance:overview' %}">
                             {% csrf_token %}
                             <div class="row">
-                                <div class="col-md-2"></div>
-                                <div class="col-md-10">
-                                    <input name="start_time" type="datetime-local" placeholder="起始时间">
-                                    <input name="end_time" type="datetime-local" placeholder="截止时间">
+
+                                <div class="col-md-12">
+                                    <input name="start_time" type="datetime-local" placeholder="起始时间" value="{{ confirm_data.tag_date.start_time }}">
+                                    <input name="end_time" type="datetime-local" placeholder="截止时间" value="{{ confirm_data.tag_date.end_time }}">
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-7"></div>
-                                <div class="col-md-5"><button type="submit" class="btn-success">展示</button></div>
+                                <div class="col-md-3"></div>
+                                <div class="col-md-9"><button type="submit" class="btn-success">自定义时间展示</button></div>
 
                             </div>
 
@@ -430,6 +430,13 @@
                 useHTML: true
             },
             plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y} 台'
+                    }
+                },
                 column: {
                     borderWidth: 0
                 }
@@ -570,6 +577,13 @@
                 useHTML: true
             },
             plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y}'
+                    }
+                },
                 column: {
                     borderWidth: 0
                 }
@@ -631,6 +645,17 @@
                 },
                 opposite: true
             }],
+            plotOptions: {
+                series: {
+                    dataLabels: {
+                        // 开启数据标签
+                        enabled: true,
+                        format: '{point.y}'
+                    },
+                    // 关闭鼠标跟踪，对应的提示框、点击事件会失效
+                    enableMouseTracking: true
+                }
+            },
             tooltip: {
                 shared: true
             },
