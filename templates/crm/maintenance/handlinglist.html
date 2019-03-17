@@ -57,7 +57,7 @@
     <div class="tab-header card">
         <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'crm_maintenance:overview' %}">服务单概览</a>
+                <a class="nav-link" href="{% url 'crm_maintenance:overview' %}">数据中控台</a>
                 <div class="slide"></div>
             </li>
             <li class="nav-item">
@@ -96,13 +96,13 @@
                         <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 
                         <a href="?order_tag=1&num={{ num }}" id="total"
-                           class="btn btn-primary btn-round">全部服务单</a>
+                           class="btn btn-primary btn-round">全部</a>
                         <span>&nbsp;&nbsp;&nbsp;</span>
                         <a href="{% url 'crm_maintenance:worklist' %}" id="pending"
-                           class="btn btn-primary btn-round">处理二次维修服务单</a>
+                           class="btn btn-primary btn-round">处二</a>
                         <span>&nbsp;&nbsp;&nbsp;</span>
                         <a href="?order_tag=9&num={{ num }}" id="repeatlist"
-                           class="btn btn-primary btn-round">查询二次维修服务单</a>
+                           class="btn btn-primary btn-round">查二</a>
 
                         <span>&nbsp;&nbsp;&nbsp;</span>
 
@@ -128,7 +128,7 @@
                                 <input placeholder="结束日期" name="end_time" class="c-datepicker-data-input" value="{% if end_time %}{{ end_time }}{% endif %}">
                             </div>
                             <span>&nbsp;</span>
-                            <button type="submit" class="btn btn-info btn-round right" contenteditable="true">完成时间查询
+                            <button type="submit" class="btn btn-info btn-round right" contenteditable="true">查询
                             </button>
                         </form>
 

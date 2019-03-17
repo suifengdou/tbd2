@@ -139,7 +139,7 @@ class MaintenanceUpload(View):
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
-    def get(self, request: object) -> object:
+    def get(self, request):
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
         total_num = MaintenanceInfo.objects.all().count()
         pending_num = MaintenanceInfo.objects.filter(towork_status=0).count()
@@ -267,7 +267,7 @@ class MaintenanceUpload(View):
 
         # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
         elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
-            df = pd.read_csv(_file, encoding="ANSI", chunksize=300)
+            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
 
             for piece in df:
                 columns_key = piece.columns.values.tolist()
@@ -399,6 +399,8 @@ class MaintenanceOverview(View):
         confirm_data["tag_date"] = confirm_data["week_num"]
         confirm_data["end_time"] = datetime.datetime.now().date().strftime("%Y-%m-%d %H:%M:%S")
         confirm_data["start_time"] = (datetime.datetime.now().date() - datetime.timedelta(weeks=int(confirm_data["week_num"]))).strftime("%Y-%m-%d %H:%M:%S")
+        confirm_data["ori_start_time"] = confirm_data["start_time"].split(" ")[0]
+        confirm_data["ori_end_time"] = confirm_data["end_time"].split(" ")[0]
         return confirm_data
 
     def get(self, request):
@@ -408,8 +410,10 @@ class MaintenanceOverview(View):
             "start_time": request.GET.get("start_time", None),
             "end_time": request.GET.get("end_time", None)
         }
-        confirm_data["start_time"] = confirm_data["start_time"].replace("T", " ") + ":00"
-        confirm_data["end_time"] = confirm_data["end_time"].replace("T", " ") + ":00"
+        if confirm_data["start_time"]:
+            confirm_data["start_time"] = confirm_data["start_time"] + " 00:00:00"
+        if confirm_data["end_time"]:
+            confirm_data["end_time"] = confirm_data["end_time"] + " 00:00:00"
         confirm_data = self.confirm_time(confirm_data)
         m_total["confirm_data"] = confirm_data
 

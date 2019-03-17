@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import json
 
 
@@ -62,14 +64,14 @@ class IndexView(View):
     """
     TBD首页
     """
-    def get(self, request: object) -> object:
+    def get(self, request):
 
         return render(request, "index.html", {})
 
 
 
 class LoginView(View):
-    def get(self, request: object) -> object:
+    def get(self, request):
         return render(request, "auth/auth-sign-in-social.html", {})
 
     def post(self, request):
@@ -92,26 +94,26 @@ class LoginView(View):
 
 
 class LogoutView(View):
-    def get(self, request: object) -> object:
+    def get(self, request):
         logout(request)
         from django.urls import reverse
         return HttpResponseRedirect(reverse("index"))
 
 
-class UserInfoView(View):
-    """
-    客户信息中心
-    """
-    def get(self, request: object) -> object:
-        return render(request, "auth/user-profile.html", {})
-
-    def post(self, request):
-        user_info_form = UserInfoForm(request.POST, instance=request.user)
-        if user_info_form.is_valid():
-            user_info_form.save()
-            return HttpResponse('{"status": "success"}', content_type='application/json')
-        else:
-            return HttpResponse(json.dump(user_info_form.errors), content_type='application/json')
+# class UserInfoView(View):
+#     """
+#     客户信息中心
+#     """
+#     def get(self, request):
+#         return render(request, "auth/user-profile.html", {})
+#
+#     def post(self, request):
+#         user_info_form = UserInfoForm(request.POST, instance=request.user)
+#         if user_info_form.is_valid():
+#             user_info_form.save()
+#             return HttpResponse('{"status": "success"}', content_type='application/json')
+#         else:
+#             return HttpResponse(json.dump(user_info_form.errors), content_type='application/json')
 
 
 # class ForgetPwdView(View):

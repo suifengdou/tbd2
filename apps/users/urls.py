@@ -8,9 +8,9 @@
 from django.conf.urls import url
 
 
-from apps.users.views import LoginView, UserInfoView
+from apps.users.views import LoginView
 
 urlpatterns = [
     url(r'^login/$', LoginView.as_view(), name='login'),
-    url(r'^profile/$', UserInfoView.as_view(), name='profile'),
+    # url(r'^profile/$', UserInfoView.as_view(), name='profile'),
 ]
