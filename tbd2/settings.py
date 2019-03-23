@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Django settings for tbd2 project.
 
@@ -30,9 +31,10 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 # Application definition
-# AUTHENTICATION_BACKENDS = (
-#     'apps.users.views.CustomBackend',
-# )
+# 自定义authenticate方法进行登录验证
+AUTHENTICATION_BACKENDS = (
+    'apps.users.views.CustomBackend',
+)
 
 
 
@@ -125,9 +127,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-hans'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 

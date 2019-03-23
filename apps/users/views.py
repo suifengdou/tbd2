@@ -14,19 +14,24 @@ from django.core.urlresolvers import reverse
 
 
 from apps.users.forms import LoginForm
+from apps.users.models import UserProfile
 
 # from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 
 
-# class CustomBackend(ModelBackend):
-#     def authenticate(self, request, username=None, password=None, **kwargs):
-#         try:
-#             user = UserProfile.objects.get(Q(username=username) | Q(email=username))
-#             if user.check_password(password):
-#                 return user
-#         except Exception as e:
-#             return None
-# #
+# 重写后台验证
+class CustomBackend(ModelBackend):
+    # 重写authenticate，支持邮箱登录
+    def authenticate(self, request, username=None, password=None, **kwargs):
+        try:
+            # 先查一下用户。
+            user = UserProfile.objects.get(Q(username=username) | Q(email=username))
+            # 验证一下密码
+            if user.check_password(password):
+                return user
+        except Exception as e:
+            return None
+#
 #
 # class RegisterView(View):
 #     def get(self, request):
