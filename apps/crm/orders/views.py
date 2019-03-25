@@ -24,9 +24,10 @@ import pandas as pd
 from .models import OrderInfo
 from apps.crm.customers.models import CustomerInfo, CustomerTendency
 from .forms import ToCustomerNum, UploadFileForm
+from apps.utils.mixin_utils import LoginRequiredMixin
 
 
-class OrderList(View):
+class OrderList(LoginRequiredMixin, View):
     QUERY_FIELD = ["shop", "order_time", "receiver_name", "receiver_address", "receiver_mobile",
                    "payment", "goods_id", "goods_name", "real_quantity", "allocated_total_fee"]
 
@@ -100,7 +101,7 @@ class OrderList(View):
         pass
 
 
-class OrderUpload(View):
+class OrderUpload(LoginRequiredMixin, View):
     INIT_FIELDS_DIC = {
         "订单编号": "erp_order_id",
         "店铺": "shop",
@@ -341,11 +342,11 @@ class OrderUpload(View):
         return report_dic
 
 
-class OrderOperate(View):
+class OrderOperate(LoginRequiredMixin, View):
     pass
 
 
-class OrderOverview(View):
+class OrderOverview(LoginRequiredMixin, View):
     tocustomers_num_obj = ToCustomerNum()
 
     def get(self, request: object) -> object:
@@ -357,7 +358,7 @@ class OrderOverview(View):
         })
 
 
-class OrderToCustomer(View):
+class OrderToCustomer(LoginRequiredMixin, View):
 
     tocustomers_num_obj = ToCustomerNum()
 
@@ -597,8 +598,8 @@ class OrderToCustomer(View):
         return report_dic
 
 
-class OrderToTendency(View):
-    def get(self, request: object) -> object:
+class OrderToTendency(LoginRequiredMixin, View):
+    def get(self, request):
         pass
 
     def post(self, request):

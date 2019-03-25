@@ -26,9 +26,10 @@ import pandas as pd
 
 from .models import SFConsignation
 from .forms import UploadFileForm
+from apps.utils.mixin_utils import LoginRequiredMixin
 
 
-class ConsignationList(View):
+class ConsignationList(LoginRequiredMixin, View):
     QUERY_FIELD = ["application_time", "consignor", "information", "remark",\
                    "feedback_time", "express_id", "is_operate", "handlingstatus", "create_time", "id", "creator"]
 
@@ -88,7 +89,7 @@ class ConsignationList(View):
         pass
 
 
-class OperateOrder(View):
+class OperateOrder(LoginRequiredMixin, View):
     '''
     对订单 进行审核 直接进行ajax通信。
     '''
@@ -103,7 +104,7 @@ class OperateOrder(View):
         return HttpResponse('{"status": "success"}', content_type='application/json')
 
 
-class ConsignationOverView(View):
+class ConsignationOverView(LoginRequiredMixin, View):
     def get(self, request: object) -> object:
         finished_count = SFConsignation.objects.filter(handlingstatus=1).count()
         pending_count = SFConsignation.objects.filter(handlingstatus=0).count()
@@ -116,7 +117,7 @@ class ConsignationOverView(View):
         })
 
 
-class ConsignationUpLoad(View):
+class ConsignationUpLoad(LoginRequiredMixin, View):
     INIT_FIELDS_DIC = {'日期': 'application_time', '委托人': 'consignor', '信息': 'information', '异常知会': 'remark',\
                        '是否操作': 'is_operate', '反馈日期': 'feedback_time', '单号': 'express_id',}
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']

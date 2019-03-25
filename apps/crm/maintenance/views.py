@@ -20,7 +20,10 @@ from .forms import UploadFileForm
 # Create your views here.
 
 
-class MaintenanceList(View):
+from apps.utils.mixin_utils import LoginRequiredMixin
+
+
+class MaintenanceList(LoginRequiredMixin, View):
     QUERY_FIELD = ["maintenance_order_id", "order_status", "shop", "purchase_time",
                    "finish_time", "buyer_nick", "sender_mobile", "goods_id", "goods_name",
                    "description", "is_guarantee", "tocustomer_status", "towork_status"]
@@ -90,7 +93,7 @@ class MaintenanceList(View):
         pass
 
 
-class MaintenanceUpload(View):
+class MaintenanceUpload(LoginRequiredMixin, View):
     INIT_FIELDS_DIC = {
         "保修单号": "maintenance_order_id",
         "保修单状态": "order_status",
@@ -355,7 +358,7 @@ class MaintenanceUpload(View):
         return report_dic
 
 
-class MaintenanceOverview(View):
+class MaintenanceOverview(LoginRequiredMixin, View):
 
     # 验证起始时间和截止时间
     def is_valid_datetime(self, start_time, end_time):
@@ -604,9 +607,7 @@ class MaintenanceOverview(View):
         pass
 
 
-
-
-class MaintenanceHandlinglist(View):
+class MaintenanceHandlinglist(LoginRequiredMixin, View):
     QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
                    "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
                    "create_time", "id"]
@@ -678,7 +679,7 @@ class MaintenanceHandlinglist(View):
         })
 
 
-class MaintenanceToWork(View):
+class MaintenanceToWork(LoginRequiredMixin, View):
     QUERY_FIELD = ['maintenance_order_id', 'warehouse', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal',
                    'shop', 'ori_create_time', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile',
                    'sender_area', 'goods_name', 'is_guarantee']
@@ -804,7 +805,7 @@ class MaintenanceToWork(View):
             })
 
 
-class MaintenanceSignRepeat(View):
+class MaintenanceSignRepeat(LoginRequiredMixin, View):
     def post(self, request):
         report_dic_totag = {"successful": 0, "tag_successful": 0, "false": 0, "torepeatsave": 0, "error": []}
         command_id = request.POST.get("signrepeat", None)
@@ -930,7 +931,7 @@ class MaintenanceSignRepeat(View):
             })
 
 
-class MaintenanceWorkList(View):
+class MaintenanceWorkList(LoginRequiredMixin, View):
     QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
                    "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
                    "create_time", "id"]

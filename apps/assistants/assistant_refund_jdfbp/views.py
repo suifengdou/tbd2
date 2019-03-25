@@ -24,9 +24,10 @@ import pandas as pd
 
 
 from .models import RefundResource
+from apps.utils.mixin_utils import LoginRequiredMixin
 
 
-class RefundList(View):
+class RefundList(LoginRequiredMixin, View):
     QUERY_FIELD = ["service_order_id", "order_id", "goods_name", "order_status",
                    "express_id", "express_company", "handlingstatus", "create_time", "id"]
 
@@ -89,7 +90,7 @@ class RefundList(View):
         pass
 
 
-class OperateOrder(View):
+class OperateOrder(LoginRequiredMixin, View):
     '''
     对订单 进行审核 直接进行ajax通信。
     '''
@@ -104,7 +105,7 @@ class OperateOrder(View):
         return HttpResponse('{"status": "success"}', content_type='application/json')
 
 
-class RefundOverView(View):
+class RefundOverView(LoginRequiredMixin, View):
     def get(self, request: object) -> object:
         finished_count = RefundResource.objects.filter(handlingstatus=1).count()
         pending_count = RefundResource.objects.filter(handlingstatus=0).count()
@@ -117,7 +118,7 @@ class RefundOverView(View):
         })
 
 
-class RefundUpLoad(View):
+class RefundUpLoad(LoginRequiredMixin, View):
     INIT_FIELDS_DIC = {'服务单号': 'service_order_id', '订单号': 'order_id', '商品编号': 'goods_id', '商品名称': 'goods_name',
                        '商品金额': 'goods_amount', '服务单状态': 'order_status', '售后服务单申请时间': 'application_time',
                        '商家首次审核时间': 'bs_initial_time', '商家首次处理时间': 'bs_handle_time', '售后服务单整体时长': 'duration',
