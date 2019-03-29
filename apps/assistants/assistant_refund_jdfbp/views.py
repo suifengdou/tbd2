@@ -140,7 +140,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
         })
 
     def post(self, request):
-
+        creator = request.user.username
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             _result = self.handle_upload_file(request.FILES['file'])
@@ -152,7 +152,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
                 })
             # 判断是数据列表的话，就执行保存操作。
             elif isinstance(_result, list):
-                _result = self.save_resources(_result)
+                _result = self.save_resources(_result, creator)
                 return render(request, "assis/refund_jdfbp/refundupload.html", {
                     "report_dic": _result,
                     "index_tag": "ass_jdfbp_service",
@@ -194,7 +194,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
             pass
 
     @staticmethod
-    def save_resources(resource):
+    def save_resources(resource, creator):
         # 设置初始报告
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0}
 
@@ -229,6 +229,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
                         else:
                             setattr(service_order, k, v)  # 更新对象属性为字典对应键值
                 try:
+                    service_order.creator = creator
                     service_order.handling_status = 0  # 设置默认的操作状态。
                     service_order.save()
                     report_dic["successful"] += 1

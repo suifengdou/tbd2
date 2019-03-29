@@ -28,7 +28,7 @@ class MaintenanceList(LoginRequiredMixin, View):
                    "finish_time", "buyer_nick", "sender_mobile", "goods_id", "goods_name",
                    "description", "is_guarantee", "tocustomer_status", "towork_status"]
 
-    def get(self, request: object) -> object:
+    def get(self, request):
         order_tag = request.GET.get("order_tag", '1')
         search_keywords = request.GET.get("search_keywords", None)
         num = request.GET.get("num", 10)
@@ -165,10 +165,10 @@ class MaintenanceUpload(LoginRequiredMixin, View):
 
     def post(self, request):
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
-
+        creator = request.user.username
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            _result = self.handle_upload_file(request.FILES['file'])
+            _result = self.handle_upload_file(request.FILES['file'], creator)
             # 如果返回的是错误信息，就是字符串格式，直接执行下面的路径
             if isinstance(_result, str):
 
@@ -225,7 +225,7 @@ class MaintenanceUpload(LoginRequiredMixin, View):
             "elements": elements,
         })
 
-    def handle_upload_file(self, _file):
+    def handle_upload_file(self, _file, creator):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
 
         if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
@@ -259,7 +259,7 @@ class MaintenanceUpload(LoginRequiredMixin, View):
 
                     # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
                     _ret_list = intermediate_df.to_dict(orient='records')
-                    intermediate_report_dic = self.save_resources(_ret_list)
+                    intermediate_report_dic = self.save_resources(_ret_list, creator)
                     for k, v in intermediate_report_dic.items():
                         if k == "error":
                             if intermediate_report_dic["error"]:
@@ -284,7 +284,7 @@ class MaintenanceUpload(LoginRequiredMixin, View):
                 ret_columns_key = dict(zip(columns_key_ori, columns_key))
                 piece.rename(columns=ret_columns_key, inplace=True)
                 _ret_list = piece.to_dict(orient='records')
-                intermediate_report_dic = self.save_resources(_ret_list)
+                intermediate_report_dic = self.save_resources(_ret_list, creator)
                 for k, v in intermediate_report_dic.items():
                     if k == "error":
                         if intermediate_report_dic["error"]:
@@ -296,7 +296,7 @@ class MaintenanceUpload(LoginRequiredMixin, View):
         else:
             return "只支持excel和csv文件格式！"
 
-    def save_resources(self, resource):
+    def save_resources(self, resource, creator):
         # 设置初始报告
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
 
@@ -349,6 +349,7 @@ class MaintenanceUpload(LoginRequiredMixin, View):
                     else:
                         setattr(order, k, v)  # 更新对象属性为字典对应键值
             try:
+                order.creator = creator
                 order.save()
                 report_dic["successful"] += 1
             # 保存出错，直接错误条数计数加一。
@@ -690,6 +691,7 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                              "error": []}
         command_id = request.POST.get("towork", None)
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+        creator = request.user.username
 
         if command_id == '1':
             pending_orders = MaintenanceInfo.objects.values(*self.__class__.QUERY_FIELD).filter(towork_status="0")
@@ -742,6 +744,7 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                 else:
                     handling_order.machine_sn = ""
 
+                handling_order.creator = creator
                 # 处理日期的年月日
                 _pre_time = order["finish_time"]
                 handling_order.finish_date = _pre_time.strftime("%Y-%m-%d")

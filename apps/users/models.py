@@ -11,19 +11,7 @@ from db.base_model import BaseModel
 
 # Create your models here.
 class UserProfile(AbstractUser, BaseModel):
-    GENDER_OPTIONS = (
-            ('male', u'男'),
-            ('female', u'女')
-    )
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
-    brithday = models.DateField(verbose_name=u'生日', null=True, blank=True)
-    gender = models.CharField(
-        max_length=6,
-        choices=GENDER_OPTIONS,
-        default='male')
-    address = models.CharField(max_length=200, default=u'')
-    mobile = models.CharField(max_length=11, null=True, blank=True)
-
 
     class Meta:
         verbose_name = u'用户信息'

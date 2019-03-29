@@ -149,44 +149,7 @@
                                             <div class="card-block">
                                                 <div class="row">
 
-                                                    <div class="col-lg-12 col-xl-4">
-                                                <div class="card trnasiction-card">
-                                                    <div class="card-header bg-c-pink">
-                                                        <h5 class="text-white">统计卡<span class="d-block">订单完成百分比</span></h5>
-                                                        <div class="card-header-right">
-                                                            <div class="transection-preogress running-75">
-                                                                <p class="m-b-0">66%</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="card-block text-center">
-                                                        <div class="trnasiction-profile">
-                                                            <h4>OTC</h4></div>
-                                                        <h6>剩余未处理订单数：{{ pending_num }} 单</h6>
 
-                                                    </div>
-
-                                                </div>
-                                            </div>
-
-                                                    <div class="col-md-6 col-lg-3">
-                                            <div class="card">
-                                                <div class="card-block text-center">
-                                                    <i class="fa fa-puzzle-piece text-c-pink d-block f-40"></i>
-                                                    <h4 class="m-t-20">更新到客户系统</h4>
-
-                                                    <p clas="m-b-20">
-                                                        <form class="" method="post" action="{% url 'crm_orders:otc' %}">
-                                                            {% csrf_token %}
-                                                    <p>输入转换数量：{{ tocustomers_num_obj.num }}<span>{{ tocustomers_errors.num }}</span></p>
-                                                    <p><input type="submit" class="btn btn-danger btn-sm btn-round" value="Upgrade to VIP"></p>
-
-                                                    </form>
-                                                    </p>
-
-                                                </div>
-                                            </div>
-                                        </div>
 
 
 

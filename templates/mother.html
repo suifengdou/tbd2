@@ -4,7 +4,7 @@
 {% load staticfiles %}
 
 <head>
-    <title>{% block title %}TBD首页{% endblock %}</title>
+    <title>{% block title %}TBD2{% endblock %}</title>
 
 
 
@@ -107,11 +107,14 @@
                         <ul class="nav-right">
                             <li class="user-profile header-notification">
                                 <a href="#!">
+                                    <!--
                                     <img src="{% static 'assets/images/avatar-4.jpg' %}" class="img-radius" alt="User-Profile-Image">
-                                    <span>John Doe</span>
+                                    -->
+                                    <span>{{ request.user.username }} </span>
                                     <i class="ti-angle-down"></i>
                                 </a>
                                 <ul class="show-notification profile-notification">
+                                    <!--
                                     <li>
                                         <a href="#!">
                                             <i class="ti-settings"></i> Settings
@@ -132,9 +135,10 @@
                                             <i class="ti-lock"></i> Lock Screen
                                         </a>
                                     </li>
+                                    -->
                                     <li>
-                                        <a href="auth-normal-sign-in.html">
-                                        <i class="ti-layout-sidebar-left"></i> Logout
+                                        <a href="{% url 'users:logout' %}">
+                                        <i class="ti-layout-sidebar-left"></i> 退出
                                     </a>
                                     </li>
                                 </ul>
@@ -592,7 +596,7 @@
                             -->
                             <!-- 图标模块 导航结束-->
 
-                            <!-- 站务支持 开始-->
+                            <!-- 站务支持 开始
 
                             <div class="pcoded-navigation-label">站务支持</div>
                             <ul class="pcoded-item pcoded-left-item">
@@ -652,7 +656,7 @@
                                 </li>
 
                             </ul>
-
+                            -->
                             <!-- 客户模块 结束-->
 
 

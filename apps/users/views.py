@@ -15,6 +15,7 @@ from django.core.urlresolvers import reverse
 
 from apps.users.forms import LoginForm
 from apps.users.models import UserProfile
+from apps.utils.mixin_utils import LoginRequiredMixin
 
 # from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 
@@ -65,14 +66,17 @@ class CustomBackend(ModelBackend):
 #             return render(request, "register.html", {"register_form": register_form})
 #
 
-class IndexView(View):
+
+class IndexView(LoginRequiredMixin, View):
     """
     TBD首页
     """
     def get(self, request):
+        print(request.user)
+        print(request.user.username)
+        print(request)
 
         return render(request, "index.html", {})
-
 
 
 class LoginView(View):
@@ -95,7 +99,6 @@ class LoginView(View):
                 return render(request, "auth/auth-sign-in-social.html", {"msg": "用户名密码错误"})
         else:
             return render(request, "auth/auth-sign-in-social.html", {"login_form": login_form})
-
 
 
 class LogoutView(View):

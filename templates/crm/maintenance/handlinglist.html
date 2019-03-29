@@ -166,7 +166,7 @@
                         <th>故障型号</th>
                         <th>创建人</th>
                         <th>创建时间</th>
-                        <th>编辑</th>
+
 
 
                     </tr>
@@ -215,13 +215,7 @@
                             <td>{{ order.creator }}</td>
                             <td>{{ order.create_time|date:"Y-m-d H:i:s" }}</td>
 
-                            <td>
-                                {% if order.repeat_tag == '0' %}锁定
-                                {% else %}
-                                    <a class="modify btn" href="#1">编辑</a>
-                                {% endif %}
 
-                            </td>
 
                         </tr>
                     {% endfor %}
