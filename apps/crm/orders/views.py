@@ -21,7 +21,7 @@ from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 import pandas as pd
 
 
-from .models import OrderInfo
+from .models import OrderInfo, OriOrderInfo
 from apps.crm.customers.models import CustomerInfo, CustomerTendency
 from .forms import ToCustomerNum, UploadFileForm
 from apps.utils.mixin_utils import LoginRequiredMixin
@@ -42,16 +42,16 @@ class OrderList(LoginRequiredMixin, View):
             num = 50
 
         if search_keywords:
-            all_orders = OrderInfo.objects.filter(
+            all_orders = OriOrderInfo.objects.filter(
                 Q(receiver_mobile=search_keywords) | Q(sub_original_order_id=search_keywords) | Q(invoice_no=search_keywords)
             )
         else:
 
             if order_tag == '0':
-                all_orders = OrderInfo.objects.filter(tocustomer_status=str(0)).values(
+                all_orders = OriOrderInfo.objects.filter(tocustomer_status=str(0)).values(
                     *self.__class__.QUERY_FIELD).all().order_by('-create_time')
             else:
-                all_orders = OrderInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('-create_time')
+                all_orders = OriOrderInfo.objects.values(*self.__class__.QUERY_FIELD).all().order_by('-create_time')
 
         try:
             page = request.GET.get('page', 1)
@@ -208,7 +208,7 @@ class OrderUpload(LoginRequiredMixin, View):
                         columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
 
                 # 验证一下必要的核心字段是否存在
-                _ret_verify_field = OrderInfo.verify_mandatory(columns_key)
+                _ret_verify_field = OriOrderInfo.verify_mandatory(columns_key)
                 if _ret_verify_field is not None:
                     return _ret_verify_field
 
@@ -246,7 +246,7 @@ class OrderUpload(LoginRequiredMixin, View):
                 for i in range(len(columns_key)):
                     if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
                         columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
-                _ret_verify_field = OrderInfo.verify_mandatory(columns_key)
+                _ret_verify_field = OriOrderInfo.verify_mandatory(columns_key)
                 if _ret_verify_field is not None:
                     return _ret_verify_field
                 columns_key_ori = piece.columns.values.tolist()
@@ -293,7 +293,7 @@ class OrderUpload(LoginRequiredMixin, View):
         # 开始导入数据
         for row in resource:
             # ERP导出文档添加了等于号，毙掉等于号。
-            order = OrderInfo()  # 创建表格每一行为一个对象
+            order = OriOrderInfo()  # 创建表格每一行为一个对象
             for k, v in row.items():
                 if re.match(r'^=', str(v)):
                     row[k] = v.replace('=', '').replace('"', '')
@@ -309,7 +309,7 @@ class OrderUpload(LoginRequiredMixin, View):
                 continue
 
             # 如果订单号，子订单原始单号，货品名称三个维度查询，已经存在，丢弃订单，计数为重复订单
-            elif OrderInfo.objects.filter(erp_order_id=erp_order_id, sub_original_order_id=sub_original_order_id,
+            elif OriOrderInfo.objects.filter(erp_order_id=erp_order_id, sub_original_order_id=sub_original_order_id,
                                           goods_id=goods_id).exists():
                 report_dic["repeated"] += 1
                 continue
@@ -363,7 +363,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
     tocustomers_num_obj = ToCustomerNum()
 
     def get(self, request: object) -> object:
-        pending_num = OrderInfo.objects.filter(tocustomer_status=str(0)).count()
+        pending_num = OriOrderInfo.objects.filter(tocustomer_status=str(0)).count()
         return render(request, 'crm/orders/overview-tc.html', {
             "index_tag": "crm_orders",
             'tocustomers_num_obj': self.__class__.tocustomers_num_obj,
@@ -376,7 +376,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
             # 操作导入
             num = int(request.POST.get("num"))
             report_dic = self.ctsloopbody(num)
-            pending_num = OrderInfo.objects.filter(tocustomer_status=str(0)).count()
+            pending_num = OriOrderInfo.objects.filter(tocustomer_status=str(0)).count()
             return render(request, 'crm/orders/overview-tc.html', {
                 "index_tag": "crm_orders",
                 'tocustomers_num_obj': self.__class__.tocustomers_num_obj,
@@ -386,7 +386,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
         else:
             # 出错反馈问题原因
             tocustomers_errors = tocustomer_input_obj.errors
-            pending_num = OrderInfo.objects.filter(tocustomer_status=str(0)).count()
+            pending_num = OriOrderInfo.objects.filter(tocustomer_status=str(0)).count()
             return render(request, 'crm/orders/overview-tc.html', {
                 "index_tag": "crm_orders",
                 'tocustomers_num_obj': self.__class__.tocustomers_num_obj,
@@ -405,7 +405,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
             modulo_num = int(num) % num_step
             div_num = int(int(num) / num_step)
 
-            orders = OrderInfo.objects.filter(tocustomer_status=str(0)).all()[: modulo_num]
+            orders = OriOrderInfo.objects.filter(tocustomer_status=str(0)).all()[: modulo_num]
             intermediate_report_dic = self.ctstidy(orders)
             for k, v in intermediate_report_dic.items():
                 report_dic[k] += v
@@ -414,7 +414,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
             # 开始大循环
             for i in range(1, int(div_num) + 1):
 
-                orders = OrderInfo.objects.filter(tocustomer_status=str(0)).all()[: num_step]
+                orders = OriOrderInfo.objects.filter(tocustomer_status=str(0)).all()[: num_step]
 
                 intermediate_report_dic = self.ctstidy(orders)
 
@@ -422,7 +422,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
                     report_dic[k] += v
 
         else:
-            orders = OrderInfo.objects.filter(tocustomer_status=str(0)).all()[: num]
+            orders = OriOrderInfo.objects.filter(tocustomer_status=str(0)).all()[: num]
             intermediate_report_dic = self.ctstidy(orders)
             for k, v in intermediate_report_dic.items():
                 report_dic[k] += v
@@ -507,7 +507,7 @@ class OrderToCustomer(LoginRequiredMixin, View):
 
             intermediate_customer.total_fee += order.allocated_total_fee
 
-            if OrderInfo.objects.filter(sub_original_order_id=order.sub_original_order_id, tocustomer_status=str(1)):
+            if OriOrderInfo.objects.filter(sub_original_order_id=order.sub_original_order_id, tocustomer_status=str(1)):
                 pass
             else:
                 intermediate_customer.total_times += 1

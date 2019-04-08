@@ -57,6 +57,7 @@ class RefundResource(BaseModel):
     class Meta:
         verbose_name = u'京东FBP退库单源数据'
         verbose_name_plural = verbose_name
+        db_table = 'refundresource'
 
     def __str__(self):
         return self.service_order_id

@@ -54,6 +54,7 @@ class CustomerInfo(BaseModel):
     class Meta:
         verbose_name = '客户信息'
         verbose_name_plural = verbose_name
+        db_table = 'customerinfo'
 
     def __str__(self):
         return self.mobile
@@ -70,6 +71,7 @@ class CustomerTendency(BaseModel):
     class Meta:
         verbose_name = '客户积分卡'
         verbose_name_plural = verbose_name
+        db_table = 'customertendency'
 
     def __str__(self):
         return self.mobile

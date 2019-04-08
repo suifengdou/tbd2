@@ -133,6 +133,7 @@ class MaintenanceInfo(BaseModel):
     class Meta:
         verbose_name = '原始保修单'
         verbose_name_plural = verbose_name
+        db_table = 'maintenanceinfo'
 
     def __str__(self):
         return self.maintenance_order_id
@@ -190,6 +191,7 @@ class MaintenanceHandlingInfo(BaseModel):
     class Meta:
         verbose_name = '保修单明细'
         verbose_name_plural = verbose_name
+        db_table = 'maintenancehandlinginfo'
 
     def __str__(self):
         return self.maintenance_order_id
@@ -204,6 +206,7 @@ class MaintenanceSummary(BaseModel):
     class Meta:
         verbose_name = '保修单汇总'
         verbose_name_plural = verbose_name
+        db_table = 'maintenancesummary'
 
     def __str__(self):
         return self.finish_date
