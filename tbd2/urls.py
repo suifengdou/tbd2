@@ -15,11 +15,12 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
+import xadmin
 
 from apps.users.views import IndexView
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
+    url(r'^xadmin/', xadmin.site.urls),
     url(r'^users/', include('apps.users.urls', namespace='users')),
     url(r'^assistants/refund/jdfbp/', include('apps.assistants.assistant_refund_jdfbp.urls', namespace='ass_ref_jdfbp')),
     url(r'^external/express/sf/', include('apps.external.external_sf_consignation.urls', namespace='ext_exp_sf')),

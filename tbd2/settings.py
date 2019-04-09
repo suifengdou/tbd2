@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'apps.crm.orders.apps.OrdersConfig',
     'apps.crm.customers.apps.CustomersConfig',
     'apps.crm.maintenance.apps.MaintenanceConfig',
+    'ext_apps.xadmin.apps.XAdminConfig',
+    'crispy_forms',
 
 ]
 
