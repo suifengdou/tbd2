@@ -98,7 +98,7 @@ class MaintenanceUpload(LoginRequiredMixin, View):
         "保修单号": "maintenance_order_id",
         "保修单状态": "order_status",
         "收发仓库": "warehouse",
-        "是否已处理过": "completer",
+        "处理登记人": "completer",
         "保修类型": "maintenance_type",
         "故障类型": "fault_type",
         "送修类型": "transport_type",
@@ -609,7 +609,7 @@ class MaintenanceOverview(LoginRequiredMixin, View):
 
 
 class MaintenanceHandlinglist(LoginRequiredMixin, View):
-    QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
+    QUERY_FIELD = ["maintenance_order_id", "completer", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
                    "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
                    "create_time", "id"]
 
@@ -662,10 +662,10 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
 
             response.write(codecs.BOM_UTF8)
             writer = csv.writer(response)
-            writer.writerow(['保修单号', '店铺', '结束语', '完成时间', '网名', '寄件人电话', '货品型号', '货品名称',
+            writer.writerow(['保修单号', '店铺', '结束语', '维修登记人', '完成时间', '网名', '寄件人电话', '货品型号', '货品名称',
                              '是否在保', '重复维修标记', '机器SN'])
             for order in all_orders:
-                writer.writerow([order['maintenance_order_id'], order['shop'], order['appraisal'], order['finish_time'],
+                writer.writerow([order['maintenance_order_id'], order['shop'], order['completer'], order['appraisal'], order['finish_time'],
                                  order['buyer_nick'], order['sender_mobile'], order['goods_type'], order['goods_name'],
                                  order['is_guarantee'], order['repeat_tag'], order['machine_sn']])
             return response
@@ -681,8 +681,8 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
 
 
 class MaintenanceToWork(LoginRequiredMixin, View):
-    QUERY_FIELD = ['maintenance_order_id', 'warehouse', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal',
-                   'shop', 'ori_create_time', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile',
+    QUERY_FIELD = ['machine_sn', 'maintenance_order_id', 'warehouse', 'completer', 'maintenance_type', 'fault_type',
+                   'appraisal', 'shop', 'ori_create_time', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile',
                    'sender_area', 'goods_name', 'is_guarantee']
 
     def post(self, request):
@@ -712,8 +712,8 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                         report_dic_towork["error"].append(e)
                         report_dic_towork["ori_order_error"] += 1
                     continue
-                # 对原单字段进行直接赋值操作。
-                for key in self.__class__.QUERY_FIELD:
+                # 对原单字段进行直接赋值操作。排除machine_sn，此字段单独进行处理。包含了空值。
+                for key in self.__class__.QUERY_FIELD[1:]:
                     if hasattr(handling_order, key):
                         re_val = order.get(key, None)
                         if re_val is None:
@@ -739,7 +739,7 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                     handling_order.goods_type = "未知"
 
                 # 处理货品sn码，
-                if re.match(r'^[0-9a-zA-Z]{8,}', order["machine_sn"].strip(" ")):
+                if re.match(r'^[0-9a-zA-Z]{8,}', str(order["machine_sn"]).strip(" ")):
                     handling_order.machine_sn = order["machine_sn"].upper().strip(" ")
                 else:
                     handling_order.machine_sn = ""

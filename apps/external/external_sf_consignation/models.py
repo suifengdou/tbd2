@@ -23,11 +23,11 @@ class SFConsignation(BaseModel):
     application_time = models.CharField(max_length=20, verbose_name='日期')
     consignor = models.CharField(max_length=30, verbose_name='委托人')
     information = models.CharField(max_length=600, verbose_name='信息')
-    remark = models.CharField(max_length=300, verbose_name='异常知会')
+    remark = models.CharField(null=True, blank=True, max_length=300, verbose_name='异常知会')
     is_operate = models.CharField(max_length=20, verbose_name="是否操作")
     feedback_time = models.CharField(max_length=20, verbose_name='反馈日期')
     express_id = models.CharField(max_length=100, verbose_name='单号')
-    handlingstatus = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='委托单状态', default=0)
+    handlingstatus = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='委托单状态', default=0)
 
     class Meta:
         verbose_name = '顺丰委托单'

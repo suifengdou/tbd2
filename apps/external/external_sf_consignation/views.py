@@ -30,7 +30,7 @@ from apps.utils.mixin_utils import LoginRequiredMixin
 
 
 class ConsignationList(LoginRequiredMixin, View):
-    QUERY_FIELD = ["application_time", "consignor", "information", "remark",\
+    QUERY_FIELD = ["application_time", "consignor", "information", "remark",
                    "feedback_time", "express_id", "is_operate", "handlingstatus", "create_time", "id", "creator"]
 
     def get(self, request: object) -> object:

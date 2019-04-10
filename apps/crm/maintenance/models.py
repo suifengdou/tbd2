@@ -90,8 +90,8 @@ class MaintenanceInfo(BaseModel):
     maintenance_type = models.CharField(max_length=50, verbose_name='保修类型')
     fault_type = models.CharField(max_length=50, verbose_name='故障类型')
     transport_type = models.CharField(max_length=50, verbose_name='送修类型')
-    machine_sn = models.CharField(max_length=50, verbose_name='序列号')
-    new_machine_sn = models.CharField(max_length=50, verbose_name='换新序列号')
+    machine_sn = models.CharField(null=True, blank=True, max_length=50, verbose_name='序列号')
+    new_machine_sn = models.CharField(null=True, blank=True, max_length=50, verbose_name='换新序列号')
     send_order_id = models.CharField(max_length=50, verbose_name='发货订单编号')
     appraisal = models.CharField(max_length=200, verbose_name='保修结束语')
     shop = models.CharField(max_length=60, verbose_name='关联店铺')
@@ -127,8 +127,8 @@ class MaintenanceInfo(BaseModel):
     charge_status = models.CharField(default='', max_length=30, verbose_name='收费状态')
     charge_amount = models.IntegerField(default=0, verbose_name='收费金额')
     charge_memory = models.TextField(default='', verbose_name='收费说明')
-    tocustomer_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)
-    towork_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
+    tocustomer_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='更新客户信息状态', default=0)
+    towork_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
 
     class Meta:
         verbose_name = '原始保修单'
@@ -165,9 +165,10 @@ class MaintenanceHandlingInfo(BaseModel):
 
     maintenance_order_id = models.CharField(max_length=50, verbose_name='保修单号')
     warehouse = models.CharField(max_length=50, verbose_name='收发仓库')
+    completer = models.CharField(null=True, blank=True, max_length=50, verbose_name='处理登记人')
     maintenance_type = models.CharField(max_length=50, verbose_name='保修类型')
     fault_type = models.CharField(max_length=50, verbose_name='故障类型')
-    machine_sn = models.CharField(max_length=50, verbose_name='序列号')
+    machine_sn = models.CharField(null=True, blank=True, max_length=50, verbose_name='序列号')
     appraisal = models.CharField(max_length=200, verbose_name='保修结束语')
     shop = models.CharField(max_length=60, verbose_name='关联店铺')
     ori_create_time = models.DateTimeField(null=True, blank=True, verbose_name='创建时间')
@@ -184,8 +185,8 @@ class MaintenanceHandlingInfo(BaseModel):
     province = models.CharField(null=True, blank=True, max_length=50, verbose_name='省份')
     city = models.CharField(null=True, blank=True, max_length=50, verbose_name='城市')
     district = models.CharField(null=True, blank=True, max_length=50, verbose_name='区县')
-    handling_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='操作状态', default=0)
-    repeat_tag = models.CharField(max_length=30, choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
+    handling_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='操作状态', default=0)
+    repeat_tag = models.SmallIntegerField(choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
     goods_type = models.CharField(null=True, max_length=60, verbose_name='保修货品型号')
 
     class Meta:
@@ -209,7 +210,7 @@ class MaintenanceSummary(BaseModel):
         db_table = 'maintenancesummary'
 
     def __str__(self):
-        return self.finish_date
+        return str(self.finish_time)
 
 
 

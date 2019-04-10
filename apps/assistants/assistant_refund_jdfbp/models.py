@@ -25,7 +25,7 @@ class RefundResource(BaseModel):
     goods_id = models.CharField(max_length=30, verbose_name=u'商品编号')
     goods_name = models.CharField(max_length=250, verbose_name=u'商品名称')
     goods_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='商品金额')
-    order_status = models.CharField(max_length=20, verbose_name=u'服务单状态')
+    order_status = models.CharField(null=True, blank=True, max_length=20, verbose_name=u'服务单状态')
     application_time = models.DateTimeField(null=True, blank=True, verbose_name='售后服务单申请时间')
     bs_initial_time = models.DateTimeField(null=True, blank=True, verbose_name=u'商家首次审核时间')
     bs_handle_time = models.DateTimeField(null=True, blank=True, verbose_name=u'商家首次处理时间')
@@ -52,7 +52,7 @@ class RefundResource(BaseModel):
     renew_express_id = models.CharField(null=True, blank=True, max_length=30, verbose_name=u'换新订单')
     renew_goods_id = models.CharField(null=True, blank=True, max_length=20, verbose_name=u'换新商品编号')
     is_quick_refund = models.CharField(null=True, blank=True, max_length=10, verbose_name=u'是否闪退订单')
-    handlingstatus = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='最终录入状态', default=0)
+    handlingstatus = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='最终录入状态', default=0)
 
     class Meta:
         verbose_name = u'京东FBP退库单源数据'

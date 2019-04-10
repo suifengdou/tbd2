@@ -145,10 +145,10 @@ class OriOrderInfo(BaseModel):
     goods_payment = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2, verbose_name='单品支付金额')
     discreteness_id = models.CharField(null=True, blank=True, max_length=30, verbose_name='拆自组合装')
     gift_type = models.CharField(null=True, blank=True, max_length=30, verbose_name='赠品方式')
-    tocustomer_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='生成客户信息状态', default=0)
-    totendency_ht_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='生成习惯时间状态', default=0)
-    totendency_ha_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='生成习惯区域状态', default=0)
-    totendency_ac_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='生成消费能力状态', default=0)
+    tocustomer_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='生成客户信息状态', default=0)
+    totendency_ht_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='生成习惯时间状态', default=0)
+    totendency_ha_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='生成习惯区域状态', default=0)
+    totendency_ac_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='生成消费能力状态', default=0)
     platform = models.CharField(default='其他', max_length=30, verbose_name='平台')
     exception_tag = models.BooleanField(default=0, verbose_name='手机异常标记')
 
@@ -223,7 +223,7 @@ class OrderInfo(BaseModel):
     goods_payment = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2, verbose_name='单品支付金额')
     discreteness_id = models.CharField(null=True, blank=True, max_length=30, verbose_name='拆自组合装')
     gift_type = models.CharField(null=True, blank=True, max_length=30, verbose_name='赠品方式')
-    tocustomer_status = models.CharField(max_length=30, choices=ODER_STATUS, verbose_name='生成客户信息状态', default=0)
+    tocustomer_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='生成客户信息状态', default=0)
     platform = models.CharField(default='其他', max_length=30, verbose_name='平台')
     exception_tag = models.BooleanField(default=0, verbose_name='手机异常标记')
 
