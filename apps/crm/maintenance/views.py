@@ -552,15 +552,15 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         repeat_goods_reason_total = []
         for respon_depart in responbility_departs:
             responbility_depart_title = {
-                "name": _pre_department[respon_depart["repeat_tag"]],
+                "name": _pre_department[str(respon_depart["repeat_tag"])],
                 "y": int(respon_depart["quantity"]),
-                "drilldown": _pre_department[respon_depart["repeat_tag"]]
+                "drilldown": _pre_department[str(respon_depart["repeat_tag"])]
             }
             responbility_depart_total.append(responbility_depart_title)
 
             respon_goods = {
-                "name": _pre_department[respon_depart["repeat_tag"]],
-                "id": _pre_department[respon_depart["repeat_tag"]],
+                "name": _pre_department[str(respon_depart["repeat_tag"])],
+                "id": _pre_department[str(respon_depart["repeat_tag"])],
             }
             respon_goods_data = []
             respon_goods_num = maintenance_quantity.filter(repeat_tag=respon_depart["repeat_tag"]).values(
@@ -628,13 +628,14 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
 
         if search_keywords:
             all_orders = MaintenanceHandlingInfo.objects.filter(
-                Q(maintenance_order_id=search_keywords) | Q(sender_mobile=search_keywords)
+                Q(maintenance_order_id=search_keywords) | Q(sender_mobile=search_keywords) | Q(machine_sn=search_keywords)
             )
         elif start_time and end_time:
             all_orders = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_time,
                                                                 finish_time__lte=end_time).order_by("-finish_time")
 
         else:
+            # 如果订单标记为9，则取出所有标记为二次维修的订单。
             if order_tag == "9":
                 all_orders = MaintenanceHandlingInfo.objects.filter(repeat_tag__in=[1, 2, 3, 4]).values(
                     *self.__class__.QUERY_FIELD).all().order_by("-finish_time")
@@ -936,8 +937,8 @@ class MaintenanceSignRepeat(LoginRequiredMixin, View):
 
 class MaintenanceWorkList(LoginRequiredMixin, View):
     QUERY_FIELD = ["maintenance_order_id", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
-                   "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
-                   "create_time", "id"]
+                   "goods_type", "goods_name", "completer", "is_guarantee", "handling_status", "repeat_tag",
+                   "machine_sn", "creator", "create_time", "id"]
 
     def get(self, request: object) -> object:
         num = request.GET.get("num", 10)
@@ -956,7 +957,7 @@ class MaintenanceWorkList(LoginRequiredMixin, View):
 
         # 根据机器sn，对二次维修的订单的相关订单进行提取。
         all_orders = MaintenanceHandlingInfo.objects.filter(machine_sn__in=sns_repeat).values(
-            *self.__class__.QUERY_FIELD).all().order_by("machine_sn")
+            *self.__class__.QUERY_FIELD).all().order_by("machine_sn", "finish_time")
         try:
             page = request.GET.get('page', 1)
         except PageNotAnInteger:

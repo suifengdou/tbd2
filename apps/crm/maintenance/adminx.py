@@ -25,7 +25,8 @@ class MaintenanceHandlingInfoAdmin(object):
 
 
 class MaintenanceSummaryAdmin(object):
-    pass
+    list_display = ['finish_time','order_count','thirty_day_count','repeat_count']
+    list_filter = ['finish_time']
 
 
 xadmin.site.register(MaintenanceInfo, MaintenanceInfoAdmin)

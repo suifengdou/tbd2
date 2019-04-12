@@ -141,6 +141,7 @@
                         <th>完成时间</th>
                         <th>寄件客户手机</th>
                         <th>是否重复维修</th>
+                        <th>维修员</th>
                         <th>是否在保</th>
                         <th>创建人</th>
                         <th>创建时间</th>
@@ -149,10 +150,10 @@
                     </thead>
                     <tbody>
                     {% for order in all_orders.object_list %}
-                        <tr {% if order.repeat_tag == '1' %}{% else %}class="bg-info"{% endif %}>
+                        <tr {% if order.repeat_tag == 1 %}{% else %}class="bg-info"{% endif %}>
 
                             <!-- 单据状态开始 -->
-                            {% if order.repeat_tag == '1' %}
+                            {% if order.repeat_tag == 1 %}
                                 <td class="check-task" data-id="1" scope="row">未处理</td>
                             {% else %}
                                 <td class="check-task" data-id="0" scope="row">已处理</td>
@@ -170,7 +171,7 @@
 
                             <td>{{ order.goods_type }}</td>
                             <!-- 操作按钮开始 -->
-                            {% if order.repeat_tag == '1' %}
+                            {% if order.repeat_tag == 1 %}
                                 <td>
                                     <span style="align: center">
                                         <a class="audit btn btn-primary" data-id="{{ order.id }}" duty-depart="2">产品</a>
@@ -196,6 +197,7 @@
                             {% endif %}
                             <!-- 判断二次维修结束 -->
 
+                            <td>{{ order.completer }}</td>
                             <td>{{ order.is_guarantee }}</td>
                             <td>{{ order.creator }}</td>
                             <td>{{ order.create_time|date:"Y-m-d H:i:s" }}</td>

@@ -157,8 +157,8 @@
                             <th>货品名称</th>
                             <th>故障描述</th>
                             <th>是否过保</th>
-                            <th>传CRM状态</th>
-                            <th>传产品状态</th>
+                            <th>递交CRM</th>
+                            <th>递交明细</th>
 
 
                         </tr>
@@ -183,7 +183,7 @@
                                 <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.description }}</span></td>
                                 <td>{{ order.is_guarantee }}</td>
                                 <td>{{ order.tocustomer_status }}</td>
-                                <td>{{ order.toproduct_status }}</td>
+                                <td>{{ order.towork_status }}</td>
                             </tr>
                         {% endfor %}
                         </tbody>
