@@ -155,7 +155,7 @@ class OriOrderInfo(BaseModel):
     class Meta:
         verbose_name = '订单'
         verbose_name_plural = verbose_name
-        db_table = 'oriorderinfo'
+        db_table = 'crm_o_oriorderinfo'
 
     def __str__(self):
         return self.erp_order_id
@@ -230,7 +230,7 @@ class OrderInfo(BaseModel):
     class Meta:
         verbose_name = '订单'
         verbose_name_plural = verbose_name
-        db_table = 'orderinfo'
+        db_table = 'crm_o_orderinfo'
 
     def __str__(self):
         return self.erp_order_id

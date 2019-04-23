@@ -133,7 +133,7 @@ class MaintenanceInfo(BaseModel):
     class Meta:
         verbose_name = '原始保修单'
         verbose_name_plural = verbose_name
-        db_table = 'maintenanceinfo'
+        db_table = 'crm_m_maintenanceinfo'
 
     def __str__(self):
         return self.maintenance_order_id
@@ -188,11 +188,12 @@ class MaintenanceHandlingInfo(BaseModel):
     handling_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='操作状态', default=0)
     repeat_tag = models.SmallIntegerField(choices=REPEAT_TAG_STATUS, verbose_name='重复维修标记', default=0)
     goods_type = models.CharField(null=True, max_length=60, verbose_name='保修货品型号')
+    tomachinesn_status = models.SmallIntegerField(default=0, choices=ODER_STATUS, verbose_name='递交序列号列表状态')
 
     class Meta:
         verbose_name = '保修单明细'
         verbose_name_plural = verbose_name
-        db_table = 'maintenancehandlinginfo'
+        db_table = 'crm_m_maintenancehandlinginfo'
 
     def __str__(self):
         return self.maintenance_order_id
@@ -207,7 +208,7 @@ class MaintenanceSummary(BaseModel):
     class Meta:
         verbose_name = '保修单汇总'
         verbose_name_plural = verbose_name
-        db_table = 'maintenancesummary'
+        db_table = 'crm_m_maintenancesummary'
 
     def __str__(self):
         return str(self.finish_time)

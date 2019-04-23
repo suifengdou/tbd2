@@ -1,6 +1,6 @@
 {% extends 'mother.html' %}
 
-{% block title %}CRM{% endblock %}
+{% block title %}机器管理系统{% endblock %}
 
 {% load staticfiles %}
 
@@ -36,8 +36,8 @@
 
     <div class="page-header card">
         <div class="card-block">
-            <h5 class="m-b-10">CRM</h5>
-            <p class="text-muted m-b-10">客户关系管理系统</p>
+            <h5 class="m-b-10">OMS</h5>
+            <p class="text-muted m-b-10">订单管理系统</p>
             <ul class="breadcrumb-title b-t-default p-t-10">
                 <li class="breadcrumb-item">
                     <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
@@ -61,16 +61,16 @@
                 <div class="slide"></div>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'crm_maintenance:list' %}">原始服务单明细</a>
+                <a class="nav-link active" href="{% url 'oms_machine:orderlist' %}">生产订单列表</a>
                 <div class="slide"></div>
             </li>
             <li class="nav-item">
-                <a class="nav-link active" href="{% url 'crm_maintenance:handlinglist' %}">服务单明细</a>
+                <a class="nav-link" href="{% url 'oms_machine:machinesn' %}">机器序列号列表</a>
                 <div class="slide"></div>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'crm_maintenance:upload' %}">单据导入</a>
+                <a class="nav-link" href="{% url 'oms_machine:upload' %}">单据导入</a>
                 <div class="slide"></div>
             </li>
 
@@ -99,17 +99,14 @@
                            class="btn btn-primary btn-round">全部</a>
                         <span>&nbsp;&nbsp;&nbsp;</span>
                         <a href="{% url 'crm_maintenance:worklist' %}" id="pending"
-                           class="btn btn-primary btn-round">处二</a>
-                        <span>&nbsp;&nbsp;&nbsp;</span>
-                        <a href="?order_tag=9&num={{ num }}" id="repeatlist"
-                           class="btn btn-primary btn-round">查二</a>
+                           class="btn btn-primary btn-round">未递交订单</a>
 
                         <span>&nbsp;&nbsp;&nbsp;</span>
 
 
                         <form class="form-search pull-right" method="GET" action="">
                             <input name="search_keywords" class="input-medium search-query" type="text"
-                                   placeholder="订单号/快递单号/服务单号" value="{% if search_keywords %}{{ search_keywords }}{% endif %}">
+                                   placeholder="机器sn/订单号/批次号" value="{% if search_keywords %}{{ search_keywords }}{% endif %}">
                             <button type="submit" class="btn btn-success btn-square" contenteditable="true">查找
                             </button>
                         </form>
@@ -136,8 +133,7 @@
 
                         <span>&nbsp;&nbsp;&nbsp;</span>
 
-                        <a href="?order_tag={{ order_tag }}&num={{ num }}&download_tag=1" id="pending"
-                           class="btn btn-primary btn-square">下载订单</a>
+
                         {% if download_error %}<a>{{ download_error }}</a>{% endif %}
                         <span>&nbsp;&nbsp;&nbsp;</span>
                         <form class="form-search pull-right" method="GET" action="{% url 'crm_maintenance:handlinglist' %}">
@@ -159,14 +155,12 @@
                     <tr class="table-primary">
 
                         <th>操作状态</th>
-                        <th>维修单号</th>
-                        <th>保修结束语</th>
-                        <th>机器SN</th>
-                        <th>完成时间</th>
-                        <th>用户手机</th>
-                        <th>二次维修标记</th>
-                        <th>故障型号</th>
-                        <th>维修员</th>
+                        <th>生产日期</th>
+                        <th>型号</th>
+                        <th>工厂</th>
+                        <th>生产单号</th>
+                        <th>数量</th>
+                        <th>序列号段</th>
                         <th>创建人</th>
                         <th>创建时间</th>
 
@@ -180,43 +174,22 @@
 
 
                             <!-- 单据状态开始 -->
-                            {% if order.handling_status == 0 %}
+                            {% if order.tosn_status == 0 %}
                                 <td scope="row">未处理</td>
                             {% else %}
                                 <td scope="row">已处理</td>
                             {% endif %}
                             <!-- 单据状态结束 -->
 
+                            <td>{{ order.mfd|date:"Y-m-d" }}</td>
 
-                            <td>
-                                <label class="check-task">
-                                    <span class="task-title-sp">{{ order.maintenance_order_id }}</span>
-                                </label>
-                            </td>
+                            <td>{{ order.goods_id }}</td>
 
-                            <td>
-                                <span
-                                    style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ order.appraisal }}</span>
-                            </td>
-                            <td>{{ order.machine_sn }}</td>
-                            <td>{{ order.finish_time|date:"Y-m-d H:i:s" }}</td>
-                            <td>{{ order.sender_mobile }}</td>
+                            <td>{{ order.manufactory }}</td>
 
-                            {% if order.repeat_tag == 0 %}
-                                <td>正常</td>
-                            {% elif order.repeat_tag == 1 %}
-                                <td>未确定</td>
-                            {% elif order.repeat_tag == 2 %}
-                                <td>产品</td>
-                            {% elif order.repeat_tag == 3 %}
-                                <td>维修</td>
-                            {% elif order.repeat_tag == 4 %}
-                                <td>客服</td>
-                            {% endif %}
-
-
-                            <td>{{ order.goods_type }}</td>
-                            <td>{{ order.completer }}</td>
+                            <td>{{ order.order_id }}</td>
+                            <td>{{ order.quantity }}</td>
+                            <td>{{ order.msn_segment }}</td>
                             <td>{{ order.creator }}</td>
                             <td>{{ order.create_time|date:"Y-m-d H:i:s" }}</td>
 
@@ -473,48 +446,6 @@
 
     </script>
 
-    <script type="text/javascript">
-
-        function audit_order(current_elem, id) {
-            $.ajax({
-                cache: false,
-                type: "POST",
-                url: "{% url "ext_exp_sf:operate" %}",
-                data: {"id": id},
-                async: true,
-                beforeSend: function (xhr, settings) {
-                    xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
-                },
-                success: function (data) {
-                    if (data.status == "fail") {
-                        location.href = "/users/login"
-                    }
-                    else if (data.status == "success") {
-                        current_elem.text("已处理")
-                    }
-                }
-
-            });
-
-        };
-
-        $(".audit").on("click", function () {
-            var id = $(this).attr("data-id");
-
-            audit_order($(this), id);
-        });
-
-        $(".check-task").dblclick(function () {
-
-            if ($(this).parent().hasClass("done-task")) {
-                $(this).parent().removeClass("done-task");
-            } else {
-                $(this).parent().addClass("done-task");
-                $(this).parent().parent().addClass("bg-info");
-            }
-
-        })
-    </script>
 
 
 {% endblock %}

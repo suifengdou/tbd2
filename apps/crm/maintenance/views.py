@@ -6,7 +6,6 @@
 # Create your views here.
 import csv, datetime, codecs, re, time
 
-
 from django.shortcuts import render, redirect
 from django.views.generic.base import View
 from django.http import HttpResponse, StreamingHttpResponse
@@ -40,7 +39,7 @@ class MaintenanceList(LoginRequiredMixin, View):
 
         if search_keywords:
             all_service_orders = MaintenanceInfo.objects.filter(
-                Q(maintenance_order_id=search_keywords) | Q(send_logistics_no=search_keywords) | Q\
+                Q(maintenance_order_id=search_keywords) | Q(send_logistics_no=search_keywords) | Q \
                     (sender_mobile=search_keywords)
             )
         else:
@@ -315,11 +314,13 @@ class MaintenanceUpload(LoginRequiredMixin, View):
             return_mobile = str(row['return_mobile'])
             handle_time = str(row['handle_time'])
 
-            # 状态不是已完成，就丢弃这个订单，计数为丢弃订单
-            if order_status != '已完成':
+            # 状态不是'已完成', '待打印', '已打印'，就丢弃这个订单，计数为丢弃订单
+            if order_status not in ['已完成', '待打印', '已打印']:
                 report_dic["discard"] += 1
                 continue
-
+            # 如果存在保修完成时间，默认就是已完成。
+            elif order_status in ['已完成', '待打印', '已打印']:
+                row["order_status"] = '已完成'
             # 如果订单号查询，已经存在，丢弃订单，计数为重复订单
             elif MaintenanceInfo.objects.filter(maintenance_order_id=maintenance_order_id).exists():
                 report_dic["repeated"] += 1
@@ -360,7 +361,6 @@ class MaintenanceUpload(LoginRequiredMixin, View):
 
 
 class MaintenanceOverview(LoginRequiredMixin, View):
-
     # 验证起始时间和截止时间
     def is_valid_datetime(self, start_time, end_time):
         try:
@@ -402,7 +402,9 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         # 直接按照快捷选择的周数进行实践确认。
         confirm_data["tag_date"] = confirm_data["week_num"]
         confirm_data["end_time"] = datetime.datetime.now().date().strftime("%Y-%m-%d %H:%M:%S")
-        confirm_data["start_time"] = (datetime.datetime.now().date() - datetime.timedelta(weeks=int(confirm_data["week_num"]))).strftime("%Y-%m-%d %H:%M:%S")
+        confirm_data["start_time"] = (
+        datetime.datetime.now().date() - datetime.timedelta(weeks=int(confirm_data["week_num"]))).strftime(
+            "%Y-%m-%d %H:%M:%S")
         confirm_data["ori_start_time"] = confirm_data["start_time"].split(" ")[0]
         confirm_data["ori_end_time"] = confirm_data["end_time"].split(" ")[0]
         return confirm_data
@@ -420,7 +422,6 @@ class MaintenanceOverview(LoginRequiredMixin, View):
             confirm_data["end_time"] = confirm_data["end_time"] + " 00:00:00"
         confirm_data = self.confirm_time(confirm_data)
         m_total["confirm_data"] = confirm_data
-
 
         # 数据库进行查询块，决定数据范围和数据内容。
         # 首先查询handling表格的数据
@@ -497,7 +498,7 @@ class MaintenanceOverview(LoginRequiredMixin, View):
 
             for reason in reason_nums:
                 # 原因创建一个小列表
-                reason_num = [reason["appraisal"], float("%.2f" % (reason["quantity"]/reason_nums_total*100))]
+                reason_num = [reason["appraisal"], float("%.2f" % (reason["quantity"] / reason_nums_total * 100))]
                 reason_num_q = [reason["appraisal"], int(reason["quantity"])]
                 # 归属到原因的大列表中。
                 reason_good_data.append(reason_num)
@@ -527,7 +528,7 @@ class MaintenanceOverview(LoginRequiredMixin, View):
             order_day_q.append(int(repeat_data["order_count"]))
             order_thirtyday_q.append(int(repeat_data["thirty_day_count"]))
             repeat_day_q.append(int(repeat_data["repeat_count"]))
-            repeat_ratio.append(float("%.2f"%(repeat_data["repeat_count"]/repeat_data["thirty_day_count"]*100)))
+            repeat_ratio.append(float("%.2f" % (repeat_data["repeat_count"] / repeat_data["thirty_day_count"] * 100)))
         m_total["repeat_date"] = repeat_date
         m_total["order_day_q"] = order_day_q
         m_total["order_thirtyday_q"] = order_thirtyday_q
@@ -609,7 +610,8 @@ class MaintenanceOverview(LoginRequiredMixin, View):
 
 
 class MaintenanceHandlinglist(LoginRequiredMixin, View):
-    QUERY_FIELD = ["maintenance_order_id", "completer", "shop", "appraisal", "finish_time", "buyer_nick", "sender_mobile",
+    QUERY_FIELD = ["maintenance_order_id", "completer", "shop", "appraisal", "finish_time", "buyer_nick",
+                   "sender_mobile",
                    "goods_type", "goods_name", "is_guarantee", "handling_status", "repeat_tag", "machine_sn", "creator",
                    "create_time", "id"]
 
@@ -622,16 +624,24 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
         start_time = request.GET.get("start_time", None)
         end_time = request.GET.get("end_time", None)
 
-
         if num > 50:
             num = 50
 
         if search_keywords:
             all_orders = MaintenanceHandlingInfo.objects.filter(
-                Q(maintenance_order_id=search_keywords) | Q(sender_mobile=search_keywords) | Q(machine_sn=search_keywords)
+                Q(maintenance_order_id=search_keywords) | Q(sender_mobile=search_keywords) | Q(
+                    machine_sn=search_keywords)
             )
         elif start_time and end_time:
-            all_orders = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_time,
+            # 如果查询的是二次维修订单，则同时增加一个时间一个维度查询
+            if order_tag == "9":
+                all_orders = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_time,
+                                                                    finish_time__lte=end_time,
+                                                                    repeat_tag__in=[1, 2, 3, 4]).order_by(
+                    "-finish_time")
+            # 如果不是查询二次维修订单，则直接一个时间维度查询。
+            else:
+                all_orders = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_time,
                                                                 finish_time__lte=end_time).order_by("-finish_time")
 
         else:
@@ -666,7 +676,8 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
             writer.writerow(['保修单号', '店铺', '结束语', '维修登记人', '完成时间', '网名', '寄件人电话', '货品型号', '货品名称',
                              '是否在保', '重复维修标记', '机器SN'])
             for order in all_orders:
-                writer.writerow([order['maintenance_order_id'], order['shop'], order['completer'], order['appraisal'], order['finish_time'],
+                writer.writerow([order['maintenance_order_id'], order['shop'], order['completer'], order['appraisal'],
+                                 order['finish_time'],
                                  order['buyer_nick'], order['sender_mobile'], order['goods_type'], order['goods_name'],
                                  order['is_guarantee'], order['repeat_tag'], order['machine_sn']])
             return response
@@ -678,6 +689,7 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
             "order_tag": str(order_tag),
             "start_time": start_time,
             "end_time": end_time,
+            "search_keywords": search_keywords,
         })
 
 
@@ -704,7 +716,8 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                 if repetition:
                     report_dic_towork["repeat_num"] += 1
                     try:
-                        ori_orders = MaintenanceInfo.objects.all().filter(maintenance_order_id=order["maintenance_order_id"], towork_status=0)
+                        ori_orders = MaintenanceInfo.objects.all().filter(
+                            maintenance_order_id=order["maintenance_order_id"], towork_status=0)
                         for ori_order in ori_orders:
                             ori_order.towork_status = 1
                             ori_order.save()
@@ -756,7 +769,8 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                     handling_order.save()
                     report_dic_towork["successful"] += 1
                     try:
-                        ori_orders = MaintenanceInfo.objects.all().filter(maintenance_order_id=order["maintenance_order_id"], towork_status=0)
+                        ori_orders = MaintenanceInfo.objects.all().filter(
+                            maintenance_order_id=order["maintenance_order_id"], towork_status=0)
                         for ori_order in ori_orders:
                             ori_order.towork_status = 1
                             ori_order.save()
@@ -848,7 +862,8 @@ class MaintenanceSignRepeat(LoginRequiredMixin, View):
                     # 恢复为当前天，查询当前天到sn码，准备进行查询。
                     current_date = current_date + datetime.timedelta(days=1)
                     next_date = current_date + datetime.timedelta(days=1)
-                    current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=current_date, finish_time__lte=next_date)
+                    current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=current_date,
+                                                                                  finish_time__lte=next_date)
                     # 查询当前天的订单对象集。准备进行循环处理。
                     for current_order in current_orders:
                         if current_order.machine_sn in machine_sns:

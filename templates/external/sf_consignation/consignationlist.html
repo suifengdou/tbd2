@@ -157,7 +157,7 @@
 
 
                                 <!-- 单据状态开始 -->
-                                {% if service_order.handlingstatus == '0' %}<th scope="row">未处理</th>
+                                {% if service_order.handlingstatus == 0 %}<th scope="row">未处理</th>
                                 {% else %}<th scope="row">已处理</th>
                                 {% endif %}
                                 <!-- 单据状态结束 -->
@@ -172,7 +172,7 @@
                                 <td><span style="word-break:normal;width:auto;display:block;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;">{{ service_order.information }}</span></td>
                                 <td>{{ service_order.consignor }}</td>
                                 <!-- 操作按钮开始 -->
-                                {% if service_order.handlingstatus == '0' %}
+                                {% if service_order.handlingstatus == 0 %}
                                     <td><a class="audit btn btn-primary" data-id="{{ service_order.id }}">审核</a></td>
                                 {% else %}
                                     <td>已处理</td>

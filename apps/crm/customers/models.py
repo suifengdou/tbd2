@@ -46,15 +46,12 @@ class CustomerInfo(BaseModel):
     maintenance_times = models.IntegerField(default=0, verbose_name='中央维修次数')
     momery = models.CharField(null=True, blank=True, max_length=30, verbose_name='备注')
     order_failure_times = models.IntegerField(default=0, verbose_name='订单失败')
-    custom_field2 = models.CharField(null=True, blank=True, max_length=30, verbose_name='未定义标签2')
-    custom_field3 = models.CharField(null=True, blank=True, max_length=30, verbose_name='未定义标签3')
-    custom_field4 = models.CharField(null=True, blank=True, max_length=30, verbose_name='未定义标签4')
-    custom_field5 = models.CharField(null=True, blank=True, max_length=30, verbose_name='未定义标签5')
+
 
     class Meta:
         verbose_name = '客户信息'
         verbose_name_plural = verbose_name
-        db_table = 'customerinfo'
+        db_table = 'crm_c_customerinfo'
 
     def __str__(self):
         return self.mobile
@@ -71,7 +68,7 @@ class CustomerTendency(BaseModel):
     class Meta:
         verbose_name = '客户积分卡'
         verbose_name_plural = verbose_name
-        db_table = 'customertendency'
+        db_table = 'crm_c_customertendency'
 
     def __str__(self):
         return self.mobile

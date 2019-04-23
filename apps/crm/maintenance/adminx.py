@@ -21,11 +21,11 @@ class MaintenanceHandlingInfoAdmin(object):
                     'shop', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile', 'sender_area', 'goods_name',
                     'is_guarantee', 'province', 'city', 'district', 'handling_status', 'repeat_tag', 'goods_type']
     search_fields = ['maintenance_order_id', 'sender_mobile']
-    list_filter = ['shop', 'goods_type', 'finish_time']
+    list_filter = ['shop', 'goods_type', 'finish_time', 'repeat_tag', 'handling_status']
 
 
 class MaintenanceSummaryAdmin(object):
-    list_display = ['finish_time','order_count','thirty_day_count','repeat_count']
+    list_display = ['finish_time', 'order_count', 'thirty_day_count', 'repeat_count']
     list_filter = ['finish_time']
 
 

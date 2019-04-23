@@ -32,7 +32,7 @@ class SFConsignation(BaseModel):
     class Meta:
         verbose_name = '顺丰委托单'
         verbose_name_plural = verbose_name
-        db_table = 'sfconsignation'
+        db_table = 'ext_c_sfconsignation'
 
     def __str__(self):
         return self.express_id

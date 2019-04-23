@@ -47,7 +47,7 @@ class ConsignationList(LoginRequiredMixin, View):
             all_service_orders = SFConsignation.objects.filter(express_id=search_keywords)
 
         elif order_tag == '0':
-            all_service_orders = SFConsignation.objects.filter(handlingstatus=str(0)).values(*self.__class__.QUERY_FIELD).all().order_by('express_id')
+            all_service_orders = SFConsignation.objects.filter(handlingstatus=0).values(*self.__class__.QUERY_FIELD).all().order_by('express_id')
         else:
             all_service_orders = SFConsignation.objects.values(*self.__class__.QUERY_FIELD).all().order_by('express_id')
 
@@ -191,7 +191,7 @@ class ConsignationUpLoad(LoginRequiredMixin, View):
             express_id = str(row["express_id"])
 
             # 如果快递单号不符合规则，则丢弃
-            if re.match(r'^[0-9]', express_id) is None:
+            if re.match(r'^[SFsf0-9]', express_id) is None:
                 report_dic["discard"] += 1
                 continue
 

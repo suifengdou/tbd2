@@ -48,7 +48,7 @@ class RefundList(LoginRequiredMixin, View):
         else:
 
             if order_tag == '0':
-                all_service_orders = RefundResource.objects.filter(handlingstatus=str(0)).values(*self.__class__.QUERY_FIELD).all().order_by('order_id')
+                all_service_orders = RefundResource.objects.filter(handlingstatus=0).values(*self.__class__.QUERY_FIELD).all().order_by('order_id')
             else:
                 all_service_orders = RefundResource.objects.values(*self.__class__.QUERY_FIELD).all().order_by('order_id')
 

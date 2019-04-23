@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.crm.maintenance.apps.MaintenanceConfig',
     'xadmin',
     'crispy_forms',
+    'apps.oms.machine.apps.MachineConfig',
 
 ]
 
@@ -153,6 +154,8 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     (os.path.join(BASE_DIR, "static")),
 )
+
+
 
 EMAIL_HOST = 'smtp.qiye.163.com'
 EMAIL_PORT = 25
