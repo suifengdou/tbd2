@@ -289,7 +289,7 @@ class OrderUpload(LoginRequiredMixin, View):
         else:
             return "只支持excel和csv文件格式！"
 
-    def save_resources(self, resource, creator, mdf=None):
+    def save_resources(self, resource, creator):
         # 设置初始报告
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
 
@@ -310,8 +310,13 @@ class OrderUpload(LoginRequiredMixin, View):
                 report_dic["discard"] += 1
                 continue
 
-            if len(msn_segment) < 15:
+            if len(msn_segment) < 15 and "-" in msn_segment:
                 report_dic["discard"] += 1
+                continue
+
+            if "-" not in msn_segment:
+                report_dic["discard"] += 1
+                report_dic["error"].append("%s行序列号段连接字符错误" % (row["identification"]))
                 continue
 
             # 如果订单号查询，已经存在，丢弃订单，计数为重复订单
@@ -339,16 +344,89 @@ class OrderUpload(LoginRequiredMixin, View):
 
 
 class ToMachineSN(LoginRequiredMixin, View):
-    report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+
     def post(self, request):
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "create_suc": 0, "create_false": 0 ,"error": [], "create_error": []}
         tomachinesn = str(request.POST.get("tomachinesn", None))
         if tomachinesn == '1':
-            all_orders = MachineOrder.objects.filter(tosn_status=0)
-            print(all_orders)
-            for order in all_orders:
-                print(order)
+            while True:
+                all_orders = MachineOrder.objects.filter(tosn_status=0)[0:30]
+                if len(all_orders) == 0:
+                    break
+                print(all_orders)
+                for order in all_orders:
+                    start_num, end_num = order.msn_segment.split('-')[0], order.msn_segment.split('-')[1]
+                    if re.match(r'^[0-9]+$', start_num):
+                        start_num = int(start_num)
+                        end_num = int(end_num)
+                        while start_num <= end_num:
+                            machinesn = MachineSN()
+                            machinesn.mfd = order.mfd
+                            machinesn.batch_number = order.order_id
+                            machinesn.manufactory = order.manufactory
+                            machinesn.goods_id = order.goods_id
+                            machinesn.m_sn = start_num
+                            try:
+                                machinesn.save()
+                                report_dic["create_suc"] += 1
+                            except Exception as e:
+                                report_dic["create_error"].append(e)
+                                report_dic["create_false"] += 1
+                            start_num += 1
 
-        pass
+                    elif re.match(r'^[0-9A-Za-z]+$', start_num):
+                        batch_number = start_num[:11]
+                        start_num = int(start_num[-5:]) + 100000
+                        end_num = int(end_num[-5:]) + 100000
+                        while start_num <= end_num:
+                            machinesn = MachineSN()
+                            machinesn.mfd = order.mfd
+                            machinesn.batch_number = batch_number
+                            machinesn.manufactory = order.manufactory
+                            machinesn.goods_id = order.goods_id
+                            machinesn.m_sn = batch_number + str(start_num)[-5:]
+                            try:
+                                machinesn.save()
+                                report_dic["create_suc"] += 1
+                            except Exception as e:
+                                report_dic["create_false"] += 1
+                            start_num += 1
+
+                    else:
+                        report_dic["discard"] += 1
+                    order.tosn_status = 1
+                    try:
+                        order.save()
+                        report_dic["successful"] += 1
+                    except Exception as e:
+                        report_dic["error"].append(e)
+                        report_dic["false"] += 1
+            print(report_dic)
+            elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+            total_num = MachineOrder.objects.all().count()
+            pending_num = MachineOrder.objects.filter(tosn_status=0).count()
+
+            elements["total_num"] = total_num
+            elements["pending_num"] = pending_num
+
+            return render(request, "oms/machine/upload.html", {
+                "index_tag": "oms_machine_upload",
+                "report_dic_towork": report_dic,
+                "elements": elements,
+            })
+        else:
+            elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0}
+            total_num = MachineOrder.objects.all().count()
+            pending_num = MachineOrder.objects.filter(tosn_status=0).count()
+
+            elements["total_num"] = total_num
+            elements["pending_num"] = pending_num
+
+            return render(request, "oms/machine/upload.html", {
+                "index_tag": "oms_machine_upload",
+                "elements": elements,
+            })
+
 
 
 class ToSummary(LoginRequiredMixin, View):

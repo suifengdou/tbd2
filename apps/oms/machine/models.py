@@ -56,7 +56,7 @@ class MachineSN(BaseModel):
     )
     VERIFY_FIELD = ['mfd', 'm_sn', 'batch_number', 'manufactory', 'goods_id']
     mfd = models.DateTimeField(verbose_name='要求交期')
-    m_sn = models.CharField(max_length=50, verbose_name='机器序列号')
+    m_sn = models.CharField(unique=True, max_length=50, verbose_name='机器序列号')
     batch_number = models.CharField(max_length=50, verbose_name='批次号')
     manufactory = models.CharField(max_length=50, verbose_name='工厂')
     goods_id = models.CharField(max_length=30, verbose_name='型号')
@@ -65,6 +65,10 @@ class MachineSN(BaseModel):
         verbose_name = '机器序列号列表'
         verbose_name_plural = verbose_name
         db_table = 'oms_m_machinsn'
+        index_together = [
+            "m_sn",
+            "batch_number",
+        ]
 
     def __str__(self):
         return self.m_sn
@@ -79,11 +83,14 @@ class MachineSN(BaseModel):
 
 
 class FaultMachineSN(BaseModel):
+    mfd = models.DateTimeField(verbose_name='生产日期')
     finish_time = models.DateTimeField(verbose_name='保修完成时间')
     m_sn = models.CharField(max_length=50, verbose_name='机器序列号')
     batch_number = models.CharField(max_length=50, verbose_name='批次号')
     manufactory = models.CharField(max_length=50, verbose_name='工厂')
     goods_id = models.CharField(max_length=30, verbose_name='型号')
+    appraisal = models.CharField(max_length=200, verbose_name='保修结束语')
+
 
     class Meta:
         verbose_name = '维修序列号列表'
@@ -122,20 +129,6 @@ class FactorySummary(BaseModel):
         return self.manufactory
 
 
-class BatchSummary(BaseModel):
-    statistic_time = models.DateTimeField(verbose_name='统计时间')
-    batch_number = models.CharField(max_length=50, verbose_name='批次号')
-    cumulation = models.IntegerField(verbose_name='生产数量累计')
-
-    class Meta:
-        verbose_name = '批次汇总表'
-        verbose_name_plural = verbose_name
-        db_table = 'oms_m_batchsummary'
-
-    def __str__(self):
-        return self.batch_number
-
-
 class GoodFaultSummary(BaseModel):
     statistic_time = models.DateTimeField(verbose_name='统计时间')
     goods_id = models.CharField(max_length=30, verbose_name='型号')
@@ -167,7 +160,9 @@ class FactoryFaultSummary(BaseModel):
 class BatchFaultSummary(BaseModel):
     statistic_time = models.DateTimeField(verbose_name='统计时间')
     batch_number = models.CharField(max_length=50, verbose_name='批次号')
+    fault_cumulation = models.IntegerField(verbose_name='故障数量累计')
     cumulation = models.IntegerField(verbose_name='生产数量累计')
+
 
     class Meta:
         verbose_name = '批次故障数量统计表'
