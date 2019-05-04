@@ -322,23 +322,23 @@ class MaintenanceUpload(LoginRequiredMixin, View):
             elif order_status in ['已完成', '待打印', '已打印']:
                 row["order_status"] = '已完成'
             # 如果订单号查询，已经存在，丢弃订单，计数为重复订单
-            elif MaintenanceInfo.objects.filter(maintenance_order_id=maintenance_order_id).exists():
+            if MaintenanceInfo.objects.filter(maintenance_order_id=maintenance_order_id).exists():
                 report_dic["repeated"] += 1
                 continue
 
-            elif len(str(row['description'])) > 500:
+            if len(str(row['description'])) > 500:
                 row['description'] = row['description'][0:499]
 
-            elif purchase_time == '0000-00-00 00:00:00':
+            if purchase_time == '0000-00-00 00:00:00':
                 row['purchase_time'] = '0001-01-01 00:00:00'
 
-            elif handle_time == '0000-00-00 00:00:00':
+            if handle_time == '0000-00-00 00:00:00':
                 row['handle_time'] = '0001-01-01 00:00:00'
 
-            elif "." in sender_mobile:
+            if "." in sender_mobile:
                 row["sender_mobile"] = sender_mobile.split(".")[0]
 
-            elif "." in return_mobile:
+            if "." in return_mobile:
                 row['return_mobile'] = return_mobile.split(".")[0]
 
             for k, v in row.items():
@@ -712,8 +712,7 @@ class MaintenanceToWork(LoginRequiredMixin, View):
                 # 创建一个工作台订单对象，
                 handling_order = MaintenanceHandlingInfo()
 
-                repetition = MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order["maintenance_order_id"])
-                if repetition[0]:
+                if MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order["maintenance_order_id"]).exists():
                     report_dic_towork["repeat_num"] += 1
                     try:
                         ori_orders = MaintenanceInfo.objects.all().filter(
@@ -1039,8 +1038,7 @@ class MaintenanceToSN(LoginRequiredMixin, View):
                 # 创建一个工作台订单对象，
                 handling_order = MaintenanceHandlingInfo()
 
-                repetition = MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order["maintenance_order_id"])
-                if repetition:
+                if MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order["maintenance_order_id"]).exists():
                     report_dic_towork["repeat_num"] += 1
                     try:
                         ori_orders = MaintenanceInfo.objects.all().filter(
