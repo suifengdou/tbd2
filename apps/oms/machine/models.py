@@ -21,7 +21,7 @@ class MachineOrder(BaseModel):
         (2, '无效'),
         (3, '异常'),
     )
-    identification = models.IntegerField(default=0, verbose_name="订单序号")
+    identification = models.IntegerField(unique=True,verbose_name="订单序号")
     mfd = models.DateTimeField(verbose_name='要求交期')
     goods_id = models.CharField(max_length=30, verbose_name='型号')
     manufactory = models.CharField(max_length=50, verbose_name='工厂')
@@ -56,7 +56,7 @@ class MachineSN(BaseModel):
     )
     VERIFY_FIELD = ['mfd', 'm_sn', 'batch_number', 'manufactory', 'goods_id']
     mfd = models.DateTimeField(verbose_name='要求交期')
-    m_sn = models.CharField(unique=True, max_length=50, verbose_name='机器序列号')
+    m_sn = models.CharField(max_length=50, unique=True, verbose_name='机器序列号')
     batch_number = models.CharField(max_length=50, verbose_name='批次号')
     manufactory = models.CharField(max_length=50, verbose_name='工厂')
     goods_id = models.CharField(max_length=30, verbose_name='型号')
