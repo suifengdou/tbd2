@@ -19,8 +19,6 @@ urlpatterns = [
     url(r'^towork/$', MaintenanceToWork.as_view(), name='towork'),
     url(r'^signrepeat/$', MaintenanceSignRepeat.as_view(), name='signrepeat'),
     url(r'^worklist/$', MaintenanceWorkList.as_view(), name='worklist'),
-    url(r'^tomanchinesn/$', MaintenanceToSN.as_view(), name='tomanchinesn'),
-
-
+    url(r'^tomachinesn/$', MaintenanceToSN.as_view(), name='tomachinesn'),
 
 ]

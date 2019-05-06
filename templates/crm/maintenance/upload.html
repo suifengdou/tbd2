@@ -773,7 +773,7 @@
                 <span>导入的维修单需直接递交到sn列表</span>
             </div>
             <div class="card-block">
-                <form id="toworkstation" method="post" action="{% url 'crm_maintenance:tomanchinesn' %}"
+                <form id="tomachinesn" method="post" action="{% url 'crm_maintenance:tomachinesn' %}"
                       novalidate="">
                     {% csrf_token %}
 

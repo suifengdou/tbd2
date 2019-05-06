@@ -944,7 +944,7 @@ class MaintenanceToSN(LoginRequiredMixin, View):
         report_dic_tosn = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "repeat_num": 0,
                              "error": [], "discard": 0}
         command_id = request.POST.get("tosn", None)
-        elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0, "pending_tosn_num": 0}
+
         creator = request.user.username
 
         if command_id == '1':
@@ -965,6 +965,13 @@ class MaintenanceToSN(LoginRequiredMixin, View):
                     # 如果没有序列号，则直接抛弃此维修单
                     if len(order.machine_sn) == 0:
                         report_dic_tosn['discard'] += 1
+                        try:
+                            order.tomachinesn_status = 3
+                            order.save()
+                            report_dic_tosn['ori_successful'] += 1
+                        except Exception as e:
+                            report_dic_tosn['error'].append(e)
+                            report_dic_tosn['ori_order_error'] += 1
                         continue
 
                     faultmachine_order = FaultMachineSN()
@@ -991,7 +998,7 @@ class MaintenanceToSN(LoginRequiredMixin, View):
                     if machine_order.count() == 0:
                         report_dic_tosn['discard'] += 1
                         try:
-                            order.tomachinesn_status = 1
+                            order.tomachinesn_status = 2
                             order.save()
                             report_dic_tosn['ori_successful'] += 1
                         except Exception as e:
