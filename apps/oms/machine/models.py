@@ -131,8 +131,11 @@ class FactorySummary(BaseModel):
 
 class GoodFaultSummary(BaseModel):
     statistic_time = models.DateTimeField(verbose_name='统计时间')
+    production_quantity = models.IntegerField(default=0, verbose_name='生产数量')
+    production_cumulation = models.IntegerField(default=0, verbose_name='生产累计数量')
+    fault_quantity = models.IntegerField(default=0, verbose_name='故障数量')
+    fault_cumulation = models.IntegerField(default=0, verbose_name='故障累计数量')
     goods_id = models.CharField(max_length=30, verbose_name='型号')
-    cumulation = models.IntegerField(verbose_name='生产数量累计')
 
     class Meta:
         verbose_name = '机器故障数量汇总表'

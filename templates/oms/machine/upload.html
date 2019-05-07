@@ -357,11 +357,11 @@
 
         <div class="card">
             <div class="card-header">
-                <h5>标记二次维修</h5>
-                <span>导入的维修单需要递交工作台才能处理</span>
+                <h5>计算汇总值</h5>
+                <span>计算上一个月的汇总值</span>
             </div>
             <div class="card-block">
-                <form id="signrepeat" name="signrepeat" method="post" action="{% url 'crm_maintenance:signrepeat' %}"
+                <form id="tosummary" name="tosummary" method="post" action="{% url 'oms_machine:tosummary' %}"
                       novalidate="">
                     {% csrf_token %}
 
@@ -369,7 +369,7 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">已经标记完成的维修单</span>
+                                <span style="font-size: x-large">已经计算的月份数</span>
                             </div>
                             <div class="card bg-c-green order-card">
                                 <div class="card-block">
@@ -382,7 +382,7 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">赶快标记维修单数量</span>
+                                <span style="font-size: x-large">赶快计算上个月的汇总值吧</span>
                             </div>
                             <div class="card bg-c-pink order-card">
                                 <div class="card-block">
@@ -395,11 +395,11 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">只有标记了才会有图表</span>
+                                <span style="font-size: x-large">只有计算了才会有图表</span>
                             </div>
                             <div class="card-block">
                                 <h6> </h6>
-                                <input type="text" name="signrepeat" value="1" style="display:none">
+                                <input type="text" name="tosummary_tag" value="1" style="display:none">
                                 <button type="submit" class="btn btn-out btn-primary btn-square">点我标记</button>
                             </div>
 

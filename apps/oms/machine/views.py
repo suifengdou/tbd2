@@ -17,7 +17,7 @@ import pandas as pd
 from apps.utils.mixin_utils import LoginRequiredMixin
 
 
-from .models import MachineOrder, MachineSN
+from .models import MachineOrder, MachineSN, FaultMachineSN
 from .forms import UploadFileForm
 
 
@@ -136,10 +136,6 @@ class MachineSNList(LoginRequiredMixin, View):
             "search_keywords": search_keywords,
         })
 
-    pass
-
-
-class FaultMachineSNList(LoginRequiredMixin, View):
     pass
 
 
@@ -428,8 +424,31 @@ class ToMachineSN(LoginRequiredMixin, View):
             })
 
 
-
 class ToSummary(LoginRequiredMixin, View):
+    def post(self, request):
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "create_suc": 0, "create_false": 0,
+                      "error": [], "create_error": []}
+        tosummary_tag = request.POST.get("tosummary_tag", None)
+        if tosummary_tag == '1':
+
+            last_month = datetime.datetime(datetime.date.today().year, datetime.date.today().month-1, 1, 0, 0, 0)
+
+            dateformat = "%Y-%m"
+            object_month = last_month.strftime("%Y-%m")
+
+
+            example_test = MachineOrder.objects.filter(manufactory__in=["海力"]).query.__str__()
+            goods_production = MachineOrder.objects.extra(where=['date_format(mfd, "%s") = "%s"'], params=[dateformat, object_month]).values("goods_id").annotate(quantity=Sum("quantity")).values("goods_id", "quantity")
+
+
+            goods_fault = FaultMachineSN.objects.extra(where=['date_format(finish_time, "%s") = "%s"'], params=[dateformat, object_month]).values("goods_id").annotate(quantity=Count("id")).values("goods_id", "quantity")
+            print(goods_production)
+            for i in goods_fault:
+                print(i)
+            for i in goods_production:
+                print(i)
+
+
     pass
 
 

@@ -98,7 +98,7 @@
                         <a href="?order_tag=1&num={{ num }}" id="total"
                            class="btn btn-primary btn-round">全部</a>
                         <span>&nbsp;&nbsp;&nbsp;</span>
-                        <a href="{% url 'crm_maintenance:worklist' %}" id="pending"
+                        <a href="{% url 'oms_machine:orderlist' %}" id="pending"
                            class="btn btn-primary btn-round">未递交订单</a>
 
                         <span>&nbsp;&nbsp;&nbsp;</span>
@@ -117,7 +117,7 @@
                         <!-- datepicker sign start -->
 
                         <form class="form-search pull-right" method="GET"
-                              action="{% url 'crm_maintenance:handlinglist' %}">
+                              action="{% url 'oms_machine:orderlist' %}">
                             <div class="c-datepicker-date-editor J-datepicker-range-betweenMonth mt10">
                                 <i class="c-datepicker-range__icon kxiconfont icon-clock"></i>
                                 <input placeholder="开始日期" name="start_time" class="c-datepicker-data-input" value="{% if start_time %}{{ start_time }}{% endif %}">
@@ -136,8 +136,8 @@
 
                         {% if download_error %}<a>{{ download_error }}</a>{% endif %}
                         <span>&nbsp;&nbsp;&nbsp;</span>
-                        <form class="form-search pull-right" method="GET" action="{% url 'crm_maintenance:handlinglist' %}">
-                            <input name="num" class="input-medium search-query" type="text" placeholder="分页数量">
+                        <form class="form-search pull-right" method="GET" action="{% url 'oms_machine:orderlist' %}">
+                            <input name="num" class="input-medium search-query" type="text" placeholder="分页数量" value="10">
                             <input name="order_tag" class="input-medium search-query" type="text" style="display:none"
                                    value="{{ order_tag }}">
                             <button type="submit" class="btn btn-success btn-square" contenteditable="true">提交</button>
