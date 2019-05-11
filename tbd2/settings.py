@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'xadmin',
     'crispy_forms',
     'apps.oms.machine.apps.MachineConfig',
+    'apps.crm.refurbishment.apps.RefurbishmentConfig',
 
 ]
 

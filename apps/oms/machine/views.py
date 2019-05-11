@@ -5,11 +5,12 @@ from django.shortcuts import render
 # Create your views here.
 
 import csv, datetime, codecs, re, time
+from dateutil.relativedelta import relativedelta
 
 from django.shortcuts import render, redirect
 from django.views.generic.base import View
 from django.http import HttpResponse, StreamingHttpResponse
-from django.db.models import Q, Sum, Count, Avg
+from django.db.models import Q, Sum, Count, Avg, Max, Min
 from django.utils.six import moves
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 import pandas as pd
@@ -17,7 +18,7 @@ import pandas as pd
 from apps.utils.mixin_utils import LoginRequiredMixin
 
 
-from .models import MachineOrder, MachineSN, FaultMachineSN
+from .models import MachineOrder, MachineSN, FaultMachineSN, GoodFaultSummary
 from .forms import UploadFileForm
 
 
@@ -428,20 +429,79 @@ class ToSummary(LoginRequiredMixin, View):
     def post(self, request):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "create_suc": 0, "create_false": 0,
                       "error": [], "create_error": []}
+        dateformat = "%Y-%m"
         tosummary_tag = request.POST.get("tosummary_tag", None)
+        products_list = {}
+        products_fault_list = {}
+
         if tosummary_tag == '1':
+            # 找到统计表中的最后统计时间
+            earliest_time = GoodFaultSummary.objects.all().aggregate(Max('statistic_time'))
+            # 如果不存在
+            if earliest_time["statistic_time__max"] is None:
+                # 初始化第一个月的开始时间是工厂订单时间。
+                _pre_start_time = MachineOrder.objects.all().aggregate(Min("mfd"))["mfd__min"]
+                # 对起始时间进行处理，修正到对应年度月份的一号
+                start_time = datetime.datetime(_pre_start_time.year, _pre_start_time.month, 1, 0, 0, 0)
+                start_month = start_time.strftime( "%Y-%m")
 
-            last_month = datetime.datetime(datetime.date.today().year, datetime.date.today().month-1, 1, 0, 0, 0)
+                _pre_goods_initial = MachineOrder.objects.extra(where=['date_format(mfd, "%s") = "%s"'],
+                                                                params=[dateformat, start_month]).values(
+                    "goods_id").annotate(quantity=Sum("quantity")).values("goods_id", "quantity")
+                # 循环创建初始化字典，初始化数量为0
 
-            dateformat = "%Y-%m"
+                for goods_id in _pre_goods_initial:
+                    products_list[goods_id["goods_id"]] = 0
+                    products_fault_list[goods_id["goods_id"]] = 0
+            else:
+                # 如果已经存在统计时间，则从最大的时间作为开始进行统计
+                _pre_start_time = earliest_time["statistic_time__max"]
+                start_time = datetime.datetime(_pre_start_time.year, _pre_start_time.month, 1, 0, 0, 0)
+                start_month = start_time.strftime( "%Y-%m")
+
+                _pre_goods_initial = GoodFaultSummary.objects.all().filter(statistic_time=start_month)
+
+                # 循环创建初始化字典，初始化数量为最后统计时间的累积量
+                for goods_id in _pre_goods_initial:
+                    products_list[goods_id["goods_id"]] = goods_id.production_cumulation
+                    products_fault_list[goods_id["goods_id"]] = goods_id.fault_cumulation
+
+            # 截止统计时间是当前月的1号
+            end_time = datetime.datetime(datetime.date.today().year, datetime.date.today().month, 1, 0, 0, 0)
+            # 开始进行大循环
+            while start_time < end_time:
+                start_month = start_time.strftime( "%Y-%m")
+
+                # 通过扩展查询以月度为聚合统计数，where后面跟表达式，param后面跟对应表达式中的参数。
+                goods_production = MachineOrder.objects.extra(where=['date_format(mfd, "%s") = "%s"'],
+                                                              params=[dateformat, start_month]).values(
+                    "goods_id").annotate(quantity=Sum("quantity")).values("goods_id", "quantity")
+
+                goods_fault = FaultMachineSN.objects.extra(where=['date_format(finish_time, "%s") = "%s"'],
+                                                           params=[dateformat, start_month]).values(
+                    "goods_id").annotate(quantity=Count("id")).values("goods_id", "quantity")
+
+                for goods_id in products_list:
+                    goodfaultsummary = GoodFaultSummary()
+                    production_quantity = goods_production.filter(goods_id=goods_id)
+                    print(production_quantity)
+
+                # 对时间进行月度增加，就需要用到，dateutil.relativedelta，直接用datetime.tiemdelta无法对月度直接增加。只能增加天数
+                start_month = start_month + relativedelta(months=+1)
+
+
+
+
+
+
+
+
+
             object_month = last_month.strftime("%Y-%m")
 
 
-            example_test = MachineOrder.objects.filter(manufactory__in=["海力"]).query.__str__()
-            goods_production = MachineOrder.objects.extra(where=['date_format(mfd, "%s") = "%s"'], params=[dateformat, object_month]).values("goods_id").annotate(quantity=Sum("quantity")).values("goods_id", "quantity")
 
 
-            goods_fault = FaultMachineSN.objects.extra(where=['date_format(finish_time, "%s") = "%s"'], params=[dateformat, object_month]).values("goods_id").annotate(quantity=Count("id")).values("goods_id", "quantity")
             print(goods_production)
             for i in goods_fault:
                 print(i)
@@ -449,7 +509,7 @@ class ToSummary(LoginRequiredMixin, View):
                 print(i)
 
 
-    pass
+        pass
 
 
 class ToFaultSummary(LoginRequiredMixin, View):

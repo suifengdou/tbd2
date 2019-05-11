@@ -101,34 +101,6 @@ class FaultMachineSN(BaseModel):
         return self.m_sn
 
 
-class GoodSummary(BaseModel):
-    statistic_time = models.DateTimeField(verbose_name='统计时间')
-    goods_id = models.CharField(max_length=30, verbose_name='型号')
-    cumulation = models.IntegerField(verbose_name='生产数量累计')
-
-    class Meta:
-        verbose_name = '机器汇总表'
-        verbose_name_plural = verbose_name
-        db_table = 'oms_m_goodsummary'
-
-    def __str__(self):
-        return self.goods_id
-
-
-class FactorySummary(BaseModel):
-    statistic_time = models.DateTimeField(verbose_name='统计时间')
-    manufactory = models.CharField(max_length=50, verbose_name='工厂')
-    cumulation = models.IntegerField(verbose_name='生产数量累计')
-
-    class Meta:
-        verbose_name = '工厂汇总表'
-        verbose_name_plural = verbose_name
-        db_table = 'oms_m_factorysummary'
-
-    def __str__(self):
-        return self.manufactory
-
-
 class GoodFaultSummary(BaseModel):
     statistic_time = models.DateTimeField(verbose_name='统计时间')
     production_quantity = models.IntegerField(default=0, verbose_name='生产数量')
@@ -175,6 +147,25 @@ class BatchFaultSummary(BaseModel):
     def __str__(self):
         return self.batch_number
 
+
+class MachineInfo(BaseModel):
+    MACHINE_TYPE = (
+        ("VAC", "吸尘器"),
+        ("DMC", "除螨仪"),
+        ("VAR", "智能机器人"),
+    )
+    machine_id = models.CharField(max_length=30, verbose_name='商家编码')
+    machine_name = models.CharField(max_length=60, verbose_name='名称')
+    machine_type = models.CharField(max_length=30, choices=MACHINE_TYPE, verbose_name='机器类型')
+    machine_number = models.CharField(unique=True, max_length=10, verbose_name='机器排序')
+
+    class Meta:
+        verbose_name = '机器信息表'
+        verbose_name_plural = verbose_name
+        db_table = 'oms_m_manchineinfo'
+
+    def __str__(self):
+        return self.machine_name
 
 
 

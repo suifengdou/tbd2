@@ -163,7 +163,7 @@ class MaintenanceHandlingInfo(BaseModel):
         (4, '客服'),
     )
 
-    maintenance_order_id = models.CharField(max_length=50, verbose_name='保修单号')
+    maintenance_order_id = models.CharField(unique=True, max_length=50, verbose_name='保修单号')
     warehouse = models.CharField(max_length=50, verbose_name='收发仓库')
     completer = models.CharField(null=True, blank=True, max_length=50, verbose_name='处理登记人')
     maintenance_type = models.CharField(max_length=50, verbose_name='保修类型')

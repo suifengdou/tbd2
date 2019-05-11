@@ -7,7 +7,7 @@
 
 import xadmin
 
-from .models import MachineOrder, MachineSN, FaultMachineSN, GoodSummary, FactorySummary, GoodFaultSummary, FactoryFaultSummary, BatchFaultSummary
+from .models import MachineOrder, MachineSN, FaultMachineSN, GoodFaultSummary, FactoryFaultSummary, BatchFaultSummary
 
 
 class MachineOrderAdmin(object):
