@@ -28,4 +28,5 @@ urlpatterns = [
     url(r'^crm/maintenance/', include('apps.crm.maintenance.urls', namespace='crm_maintenance')),
     url(r'^$', IndexView.as_view(), name='index'),
     url(r'^oms/machine/', include('apps.oms.machine.urls', namespace='oms_machine')),
+    url(r'^crm/refurbishment/', include('apps.crm.refurbishment.urls', namespace='crm_refurbishment')),
     ]

@@ -154,7 +154,7 @@ class MachineInfo(BaseModel):
         ("DMC", "除螨仪"),
         ("VAR", "智能机器人"),
     )
-    machine_id = models.CharField(max_length=30, verbose_name='商家编码')
+    machine_id = models.CharField(unique=True, max_length=30, verbose_name='商家编码')
     machine_name = models.CharField(max_length=60, verbose_name='名称')
     machine_type = models.CharField(max_length=30, choices=MACHINE_TYPE, verbose_name='机器类型')
     machine_number = models.CharField(unique=True, max_length=10, verbose_name='机器排序')
@@ -163,9 +163,13 @@ class MachineInfo(BaseModel):
         verbose_name = '机器信息表'
         verbose_name_plural = verbose_name
         db_table = 'oms_m_manchineinfo'
+        index_together = [
+            "machine_name",
+            "machine_id",
+        ]
 
     def __str__(self):
-        return self.machine_name
+        return str(self.machine_name)
 
 
 

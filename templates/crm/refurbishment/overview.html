@@ -1,0 +1,782 @@
+{% extends 'mother.html' %}
+
+{% block title %}CRM{% endblock %}
+
+{% load staticfiles %}
+
+{% block css %}
+    <!-- Date-time picker css -->
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'assets/pages/advance-elements/css/bootstrap-datetimepicker.css' %}">
+    <!-- Date-range picker css  -->
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'bower_components/bootstrap-daterangepicker/css/daterangepicker.css' %}"/>
+    <!-- Date-Dropper css -->
+    <link rel="stylesheet" type="text/css" href="{% static 'bower_components/datedropper/css/datedropper.min.css' %}"/>
+    <!-- Data Table Css -->
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}">
+    <!-- themify-icons line icon -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/icon/themify-icons/themify-icons.css' %}">
+    <!-- ico font -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/icon/icofont/css/icofont.css' %}">
+    <!-- Style.css -->
+    <link rel="stylesheet" type="text/css" href="{% static 'assets/css/jquery.mCustomScrollbar.css' %}">
+
+    <!-- 导入每个具体模块的第三方模块css -->
+
+
+    <style>
+
+        .icofont {
+            display: inline-block;
+            width: 36px;
+            height: 36px; /*占个位**/
+            color: #e95d4e;
+            font-size: 36px;
+        }
+
+        .icofont:after, .icon::after {
+            display: inline-block;
+            content: ""; /*在这里调用字符*/
+            width: 5px;
+            height: 5px;
+            margin-left: -16px; /*position:absolute什么的也可以，看具体情况*/
+        }
+
+        .m_chart {
+        	min-width: 78%;
+        	height: 500px;
+        	margin: 0 auto;
+        }
+
+
+    </style>
+
+
+
+{% endblock %}
+
+
+{% block content %}
+
+
+
+    <div class="page-header card">
+        <div class="card-block">
+            <h5 class="m-b-10">CRM</h5>
+            <p class="text-muted m-b-10">客户关系管理系统</p>
+            <ul class="breadcrumb-title b-t-default p-t-10">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
+                </li>
+                <li class="breadcrumb-item"><a href="#!">售后管理</a>
+                </li>
+                <li class="breadcrumb-item"><a href="#!">机器翻新</a>
+                </li>
+                <li class="breadcrumb-item"><a href="#!">数据中心</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- tab header start -->
+    <div class="tab-header card">
+        <ul class="nav nav-tabs md-tabs tab-timeline" role="tablist" id="mytab">
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'crm_refurbishment:overview' %}">数据中心</a>
+                <div class="slide"></div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'crm_refurbishment:upload' %}">任务控制台</a>
+                <div class="slide"></div>
+            </li>
+        </ul>
+    </div>
+    <!-- tab header end -->
+
+
+    <div class="tab-pane" id="contacts" role="tabpanel">
+        <div class="row">
+
+            <div class="col-xl-10">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <!-- contact data table card start -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-header-text">当前系统订单概览</h5>
+                            </div>
+                            <div class="card-block contact-details">
+                                <!-- 自定义时间维修量 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text"></h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_quantity"></div>
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 对应时间维修型号占比下钻故障占比图 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text"></h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_goods"></div>
+
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 对应时间维修型号数量下钻故障图 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_goods_quantity"></div>
+
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 当天维修量和二次维修量对比图 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_repeat"></div>
+
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 二次维修率和二次维修量 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_repeat_ratio"></div>
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 二次维修责任量下钻型号图 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_responbility_depart"></div>
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 二次维修型号下钻故障图 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_responbility_goods_total"></div>
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- contact data table card end -->
+                </div>
+            </div>
+            <div class="col-xl-2">
+                <!-- user contact card left side start -->
+                <div class="card">
+                    <div class="card-header contact-user">
+                        <h5 class="m-l-10">快捷选项</h5>
+                    </div>
+                    <div class="card-block">
+                        <ul class="list-group list-contacts">
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "1" %}active{% endif %}"><a href="?weeks_num=1">最近1周</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "2" %}active{% endif %}"><a href="?weeks_num=2">最近2周</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "4" %}active{% endif %}"><a href="?weeks_num=4">最近4周（近1个月）</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "8" %}active{% endif %}"><a href="?weeks_num=8">最近8周（近2个月）</a></li>
+                            <li class="list-group-item {% if m_total.confirm_data.tag_date == "12" %}active{% endif %}"><a href="?weeks_num=12">最近12周（近3个月）</a></li>
+                        </ul>
+                    </div>
+
+
+                </div>
+
+                <div class="card">
+                    <div class="card-header contact-user">
+                        <h5 class="m-l-10 ui-accordion-header-active ui-state-active">自定义时间范围</h5>
+                    </div>
+                    <div class="card-block">
+                        <form class="form-search pull right" method="GET" action="{% url 'crm_maintenance:overview' %}">
+                            {% csrf_token %}
+                            <div class="row">
+
+                                <div class="col-md-12">
+                                    <input name="start_time" type="date" placeholder="起始时间" value="{{ m_total.confirm_data.ori_start_time }}">
+                                    <input name="end_time" type="date" placeholder="截止时间" value="{{ m_total.confirm_data.ori_end_time }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3"></div>
+                                <div class="col-md-9"><button type="submit" class="btn-success">自定义时间展示</button></div>
+
+                            </div>
+
+                        </form>
+                    </div>
+
+
+                </div>
+                <!-- user contact card left side end -->
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+{% endblock %}
+
+
+
+{% block js %}
+    <!-- Date-range picker js -->
+    <script src="{% static 'bower_components/bootstrap-daterangepicker/js/daterangepicker.js' %}"></script>
+
+    <!-- Date-dropper js -->
+    <script src="{% static 'bower_components/datedropper/js/datedropper.min.js' %}"></script>
+
+    <!-- data-table js -->
+    <script src="{% static 'bower_components/datatables.net/js/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'bower_components/datatables.net-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'bower_components/datatables.net-responsive/js/dataTables.responsive.min.js' %}"></script>
+    <script src="{% static 'bower_components/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js' %}"></script>
+
+    <!-- ck editor -->
+    <script src="{% static 'assets/pages/ckeditor/ckeditor.js' %}"></script>
+
+    <!-- echart js -->
+    <script src="{% static 'assets/pages/chart/echarts/js/echarts-all.js' %}"></script>
+    <script src="{% static 'assets/pages/user-profile.js' %}"></script>
+    <script src="{% static 'assets/js/pcoded.min.js' %}"></script>
+    <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
+    <script src="{% static 'assets/js/jquery.mCustomScrollbar.concat.min.js' %}"></script>
+
+    <script src="{% static 'bower_components/bootstrap-table/bootstrap-table.js' %}" rel="stylesheet"></script>
+    <script src="{% static 'bower_components/bootstrap-table/locale/bootstrap-table-zh-CN.js' %}"></script>
+    <!-- 导入每个具体模块的第三方模块js-->
+
+    <!-- Todo js -->
+    <script src="{% static 'assets/pages/todo/todo.js' %}"></script>
+    <script src="{% static 'assets/js/pcoded.min.js' %}"></script>
+    <script src="{% static 'assets/js/vertical/vertical-layout.min.js' %}"></script>
+    <script src="{% static 'assets/js/jquery.mCustomScrollbar.concat.min.js' %}"></script>
+
+    <script src="{% static 'bower_components/highcharts/js/highcharts.js' %}"></script>
+    <script src="{% static 'bower_components/highcharts/js/exporting.js' %}"></script>
+    <script src="{% static 'bower_components/highcharts/js/drilldown.js' %}"></script>
+    <script src="{% static 'bower_components/highcharts/js/highcharts-zh-CN.js' %}"></script>
+    <!-- 导入每个具体模块的第三方模块js-->
+    <script>
+        // 自定义时间维修量
+        Highcharts.chart('m_quantity', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '维修量（天）'
+            },
+            subtitle: {
+                text: '数据来源: tbd.com'
+            },
+            xAxis: {
+                categories: {{ m_total.rt_summary_quantity_d | safe }},
+                crosshair: true
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: '维修量 (台)'
+                }
+            },
+            tooltip: {
+                // head + 每个 point + footer 拼接成完整的 table
+                headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+                pointFormat: '<tr><td style="color:{series.color};padding:10px">{series.name}: </td>' +
+                '<td style="padding:10px"><b>{point.y:.0f} 台</b></td></tr>',
+                footerFormat: '</table>',
+                shared: true,
+                useHTML: true
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y} 台'
+                    }
+                },
+                column: {
+                    borderWidth: 0
+                }
+            },
+            series: [{
+                name: '每天维修量',
+                data: {{ m_total.rt_summary_quantity_q | safe }}
+            }]
+        });
+
+        // 对应时间维修型号占比下钻故障占比图
+        Highcharts.chart('m_goods', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '期间内的产品型号占比'
+            },
+            subtitle: {
+                text: '数据来源: tbd'
+            },
+            xAxis: {
+                type: 'category'
+            },
+            yAxis: {
+                title: {
+                    text: '总的市场份额'
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y:.1f}%'
+                    }
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b> of total<br/>'
+            },
+            series: [{
+                name: '型号数量占比',
+                colorByPoint: true,
+                data: {{ m_total.goods_type_total | safe }}
+            }],
+            drilldown: {
+                series: {{ m_total.reason_goods_total | safe }}
+            }
+        });
+
+        // 对应时间维修型号数量下钻故障图
+        Highcharts.chart('m_goods_quantity', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '期间内的产品型号数量'
+            },
+            subtitle: {
+                text: '数据来源:tbd'
+            },
+            xAxis: {
+                type: 'category'
+            },
+            yAxis: {
+                title: {
+                    text: '维修数量'
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y} 台'
+                    }
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y} 台</b> of total<br/>'
+            },
+            series: [{
+                name: '型号数量',
+                colorByPoint: true,
+                data: {{ m_total.goods_type_total_q | safe }}
+            }],
+            drilldown: {
+                series: {{ m_total.reason_goods_total_q | safe }}
+            }
+        });
+
+        // 当天维修量和二次维修量对比图
+        Highcharts.chart('m_repeat', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '维修量和当天二次维修订单对比图'
+            },
+            subtitle: {
+                text: '数据来源: tbd'
+            },
+            xAxis: {
+                categories: {{ m_total.repeat_date | safe }},
+                crosshair: true
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: '维修量 (台)'
+                }
+            },
+            tooltip: {
+                // head + 每个 point + footer 拼接成完整的 table
+                headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+                pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                '<td style="padding:0"><b>{point.y} 台</b></td></tr>',
+                footerFormat: '</table>',
+                shared: true,
+                useHTML: true
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y}'
+                    }
+                },
+                column: {
+                    borderWidth: 0
+                }
+            },
+            series: [{
+                name: '日维修量',
+                color: Highcharts.getOptions().colors[7],
+                data: {{ m_total.order_day_q | safe }}
+            }, {
+                name: '期间内二次维修量',
+                color: Highcharts.getOptions().colors[5],
+                data: {{ m_total.repeat_day_q | safe }}
+            }]
+        });
+
+        // 二次维修率和二次维修量
+        var chart = Highcharts.chart('m_repeat_ratio', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                zoomType: 'xy'
+            },
+            title: {
+                text: '二次维修率和二次维修量'
+            },
+            subtitle: {
+                text: '数据来源: tbd'
+            },
+            xAxis: [{
+                categories: {{ m_total.repeat_date | safe }},
+                crosshair: true
+            }],
+            yAxis: [{ // Primary yAxis
+                labels: {
+                    format: '{value} %',
+                    style: {
+                        color: Highcharts.getOptions().colors[1]
+                    }
+                },
+                title: {
+                    text: '二次维修率（30天）',
+                    style: {
+                        color: Highcharts.getOptions().colors[1]
+                    }
+                }
+            }, { // Secondary yAxis
+                title: {
+                    text: '二次维修量（30天）',
+                    style: {
+                        color: Highcharts.getOptions().colors[7]
+                    }
+                },
+                labels: {
+                    format: '{value} 台',
+                    style: {
+                        color: Highcharts.getOptions().colors[7]
+                    }
+                },
+                opposite: true
+            }],
+            plotOptions: {
+                series: {
+                    dataLabels: {
+                        // 开启数据标签
+                        enabled: true,
+                        format: '{point.y}'
+                    },
+                    // 关闭鼠标跟踪，对应的提示框、点击事件会失效
+                    enableMouseTracking: true
+                }
+            },
+            tooltip: {
+                shared: true
+            },
+            legend: {
+                layout: 'vertical',
+                align: 'left',
+                x: 120,
+                verticalAlign: 'top',
+                y: 70,
+                floating: true,
+                backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+            },
+            series: [{
+                name: '期间内二次维修量',
+                type: 'column',
+                yAxis: 1,
+                color: Highcharts.getOptions().colors[3],
+                data: {{ m_total.repeat_day_q | safe }},
+                tooltip: {
+                    valueSuffix: ' 台'
+                }
+            }, {
+                name: '期间内二次维修率',
+                color: Highcharts.getOptions().colors[5],
+                type: 'spline',
+                data: {{ m_total.repeat_ratio | safe }},
+                tooltip: {
+                    valueSuffix: '%'
+                }
+            }]
+        });
+
+        // 二次维修责任部门下钻型号比例图
+        Highcharts.chart('m_responbility_depart', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '二次维修责任部门下钻型号比例图'
+            },
+            subtitle: {
+                text: '数据来源: tbd'
+            },
+            xAxis: {
+                type: 'category'
+            },
+            yAxis: {
+                title: {
+                    text: '二次维修台数'
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y}台'
+                    }
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y}台</b> of total<br/>'
+            },
+            series: [{
+                name: '责任部门',
+                colorByPoint: true,
+                data: {{ m_total.responbility_depart_total | safe }}
+            }],
+            drilldown: {
+                series: {{ m_total.repeat_goods_total | safe }}
+            }
+        });
+
+        // 二次维修型号下钻故障图
+        Highcharts.chart('m_responbility_goods_total', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+
+            },
+            title: {
+                text: '二次维修型号下钻故障原因柱形图'
+            },
+            subtitle: {
+                text: '数据来源: tbd.'
+            },
+            xAxis: {
+                type: 'category'
+            },
+            yAxis: {
+                title: {
+                    text: '二次维修数量'
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y}台'
+                    }
+                }
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y}台</b> of total<br/>'
+            },
+            series: [{
+                    name: '机器型号',
+                colorByPoint: true,
+                data: {{ m_total.responbility_goods_total | safe }}
+            }],
+            drilldown: {
+                series: {{ m_total.repeat_goods_reason_total | safe }}
+            }
+        });
+
+    </script>
+
+{% endblock %}

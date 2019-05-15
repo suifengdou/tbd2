@@ -7,7 +7,7 @@
 
 import xadmin
 
-from .models import MachineOrder, MachineSN, FaultMachineSN, GoodFaultSummary, FactoryFaultSummary, BatchFaultSummary
+from .models import MachineOrder, MachineSN, FaultMachineSN, GoodFaultSummary, FactoryFaultSummary, BatchFaultSummary, MachineInfo
 
 
 class MachineOrderAdmin(object):
@@ -27,6 +27,15 @@ class FaultMachineSNAdmin(object):
     list_filter = ['mfd', 'finish_time', 'batch_number', 'manufactory', 'goods_id', 'appraisal']
 
 
+class MachineInfoAdmin(object):
+    list_display = ['machine_id', 'machine_name', 'machine_type', 'machine_number']
+    search_fields = ['machine_id', 'machine_name']
+    list_filter = ['machine_type']
+    # 设置这个外键用搜索的方式输入
+    relfield_style = 'fk-ajax'
+
+
 xadmin.site.register(MachineOrder, MachineOrderAdmin)
 xadmin.site.register(MachineSN, MachineSNAdmin)
 xadmin.site.register(FaultMachineSN, FaultMachineSNAdmin)
+xadmin.site.register(MachineInfo, MachineInfoAdmin)
