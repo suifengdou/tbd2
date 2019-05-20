@@ -436,14 +436,14 @@ class ToSummary(LoginRequiredMixin, View):
 
         if tosummary_tag == '1':
             # 找到统计表中的最后统计时间
-            earliest_time = GoodFaultSummary.objects.all().aggregate(Max('statistic_time'))
+            last_time = GoodFaultSummary.objects.all().aggregate(Max('statistic_time'))
             # 如果不存在
-            if earliest_time["statistic_time__max"] is None:
+            if last_time["statistic_time__max"] is None:
                 # 初始化第一个月的开始时间是工厂订单时间。
                 _pre_start_time = MachineOrder.objects.all().aggregate(Min("mfd"))["mfd__min"]
                 # 对起始时间进行处理，修正到对应年度月份的一号
                 start_time = datetime.datetime(_pre_start_time.year, _pre_start_time.month, 1, 0, 0, 0)
-                start_month = start_time.strftime( "%Y-%m")
+                start_month = start_time.strftime("%Y-%m")
 
                 _pre_goods_initial = MachineOrder.objects.extra(where=['date_format(mfd, "%s") = "%s"'],
                                                                 params=[dateformat, start_month]).values(
@@ -455,7 +455,7 @@ class ToSummary(LoginRequiredMixin, View):
                     products_fault_list[goods_id["goods_id"]] = 0
             else:
                 # 如果已经存在统计时间，则从最大的时间作为开始进行统计
-                _pre_start_time = earliest_time["statistic_time__max"]
+                _pre_start_time = last_time["statistic_time__max"]
                 start_time = datetime.datetime(_pre_start_time.year, _pre_start_time.month, 1, 0, 0, 0)
                 start_month = start_time.strftime( "%Y-%m")
 
@@ -470,7 +470,7 @@ class ToSummary(LoginRequiredMixin, View):
             end_time = datetime.datetime(datetime.date.today().year, datetime.date.today().month, 1, 0, 0, 0)
             # 开始进行大循环
             while start_time < end_time:
-                start_month = start_time.strftime( "%Y-%m")
+                start_month = start_time.strftime("%Y-%m")
 
                 # 通过扩展查询以月度为聚合统计数，where后面跟表达式，param后面跟对应表达式中的参数。
                 goods_production = MachineOrder.objects.extra(where=['date_format(mfd, "%s") = "%s"'],

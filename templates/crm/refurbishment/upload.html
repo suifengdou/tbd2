@@ -1,7 +1,7 @@
 
     {% extends 'mother.html' %}
 
-    {% block title %}中央维修服务单{% endblock %}
+    {% block title %}退货翻新{% endblock %}
 
     {% load staticfiles %}
 
@@ -294,7 +294,7 @@
                 <span>导入的维修单需要先递交服务单明细，才能开始标记二次维修</span>
             </div>
             <div class="card-block">
-                <form id="toworkstation" method="post" action="{% url 'crm_maintenance:towork' %}"
+                <form id="submit-list" method="post" action="{% url 'crm_refurbishment:upload' %}"
                       novalidate="">
                     {% csrf_token %}
 
@@ -302,7 +302,7 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">全部维修单数</span>
+                                <span style="font-size: x-large">全部原始翻新登记单数</span>
                             </div>
                             <div class="card bg-c-green order-card">
                                 <div class="card-block">
@@ -315,7 +315,7 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">未递交维修单数</span>
+                                <span style="font-size: x-large">未递交原始翻新登记单数</span>
                             </div>
                             <div class="card bg-c-pink order-card">
                                 <div class="card-block">
@@ -328,7 +328,7 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">递交之后才能计算</span>
+                                <span style="font-size: x-large">递交之后才能计算翻新数量</span>
                             </div>
                             <div class="card-block">
                                 <h6></h6>
@@ -345,223 +345,16 @@
 
         <!-- tab content start -->
 
-        {% if report_dic_towork %}
 
-        <div class="tab-content">
-
-            <!-- tab pane info start -->
-            <div class="tab-pane active"  aria-expanded="true">
-                <!-- info card start -->
-                <div class="card">
-                    <div class="card-header">
-                        <h1 class="card-header-text">导入完成信息面板</h1>
-                    </div>
-                    <div class="card-block">
-                        <div class="row">
-
-
-
-                            <!-- 导入成功标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-success business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">导入成功</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终导入成功条数：<b>{{ report_dic_towork.successful }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入成功标签结束 -->
-
-                            <!-- 导入失败标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-danger business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">导入失败</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终导入失败条数：<b>{{ report_dic_towork.false }}</b>条。</p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入失败标签结束 -->
-
-                            <!-- 导入失败标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-danger business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">丢弃重复</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终丢弃重复条数：<b>{{ report_dic_towork.repeat_num }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入失败标签结束 -->
-                        </div>
-                        <div class="row">
-
-                            <!-- 无效数据标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-warning business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">更新源数据成功数</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终更新源数据成功数：<b>{{ report_dic_towork.ori_successful }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 无效数据标签结束 -->
-
-                            <!-- 重复数据标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-info business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">更新源数据失败数</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终更新源数据失败数：<b>{{ report_dic_towork.ori_order_error }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 重复数据标签结束 -->
-
-                            <!-- 重复数据标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-info business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">递交数据内部错误</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">
-                                                    内部错误列表：
-                                                {% if report_dic_towork.error %}<p class="task-detail">
-                                                    错误信息：{{ report_dic_towork.error }}</p>
-                                                {% endif %}
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 重复数据标签结束 -->
-
-                        </div>
-                    </div>
-                </div>
-
-
-                <!-- info card end -->
-            </div>
-            <!-- tab pane info end -->
-
-
-        </div>
-
-        {% endif %}
         <!-- tab content end -->
 
         <div class="card">
             <div class="card-header">
-                <h5>标记二次维修</h5>
-                <span>导入的维修单需要递交工作台才能处理</span>
+                <h5>统计翻新数据</h5>
+                <span>导入的翻修单需要进行统计</span>
             </div>
             <div class="card-block">
-                <form id="signrepeat" name="signrepeat" method="post" action="{% url 'crm_maintenance:signrepeat' %}"
+                <form id="summary-goods-technician" name="signrepeat" method="post" action="{% url 'crm_refurbishment:upload' %}"
                       novalidate="">
                     {% csrf_token %}
 
@@ -569,12 +362,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">已经标记完成的维修单</span>
+                                <span style="font-size: x-large">已经标记完成的翻修单</span>
                             </div>
                             <div class="card bg-c-green order-card">
                                 <div class="card-block">
                                     <h6></h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.repeat_num }}</span></h2>
+                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.refurbish_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
                             </div>
@@ -582,12 +375,12 @@
                         <div class="col-4">
                             <div class="big-icon">
                                 <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">赶快标记维修单数量</span>
+                                <span style="font-size: x-large">未标记翻修单数量</span>
                             </div>
                             <div class="card bg-c-pink order-card">
                                 <div class="card-block">
                                     <h6></h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.unresolved_num }}</span></h2>
+                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.unsummary_num }}</span></h2>
                                     <p class="m-b-0"><span class="f-right"></span></p>
                                 </div>
                             </div>
@@ -599,7 +392,7 @@
                             </div>
                             <div class="card-block">
                                 <h6> </h6>
-                                <input type="text" name="signrepeat" value="1" style="display:none">
+                                <input type="text" name="towork" value="2" style="display:none">
                                 <button type="submit" class="btn btn-out btn-primary btn-square">点我标记</button>
                             </div>
 
@@ -610,158 +403,10 @@
             </div>
         </div>
 
-        {% if report_dic_totag %}
-
-        <!-- tab content start -->
-        <div class="tab-content">
-
-            <!-- tab pane info start -->
-            <div class="tab-pane active"  aria-expanded="true">
-                <!-- info card start -->
-                <div class="card">
-                    <div class="card-header">
-                        <h1 class="card-header-text">导入完成信息面板</h1>
-                    </div>
-                    <div class="card-block">
-                        <div class="row">
-
-                            <!-- 导入成功标签开始 -->
-                            <div class="col-md-6">
-                                <div class="card b-l-success business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">二次维修标记订单成功</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终处理订单成功条数：<b>{{ report_dic_totag.successful }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入成功标签结束 -->
-
-                            <!-- 导入失败标签开始 -->
-                            <div class="col-md-6">
-                                <div class="card b-l-danger business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">汇总数据表更新失败</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">二次维修汇总数错误：<b>{{ report_dic_totag.false }}</b>条。</p>
-                                                {% if report_dic.error %}<p class="task-detail">
-                                                    错误信息：{{ report_dic.error }}</p>{% endif %}
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入失败标签结束 -->
-
-                        </div>
-                        <div class="row">
-
-                            <!-- 无效数据标签开始 -->
-                            <div class="col-md-6">
-                                <div class="card b-l-warning business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">标记二次维修数量</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">此次标记二次维修数量：<b>{{ report_dic_totag.tag_successful }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 无效数据标签结束 -->
-
-                            <!-- 重复数据标签开始 -->
-                            <div class="col-md-6">
-                                <div class="card b-l-info business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">更新错误信息</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">更新错误：<b>{{ report_dic_totag.error }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 重复数据标签结束 -->
-
-                        </div>
-                    </div>
-                </div>
-
-
-                <!-- info card end -->
-            </div>
-            <!-- tab pane info end -->
-
-
-        </div>
-        <!-- tab content end -->
-
-        {% endif %}
 
 
 
+        <!--
         <div class="card">
             <div class="card-header">
                 <h5>递交维修单到SN列表</h5>
@@ -816,249 +461,8 @@
                 </form>
             </div>
         </div>
+        -->
 
-        <!-- tab content start -->
-
-        {% if report_dic_tosn %}
-
-        <div class="tab-content">
-
-            <!-- tab pane info start -->
-            <div class="tab-pane active"  aria-expanded="true">
-                <!-- info card start -->
-                <div class="card">
-                    <div class="card-header">
-                        <h1 class="card-header-text">递交完成信息面板</h1>
-                    </div>
-                    <div class="card-block">
-                        <div class="row">
-
-
-
-                            <!-- 导入成功标签开始 -->
-                            <div class="col-md-3">
-                                <div class="card b-l-success business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">递交成功</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终递交成功条数：<b>{{ report_dic_tosn.successful }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入成功标签结束 -->
-
-                            <!-- 导入失败标签开始 -->
-                            <div class="col-md-3">
-                                <div class="card b-l-danger business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">导入失败</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终导入失败条数：<b>{{ report_dic_tosn.false }}</b>条。</p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入失败标签结束 -->
-
-                            <!-- 导入失败标签开始 -->
-                            <div class="col-md-3">
-                                <div class="card b-l-danger business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">丢弃重复</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终丢弃重复条数：<b>{{ report_dic_tosn.repeat_num }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入失败标签结束 -->
-
-                            <!-- 导入失败标签开始 -->
-                            <div class="col-md-3">
-                                <div class="card b-l-danger business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">丢弃无sn条数</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">丢弃无sn条数：<b>{{ report_dic_tosn.discard }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 导入失败标签结束 -->
-
-
-                        </div>
-                        <div class="row">
-
-                            <!-- 无效数据标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-warning business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">更新源数据成功数</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终更新源数据成功数：<b>{{ report_dic_tosn.ori_successful }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 无效数据标签结束 -->
-
-                            <!-- 重复数据标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-info business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">更新源数据失败数</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">最终更新源数据失败数：<b>{{ report_dic_tosn.ori_order_error }}</b>条。
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 重复数据标签结束 -->
-
-                            <!-- 重复数据标签开始 -->
-                            <div class="col-md-4">
-                                <div class="card b-l-info business-info services m-b-20">
-                                    <div class="card-header">
-                                        <div class="service-header">
-                                            <a href="#">
-                                                <h2 class="card-header-text">递交数据内部错误</h2>
-                                            </a>
-                                        </div>
-                                        <span class="dropdown-toggle addon-btn text-muted f-right service-btn"
-                                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                              role="tooltip">
-                                         </span>
-                                    </div>
-                                    <div class="card-block">
-                                        <div class="row">
-                                            <div class="col-sm-12">
-                                                <p class="task-detail">
-                                                    内部错误列表：
-                                                {% if report_dic_towork.error %}<p class="task-detail">
-                                                    错误信息：{{ report_dic_tosn.error }}</p>
-                                                {% endif %}
-                                                </p>
-                                            </div>
-                                            <!-- end of col-sm-8 -->
-                                        </div>
-                                        <!-- end of row -->
-                                    </div>
-                                    <!-- end of card-block -->
-                                </div>
-                            </div>
-                            <!-- 重复数据标签结束 -->
-
-                        </div>
-                    </div>
-                </div>
-
-
-                <!-- info card end -->
-            </div>
-            <!-- tab pane info end -->
-
-
-        </div>
-
-        {% endif %}
-        <!-- tab content end -->
 
 
     {% endblock %}

@@ -32,7 +32,7 @@ class OriRefurbishInfo(BaseModel):
     ODER_STATUS = (
         (0, '未递交'),
         (1, '已处理'),
-        (2, '无效'),
+        (2, '重复订单'),
         (3, '异常'),
     )
     BATCH = (
@@ -68,12 +68,21 @@ class PrivateOriRefurbishInfo(OriRefurbishInfo):
 
 
 class RefurbishInfo(BaseModel):
+    ODER_STATUS = (
+        (0, '未递交'),
+        (1, '已处理'),
+        (2, '售后质量'),
+        (3, '异常'),
+    )
     ref_time = models.DateTimeField(verbose_name='翻新时间')
     goods_name = models.CharField(max_length=60, verbose_name='机器名称')
+    goods_id = models.CharField(max_length=30, verbose_name='机器编码')
     appraisal = models.CharField(max_length=60, verbose_name='故障判断')
     m_sn = models.CharField(max_length=30, verbose_name='机器序列号')
-    technician = models.CharField(null=True, max_length=30, verbose_name='技术员')
+    technician = models.CharField(max_length=30, verbose_name='技术员')
     memo = models.CharField(null=True, blank=True, max_length=60, verbose_name='备注信息')
+    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
+    summary_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
 
     class Meta:
         verbose_name = '翻新列表'
@@ -84,6 +93,46 @@ class RefurbishInfo(BaseModel):
         return self.m_sn
 
 
+class RefurbishTechSummary(BaseModel):
+    statistical_time = models.DateTimeField(verbose_name='统计时间')
+    technician = models.CharField(max_length=30, verbose_name='技术员')
+    quantity = models.IntegerField(verbose_name='翻新数量')
 
+    class Meta:
+        verbose_name = '技术员翻新统计列表'
+        verbose_name_plural = verbose_name
+        db_table = 'crm_ref_refurbishtechsummary'
+
+    def __str__(self):
+        return self.statistical_time
+
+
+class PrivateRefurbishTechSummary(RefurbishTechSummary):
+    class Meta:
+        verbose_name = '私有技术员翻新统计列表'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class RefurbishGoodSummary(BaseModel):
+    ODER_STATUS = (
+        (0, '未递交'),
+        (1, '已处理'),
+        (2, '已出库'),
+        (3, '异常'),
+    )
+    statistical_time = models.DateTimeField(verbose_name='统计时间')
+    goods_name = models.CharField(max_length=60, verbose_name='机器名称')
+    goods_id = models.CharField(max_length=30, verbose_name='机器编码')
+    quantity = models.IntegerField(verbose_name='翻新数量')
+    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
+
+    class Meta:
+        verbose_name = '翻新机器统计列表'
+        verbose_name_plural = verbose_name
+        db_table = 'crm_ref_refurbishgoodsummary'
+
+    def __str__(self):
+        return self.statistical_time
 
 

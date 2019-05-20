@@ -8,7 +8,7 @@
 
 import xadmin
 
-from .models import OriRefurbishInfo, ApprasialInfo, PrivateOriRefurbishInfo
+from .models import OriRefurbishInfo, ApprasialInfo, PrivateOriRefurbishInfo, RefurbishInfo, RefurbishTechSummary, PrivateRefurbishTechSummary, RefurbishGoodSummary
 
 
 class SetUserAdminMixin(object):
@@ -25,24 +25,56 @@ class SetUserAdminMixin(object):
 class OriRefurbishAdmin(SetUserAdminMixin, object):
     list_display = ['ref_time', 'goods_name', 'appraisal', 'pre_sn', 'mid_batch', 'tail_sn', 'submit_tag', 'creator',
                     'create_time', 'created_by', 'new_sn']
-    list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time']
+    list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
+    search_fields = ["tail_sn"]
     model_icon = 'fa fa-refresh'
     readonly_fields = ['submit_tag']
+    ordering = ['-ref_time']
     exclude = ['creator', 'created_by']
 
 
 class PrivateOriRefurbishInfoAdmin(SetUserAdminMixin, object):
     list_display = ['ref_time', 'goods_name', 'appraisal', 'pre_sn', 'mid_batch', 'tail_sn', 'submit_tag', 'creator',
                     'create_time', 'created_by', 'new_sn']
-    list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time']
+    list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
+    search_fields = ["tail_sn"]
     model_icon = 'fa fa-refresh'
     readonly_fields = ['submit_tag']
+    ordering = ['-ref_time']
     exclude = ['creator', 'created_by']
 
     def queryset(self):
         request = self.request
         qs = super(PrivateOriRefurbishInfoAdmin, self).queryset()
         qs = qs.filter(created_by=request.user.id)
+        return qs
+
+
+class RefurbishInfoAdmin(object):
+    list_display = ['ref_time', 'goods_name', 'm_sn', 'appraisal', 'technician', 'memo', 'submit_tag', 'create_time']
+    list_filter = ['ref_time', 'goods_name', 'appraisal', 'technician', 'create_time']
+    search_fields = ['m_sn']
+    readonly_fields = ['ref_time', 'goods_name', 'appraisal', 'technician', 'submit_tag', 'submit_tag']
+    ordering = ['-ref_time']
+    exclude =['creator']
+
+
+class RefurbishTechSummaryAdmin(object):
+    list_display = ["statistical_time", "technician", "quantity"]
+    search_fields = ['technician']
+    list_filter = ["statistical_time", 'technician']
+    ordering = ['-statistical_time']
+
+
+class PrivateRefurbishTechSummaryAdmin(object):
+    list_display = ["statistical_time", "technician", "quantity"]
+    list_filter = ["statistical_time"]
+    ordering = ['-statistical_time']
+
+    def queryset(self):
+        request = self.request
+        qs = super(PrivateRefurbishTechSummaryAdmin, self).queryset()
+        qs = qs.filter(technician=request.user.username)
         return qs
 
 
@@ -54,4 +86,7 @@ class AppraisalInfoAdmin(object):
 
 xadmin.site.register(OriRefurbishInfo, OriRefurbishAdmin)
 xadmin.site.register(PrivateOriRefurbishInfo, PrivateOriRefurbishInfoAdmin)
+xadmin.site.register(PrivateRefurbishTechSummary, PrivateRefurbishTechSummaryAdmin)
+xadmin.site.register(RefurbishTechSummary, RefurbishTechSummaryAdmin)
+xadmin.site.register(RefurbishInfo, RefurbishInfoAdmin)
 xadmin.site.register(ApprasialInfo, AppraisalInfoAdmin)
