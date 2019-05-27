@@ -132,9 +132,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
                        '是否闪退订单': 'is_quick_refund'}
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
-
-    def get(self, request: object) -> object:
-
+    def get(self, request):
         return render(request, "assis/refund_jdfbp/refundupload.html", {
             "index_tag": "ass_jdfbp_service",
         })
@@ -205,7 +203,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
             service_order_id = str(row["service_order_id"])
 
             # 如果服务单号为空，就丢弃这个订单，计数为丢弃订单
-            if re.match(r'^[0-9VW]', service_order_id) is None:
+            if re.match(r'^[0-9]', service_order_id) is None:
                 report_dic["discard"] += 1
                 continue
 
@@ -215,7 +213,7 @@ class RefundUpLoad(LoginRequiredMixin, View):
                 continue
 
             # 如果快递单号为空，则丢弃
-            elif re.match(r'^[0-9VW]', express_id) is None:
+            elif re.match(r'^[0-9JVW]', express_id) is None:
                 report_dic["discard"] += 1
                 continue
 

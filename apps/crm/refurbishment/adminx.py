@@ -28,7 +28,6 @@ class OriRefurbishAdmin(SetUserAdminMixin, object):
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
     search_fields = ["tail_sn"]
     model_icon = 'fa fa-refresh'
-    readonly_fields = ['submit_tag']
     ordering = ['-ref_time']
     exclude = ['creator', 'created_by']
 
@@ -51,10 +50,10 @@ class PrivateOriRefurbishInfoAdmin(SetUserAdminMixin, object):
 
 
 class RefurbishInfoAdmin(object):
-    list_display = ['ref_time', 'goods_name', 'm_sn', 'appraisal', 'technician', 'memo', 'submit_tag', 'create_time']
-    list_filter = ['ref_time', 'goods_name', 'appraisal', 'technician', 'create_time']
+    list_display = ['ref_time', 'goods_name', 'm_sn', 'appraisal', 'technician', 'memo', 'create_time']
+    list_filter = ['ref_time', 'goods_name', 'appraisal', 'technician', 'create_time', 'memo']
     search_fields = ['m_sn']
-    readonly_fields = ['ref_time', 'goods_name', 'appraisal', 'technician', 'submit_tag', 'submit_tag']
+    readonly_fields = ['ref_time', 'goods_name', 'appraisal', 'technician', 'submit_tag']
     ordering = ['-ref_time']
     exclude =['creator']
 

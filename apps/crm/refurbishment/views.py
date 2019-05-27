@@ -72,8 +72,9 @@ class RefurbishTask(LoginRequiredMixin, View):
                             report_dic["error"].append(e)
                         continue
                     # 判断此机器sn是否已经存在，如果存在则舍去，标记为重复值。跳出此循环
+                    standard_time = order.ref_time - relativedelta(days=1)
                     current_time = order.ref_time.strftime("%Y-%m-%d")
-                    repeat_tag = RefurbishInfo.objects.filter(m_sn=m_sn).values("ref_time")
+                    repeat_tag = RefurbishInfo.objects.all().filter(m_sn=m_sn, ref_time__gte=standard_time).values("ref_time")
                     if repeat_tag.exists():
                         last_time = repeat_tag[0]["ref_time"].strftime("%Y-%m-%d")
                         if current_time == last_time:
@@ -99,9 +100,10 @@ class RefurbishTask(LoginRequiredMixin, View):
                     refurbish.m_sn = m_sn
                     refurbish.technician = str(order.created_by.username)
                     refurbish.appraisal = str(order.appraisal.appraisal)
-                    refurbish.ref_time = order.ref_time
+                    refurbish.ref_time = current_time
                     refurbish.goods_name = str(order.goods_name.machine_name)
                     refurbish.goods_id = str(order.goods_name.machine_id)
+                    refurbish.creator = str(request.user.username)
 
                     try:
                         refurbish.save()
@@ -146,6 +148,7 @@ class RefurbishTask(LoginRequiredMixin, View):
                         refurbishtech.statistical_time = datetime.datetime(start_time.year, start_time.month, start_time.day, 10, 0, 0)
                         refurbishtech.technician = technician["technician"]
                         refurbishtech.quantity = technician["quantity"]
+                        refurbishtech.creator = request.user.username
                         try:
                             refurbishtech.save()
                         except Exception as e:
@@ -164,6 +167,7 @@ class RefurbishTask(LoginRequiredMixin, View):
                         refurbishgoods.goods_name = goods["goods_name"]
                         refurbishgoods.goods_id = goods["goods_id"]
                         refurbishgoods.quantity = goods["quantity"]
+                        refurbishgoods.creator = request.user.username
                         try:
                             refurbishgoods.save()
                         except Exception as e:
@@ -297,7 +301,6 @@ class RefurbishOverView(LoginRequiredMixin, View):
             tech_data = [tech["technician"], tech["quantity"]]
             techs_sort.append(tech_data)
         m_total["techs_sort"] = techs_sort
-
 
         pre_goods_summary = RefurbishGoodSummary.objects.all().filter(
             statistical_time__gte=datetime.datetime.strptime(confirm_data["start_time"], "%Y-%m-%d %H:%M:%S"),
