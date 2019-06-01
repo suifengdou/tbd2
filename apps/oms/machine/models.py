@@ -10,6 +10,8 @@ from django.db import models
 
 
 from db.base_model import BaseModel
+from apps.oms.manufactory.models import ManufactoryInfo
+from apps.utils.geography.models import NationalityInfo
 
 
 # Create your models here.
@@ -154,10 +156,12 @@ class MachineInfo(BaseModel):
         ("DMC", "除螨仪"),
         ("VAR", "智能机器人"),
     )
+
     machine_id = models.CharField(unique=True, max_length=30, verbose_name='商家编码')
-    machine_name = models.CharField(max_length=60, verbose_name='名称')
+    machine_name = models.CharField(unique=True, max_length=60, verbose_name='名称')
     machine_type = models.CharField(max_length=30, choices=MACHINE_TYPE, verbose_name='机器类型')
     machine_number = models.CharField(unique=True, max_length=10, verbose_name='机器排序')
+    sales_distriction = models.ForeignKey(NationalityInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='销售区域')
 
     class Meta:
         verbose_name = '机器信息表'
@@ -172,10 +176,26 @@ class MachineInfo(BaseModel):
         return str(self.machine_name)
 
 
+class PartInfo(BaseModel):
+    CATEGORY = (
+        (0, '客供配件'),
+        (1, '常规配件'),
+        (2, '礼品'),
+        (3, '其他'),
+    )
+    part_id = models.CharField(unique=True, max_length=30, verbose_name='配件编码')
+    part_name = models.CharField(unique=True, max_length=60, verbose_name='配件名称')
+    manufactory = models.ForeignKey(ManufactoryInfo, on_delete=models.CASCADE, verbose_name='工厂')
+    category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='配件类别')
+    size = models.CharField(null=True, blank=True, max_length=15, verbose_name='规格')
 
+    class Meta:
+        verbose_name = '配件信息表'
+        verbose_name_plural = verbose_name
+        db_table = 'oms_m_partinfo'
 
-
-
+    def __str__(self):
+        return str(self.part_name)
 
 
 

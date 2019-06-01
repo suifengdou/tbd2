@@ -14,7 +14,7 @@ from tbd2.settings import AUTH_USER_MODEL
 
 
 class ApprasialInfo(BaseModel):
-    appraisal = models.CharField(max_length=30, verbose_name='故障判断')
+    appraisal = models.CharField(unique=True, max_length=30, verbose_name='故障判断')
 
     class Meta:
         verbose_name = '故障列表'
