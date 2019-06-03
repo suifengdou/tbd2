@@ -10,7 +10,6 @@ from django.db import models
 
 
 from db.base_model import BaseModel
-from apps.oms.manufactory.models import ManufactoryInfo
 from apps.utils.geography.models import NationalityInfo
 
 
@@ -185,7 +184,6 @@ class PartInfo(BaseModel):
     )
     part_id = models.CharField(unique=True, max_length=30, verbose_name='配件编码')
     part_name = models.CharField(unique=True, max_length=60, verbose_name='配件名称')
-    manufactory = models.ForeignKey(ManufactoryInfo, on_delete=models.CASCADE, verbose_name='工厂')
     category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='配件类别')
     size = models.CharField(null=True, blank=True, max_length=15, verbose_name='规格')
 

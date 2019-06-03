@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'apps.oms.machine.apps.MachineConfig',
     'apps.crm.refurbishment.apps.RefurbishmentConfig',
     'apps.utils.geography.apps.GeographyConfig',
+    'apps.assistants.undelivered.apps.UndeliveredConfig',
 
 ]
 

@@ -9,7 +9,6 @@ from django.db import models
 import django.utils.timezone as timezone
 
 from db.base_model import BaseModel
-from apps.oms.machine.models import MachineInfo
 from tbd2.settings import AUTH_USER_MODEL
 
 
