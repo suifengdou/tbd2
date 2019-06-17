@@ -81,8 +81,8 @@ class RefurbishInfo(BaseModel):
     m_sn = models.CharField(max_length=30, verbose_name='机器序列号')
     technician = models.CharField(max_length=30, verbose_name='技术员')
     memo = models.CharField(null=True, blank=True, max_length=60, verbose_name='备注信息')
-    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
-    summary_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
+    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='递交状态')
+    summary_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='统计状态')
 
     class Meta:
         verbose_name = '翻新列表'

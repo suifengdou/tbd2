@@ -11,4 +11,4 @@ from django.apps import AppConfig
 class MachineConfig(AppConfig):
     # 名字要带路径
     name = 'apps.oms.machine'
-    verbose_name = '机器'
+    verbose_name = 'oms-machine'

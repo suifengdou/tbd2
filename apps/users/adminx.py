@@ -10,9 +10,9 @@ import xadmin
 from xadmin import views
 
 class GlobalSettings(object):
-    site_title = 'TBD2后台管理系统'
-    site_footer = 'TBD2'
-    menu_style = 'accordion'
+    site_title = 'UT后台管理系统'
+    site_footer = ' '
+    # menu_style = 'accordion'
 
 
 xadmin.site.register(views.CommAdminView, GlobalSettings)

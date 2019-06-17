@@ -152,7 +152,6 @@ class MaintenanceUpload(LoginRequiredMixin, View):
         })
 
     def post(self, request):
-        elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0, "pending_tosn_num": 0}
         creator = request.user.username
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
@@ -805,8 +804,10 @@ class MaintenanceSignRepeat(LoginRequiredMixin, View):
                     # 恢复为当前天，查询当前天到sn码，准备进行查询。
                     current_date = current_date + datetime.timedelta(days=1)
                     next_date = current_date + datetime.timedelta(days=1)
+                    # 取出当前时间段的所有单据，需要锁定未进行标记过的订单，已经标记过的订单需要排除在外。
                     current_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=current_date,
-                                                                                  finish_time__lte=next_date)
+                                                                                  finish_time__lte=next_date,
+                                                                                  repeat_tag=0)
                     # 查询当前天的订单对象集。准备进行循环处理。
                     for current_order in current_orders:
                         if current_order.machine_sn in machine_sns:

@@ -20,6 +20,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 添加目录到源目录
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 sys.path.insert(0, os.path.join(BASE_DIR, 'db'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'ext_apps'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -107,7 +108,7 @@ WSGI_APPLICATION = 'tbd2.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'tbd2',
+        'NAME': 'tbd2mb4',
         'HOST': '192.168.116.131',
         "USER": 'sfd',
         'PASSWORD': 'suifengdou963',
@@ -158,7 +159,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     (os.path.join(BASE_DIR, "static")),
 )
-
+STATIC_ROOT = os.path.join(BASE_DIR, "static_new/")
 
 
 EMAIL_HOST = 'smtp.qiye.163.com'

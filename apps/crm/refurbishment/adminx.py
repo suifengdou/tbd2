@@ -26,7 +26,7 @@ class OriRefurbishAdmin(SetUserAdminMixin, object):
     list_display = ['ref_time', 'goods_name', 'appraisal', 'pre_sn', 'mid_batch', 'tail_sn', 'submit_tag', 'creator',
                     'create_time', 'created_by', 'new_sn']
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
-    search_fields = ["tail_sn"]
+    search_fields = ["tail_sn", "pre_sn", "new_sn"]
     model_icon = 'fa fa-refresh'
     ordering = ['-ref_time']
     exclude = ['creator', 'created_by']
@@ -37,7 +37,7 @@ class PrivateOriRefurbishInfoAdmin(SetUserAdminMixin, object):
                     'create_time', 'created_by', 'new_sn']
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
     search_fields = ["tail_sn"]
-    model_icon = 'fa fa-refresh'
+    model_icon = 'fa fa-gear'
     readonly_fields = ['submit_tag']
     ordering = ['-ref_time']
     exclude = ['creator', 'created_by']
@@ -53,6 +53,7 @@ class RefurbishInfoAdmin(object):
     list_display = ['ref_time', 'goods_name', 'm_sn', 'appraisal', 'technician', 'memo', 'create_time']
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'technician', 'create_time', 'memo']
     search_fields = ['m_sn']
+    model_icon = 'fa fa-table'
     readonly_fields = ['ref_time', 'goods_name', 'appraisal', 'technician', 'submit_tag']
     ordering = ['-ref_time']
     exclude =['creator']
@@ -62,12 +63,14 @@ class RefurbishTechSummaryAdmin(object):
     list_display = ["statistical_time", "technician", "quantity"]
     search_fields = ['technician']
     list_filter = ["statistical_time", 'technician']
+    model_icon = 'fa fa-trophy'
     ordering = ['-statistical_time']
 
 
 class PrivateRefurbishTechSummaryAdmin(object):
     list_display = ["statistical_time", "technician", "quantity"]
     list_filter = ["statistical_time"]
+    model_icon = 'fa fa-trophy'
     ordering = ['-statistical_time']
 
     def queryset(self):
@@ -81,6 +84,7 @@ class AppraisalInfoAdmin(object):
     list_display = ['appraisal', 'creator', 'create_time']
     search_feilds = ['appraisal']
     list_filter = ['appraisal']
+    model_icon = 'fa fa-tags'
 
 
 xadmin.site.register(OriRefurbishInfo, OriRefurbishAdmin)

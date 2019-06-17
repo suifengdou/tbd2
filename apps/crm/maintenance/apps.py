@@ -9,4 +9,4 @@ from django.apps import AppConfig
 
 class MaintenanceConfig(AppConfig):
     name = 'apps.crm.maintenance'
-    verbose_name = '中央维修'
+    verbose_name = 'crm-maintenance'

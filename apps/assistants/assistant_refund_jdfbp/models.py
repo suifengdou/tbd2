@@ -15,7 +15,7 @@ from db.base_model import BaseModel
 class RefundResource(BaseModel):
     VERIFY_FIELD = ['service_order_id', 'order_id', 'goods_id', 'goods_name', 'order_status', 'application_time',
                     'buyer_expectation', 'return_model', 'handler_name', 'express_id', 'express_company']
-    ODER_STATUS = (
+    ORDER_STATUS = (
         (0, '未审核'),
         (1, '已处理'),
         (2, '已完结'),
@@ -42,7 +42,7 @@ class RefundResource(BaseModel):
     take_delivery_status = models.CharField(null=True, blank=True, max_length=20, verbose_name=u'取件状态')
     delivery_time = models.CharField(null=True, blank=True, max_length=30, verbose_name=u'发货时间')
     express_id = models.CharField(max_length=30, verbose_name=u'运单号')
-    express_fee =models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2, verbose_name=u'运费金额')
+    express_fee = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2, verbose_name=u'运费金额')
     express_company = models.CharField(max_length=20, verbose_name=u'快递公司')
     receive_time = models.CharField(null=True, blank=True, max_length=50, verbose_name=u'商家收货时间')
     refund_reason = models.CharField(null=True, blank=True, max_length=50, verbose_name=u'收货登记原因')
@@ -52,7 +52,7 @@ class RefundResource(BaseModel):
     renew_express_id = models.CharField(null=True, blank=True, max_length=30, verbose_name=u'换新订单')
     renew_goods_id = models.CharField(null=True, blank=True, max_length=20, verbose_name=u'换新商品编号')
     is_quick_refund = models.CharField(null=True, blank=True, max_length=10, verbose_name=u'是否闪退订单')
-    handlingstatus = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='最终录入状态', default=0)
+    handlingstatus = models.SmallIntegerField(choices=ORDER_STATUS, verbose_name='最终录入状态', default=0)
 
     class Meta:
         verbose_name = u'京东FBP退库单源数据'
@@ -70,3 +70,9 @@ class RefundResource(BaseModel):
         else:
             return None
 
+
+class PendingRefundResource(RefundResource):
+    class Meta:
+        verbose_name = '未建单退货单'
+        verbose_name_plural = verbose_name
+        proxy = True
