@@ -19,7 +19,6 @@ import pandas as pd
 
 
 
-from apps.crm.customers.models import CustomerInfo, CustomerTendency
 from .models import OriRefurbishInfo, RefurbishInfo, ApprasialInfo, RefurbishTechSummary, RefurbishGoodSummary
 
 from apps.utils.mixin_utils import LoginRequiredMixin
@@ -55,9 +54,9 @@ class RefurbishTask(LoginRequiredMixin, View):
                     if len(pre_sn) == 4:
                         mid_batch = str(order.mid_batch)
                         tail_sn = str(order.tail_sn)
-                        machine_number = str(order.goods_name.machine_number)
-                        machine_type = str(order.goods_name.machine_type)
-                        m_sn = pre_sn + machine_type + machine_number + mid_batch + tail_sn
+                        goods_number = str(order.goods_name.goods_number)
+                        category = str(order.goods_name.category)
+                        m_sn = pre_sn + category + goods_number + mid_batch + tail_sn
                     # 大于4的时候，按照老编码规则内容处理。
                     elif len(pre_sn) > 4:
                         m_sn = pre_sn
@@ -101,8 +100,8 @@ class RefurbishTask(LoginRequiredMixin, View):
                     refurbish.technician = str(order.created_by.username)
                     refurbish.appraisal = str(order.appraisal.appraisal)
                     refurbish.ref_time = current_time
-                    refurbish.goods_name = str(order.goods_name.machine_name)
-                    refurbish.goods_id = str(order.goods_name.machine_id)
+                    refurbish.goods_name = str(order.goods_name.good_name)
+                    refurbish.goods_id = str(order.goods_name.good_id)
                     refurbish.creator = str(request.user.username)
 
                     try:

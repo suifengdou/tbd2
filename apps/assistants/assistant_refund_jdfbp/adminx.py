@@ -73,7 +73,6 @@ class RefundResourceAdmin(object):
     search_fields = ['service_order_id', 'order_id', 'express_id']
     list_filter = ['goods_id', 'application_time', 'order_status', 'handlingstatus']
     import_data = True
-    actions = [ModifyAction, ]
 
     def post(self, request, *args, **kwargs):
         creator = request.user.username

@@ -31,6 +31,10 @@ class OriRefurbishAdmin(SetUserAdminMixin, object):
     ordering = ['-ref_time']
     exclude = ['creator', 'created_by']
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class PrivateOriRefurbishInfoAdmin(SetUserAdminMixin, object):
     list_display = ['ref_time', 'goods_name', 'appraisal', 'pre_sn', 'mid_batch', 'tail_sn', 'submit_tag', 'creator',
@@ -52,11 +56,15 @@ class PrivateOriRefurbishInfoAdmin(SetUserAdminMixin, object):
 class RefurbishInfoAdmin(object):
     list_display = ['ref_time', 'goods_name', 'm_sn', 'appraisal', 'technician', 'memo', 'create_time']
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'technician', 'create_time', 'memo']
-    search_fields = ['m_sn']
+    search_fields = ['m_sn', 'memo']
     model_icon = 'fa fa-table'
     readonly_fields = ['ref_time', 'goods_name', 'appraisal', 'technician', 'submit_tag']
     ordering = ['-ref_time']
     exclude =['creator']
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 class RefurbishTechSummaryAdmin(object):
@@ -65,6 +73,10 @@ class RefurbishTechSummaryAdmin(object):
     list_filter = ["statistical_time", 'technician']
     model_icon = 'fa fa-trophy'
     ordering = ['-statistical_time']
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 class PrivateRefurbishTechSummaryAdmin(object):
@@ -79,6 +91,10 @@ class PrivateRefurbishTechSummaryAdmin(object):
         qs = qs.filter(technician=request.user.username)
         return qs
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class AppraisalInfoAdmin(object):
     list_display = ['appraisal', 'creator', 'create_time']
@@ -87,8 +103,8 @@ class AppraisalInfoAdmin(object):
     model_icon = 'fa fa-tags'
 
 
-xadmin.site.register(OriRefurbishInfo, OriRefurbishAdmin)
 xadmin.site.register(PrivateOriRefurbishInfo, PrivateOriRefurbishInfoAdmin)
+xadmin.site.register(OriRefurbishInfo, OriRefurbishAdmin)
 xadmin.site.register(PrivateRefurbishTechSummary, PrivateRefurbishTechSummaryAdmin)
 xadmin.site.register(RefurbishTechSummary, RefurbishTechSummaryAdmin)
 xadmin.site.register(RefurbishInfo, RefurbishInfoAdmin)

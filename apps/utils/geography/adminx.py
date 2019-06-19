@@ -16,11 +16,20 @@ class NationalityAdmin(object):
 
 
 class ProvinceAdmin(object):
-    pass
+
+    def queryset(self):
+        request = self.request
+        qs = super(ProvinceAdmin, self).queryset()
+        return qs
+
 
 
 class CityAdmin(object):
-    pass
+
+    def queryset(self):
+        request = self.request
+        qs = super(ProvinceAdmin, self).queryset()
+        return qs
 
 
 xadmin.site.register(NationalityInfo, NationalityAdmin)

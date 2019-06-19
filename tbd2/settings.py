@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'apps.utils.geography.apps.GeographyConfig',
     'apps.assistants.undelivered.apps.UndeliveredConfig',
 
+
 ]
 
 AUTH_USER_MODEL = "users.UserProfile"

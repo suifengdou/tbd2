@@ -9,7 +9,5 @@ from django.db import models
 import django.utils.timezone as timezone
 
 from db.base_model import BaseModel
+from apps.utils.geography.models import NationalityInfo, ProvinceInfo, CityInfo
 
-
-class CusODOInfo(BaseModel):
-    pass

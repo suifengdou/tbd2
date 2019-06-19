@@ -26,7 +26,7 @@ class NationalityInfo(BaseModel):
 
 
 class ProvinceInfo(BaseModel):
-    nationality = models.ForeignKey(NationalityInfo, models.CASCADE, verbose_name='国家')
+    nationality = models.ForeignKey(NationalityInfo, on_delete=models.CASCADE, verbose_name='国家')
     province = models.CharField(unique=True, max_length=150, verbose_name="省份")
     area_code = models.CharField(unique=True, max_length=10, verbose_name='电话区号')
 

@@ -11,6 +11,7 @@
   {% if LANGUAGE_BIDI %}<link rel="stylesheet" type="text/css" href="{% block stylesheet_rtl %}{% static "xadmin/css/rtl.css" %}{% endblock %}" />{% endif %}
   {% vendor 'bootstrap.css' %}
   {% if site_theme %}
+  <link rel="icon" href="{% static 'assets/images/favicon.ico' %}" type="image/x-icon">
   <link rel="stylesheet" type="text/css" id="site-theme" href="{{site_theme}}" />
   {% else %}
   <link rel="stylesheet" type="text/css" href="{% static "xadmin/css/themes/bootstrap-xadmin.css" %}" />
