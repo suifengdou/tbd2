@@ -55,7 +55,7 @@ class OriorderInfo(BaseModel):
 
 
     class Meta:
-        verbose_name = "未发货订单表"
+        verbose_name = "订单查询表"
         verbose_name_plural = verbose_name
         db_table = 'ass_und_undelivered'
 

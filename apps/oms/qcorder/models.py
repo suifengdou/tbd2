@@ -1,3 +1,103 @@
-from django.db import models
+# -*- coding:  utf-8 -*-
+# @Time    :  2019/5/11 13: 47
+# @Author  :  Hann
+# @Site    :
+# @File    :  models.py
+# @Software:  PyCharm
 
-# Create your models here.
+from django.db import models
+import django.utils.timezone as timezone
+
+from db.base_model import BaseModel
+from apps.oms.manuorder.models import ManuOrderInfo
+from django.db.models import Count, Avg, Max, Min, Sum
+
+
+class QCOriInfo(BaseModel):
+    ORDERSTATUS = (
+        (0, '取消'),
+        (1, '未递交'),
+        (2, '有错误'),
+        (3, '已递交'),
+    )
+    RESULT = (
+        (0, '合格'),
+        (1, '不合格'),
+    )
+    CATEGORY = (
+        (0, '首检'),
+        (1, '复检'),
+        (2, '召回'),
+    )
+
+    batch_num = models.ForeignKey(ManuOrderInfo, on_delete=models.CASCADE, verbose_name='批次号码')
+    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+    quantity = models.IntegerField(verbose_name='验货数量')
+    result = models.IntegerField(choices=RESULT, default=0, verbose_name='验货结果')
+    category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='验货类型')
+    check_quantity = models.IntegerField(verbose_name='抽检数量')
+    a_flaw = models.IntegerField(verbose_name='A类缺陷')
+    b1_flaw = models.IntegerField(verbose_name='B1类缺陷')
+    b2_flaw = models.IntegerField(verbose_name='B2类缺陷')
+    c_flaw = models.IntegerField(verbose_name='C类缺陷')
+    memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
+    qc_order_id = models.CharField(null=True, blank=True, unique=True, max_length=30, verbose_name='质检单号')
+
+    class Meta:
+        verbose_name = '原始质检单明细表'
+        verbose_name_plural = verbose_name
+        db_table = 'oms_qc_oriorder'
+
+    def __str__(self):
+        return str(self.quantity)
+
+
+class QCSubmitOriInfo(QCOriInfo):
+
+    class Meta:
+        verbose_name = '未递交原始质检单'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+
+class QCInfo(BaseModel):
+    ORDERSTATUS = (
+        (0, '取消'),
+        (1, '未处理'),
+        (2, '已确认'),
+        (3, '已递交'),
+    )
+    RESULT = (
+        (0, '合格'),
+        (1, '不合格'),
+    )
+    CATEGORY = (
+        (0, '首检'),
+        (1, '复检'),
+        (2, '召回'),
+    )
+
+    batch_num = models.CharField(max_length=30, verbose_name='批次号码')
+    qc_order_id = models.CharField(max_length=30, verbose_name='质检单号')
+    goods_name = models.CharField(max_length=60, verbose_name='货品名称')
+    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+    manufactory = models.CharField(max_length=60, verbose_name='工厂名称')
+    goods_id = models.CharField(max_length=30, verbose_name='货品编码')
+
+    quantity = models.IntegerField(verbose_name='验货数量')
+    total_quantity = models.IntegerField(verbose_name='订单数量')
+    accumulation = models.IntegerField(verbose_name='累计数量')
+    result = models.IntegerField(choices=RESULT, verbose_name='验货结果')
+    category = models.IntegerField(choices=CATEGORY, verbose_name='验货类型')
+    check_quantity = models.IntegerField(verbose_name='抽检数量')
+    a_flaw = models.IntegerField(verbose_name='A类缺陷')
+    b1_flaw = models.IntegerField(verbose_name='B1类缺陷')
+    b2_flaw = models.IntegerField(verbose_name='B2类缺陷')
+    c_flaw = models.IntegerField(verbose_name='C类缺陷')
+    memorandum = models.CharField(max_length=200, verbose_name='备注')
+
+    class Meta:
+        verbose_name = '工厂验货明细表'
+        verbose_name_plural = verbose_name
+        db_table = 'oms_qc_order'

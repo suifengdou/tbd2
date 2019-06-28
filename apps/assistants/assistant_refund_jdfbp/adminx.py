@@ -55,6 +55,13 @@ class ModifyAction(BaseActionView):
 
 
 class RefundResourceAdmin(object):
+    list_display = ['service_order_id', 'order_id', 'goods_id', 'goods_name', 'order_status', 'application_time',
+                    'buyer_expectation', 'return_model', 'handler_name', 'express_id', 'express_company', 'handlingstatus']
+    search_fields = ['service_order_id', 'order_id', 'express_id']
+    list_filter = ['goods_id', 'application_time', 'order_status', 'handlingstatus']
+
+
+class PendingRefundResourceAdmin(object):
     INIT_FIELDS_DIC = {'服务单号': 'service_order_id', '订单号': 'order_id', '商品编号': 'goods_id', '商品名称': 'goods_name',
                        '商品金额': 'goods_amount', '服务单状态': 'order_status', '售后服务单申请时间': 'application_time',
                        '商家首次审核时间': 'bs_initial_time', '商家首次处理时间': 'bs_handle_time', '售后服务单整体时长': 'duration',
@@ -67,11 +74,12 @@ class RefundResourceAdmin(object):
                        '退款金额': 'refund_amount', '换新订单': 'renew_express_id', '换新商品编号': 'renew_goods_id',
                        '是否闪退订单': 'is_quick_refund'}
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
-
-    list_display = ['service_order_id', 'order_id', 'goods_id', 'goods_name', 'order_status', 'application_time',
-                    'buyer_expectation', 'return_model', 'handler_name', 'express_id', 'express_company', 'handlingstatus']
+    list_display = ['handlingstatus', 'service_order_id', 'order_id', 'express_id', 'express_company', 'goods_name',
+                    'order_status', 'application_time', 'buyer_expectation', 'return_model']
     search_fields = ['service_order_id', 'order_id', 'express_id']
-    list_filter = ['goods_id', 'application_time', 'order_status', 'handlingstatus']
+    list_filter = ['application_time', 'handlingstatus']
+    list_editable = ['handlingstatus']
+    actions = [ModifyAction, ]
     import_data = True
 
     def post(self, request, *args, **kwargs):
@@ -84,7 +92,7 @@ class RefundResourceAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (result['false'], result['error']), 'warning')
             if result['repeated'] > 0:
                 self.message_user('包含更新重复数据%s条' % result['repeated'], 'error')
-        return super(RefundResourceAdmin, self).post(request, args, kwargs)
+        return super(PendingRefundResourceAdmin, self).post(request, args, kwargs)
 
     def handle_upload_file(self, _file, creator):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -210,15 +218,6 @@ class RefundResourceAdmin(object):
                     report_dic["error"].append(e)
         return report_dic
 
-
-class PendingRefundResourceAdmin(object):
-    list_display = ['goods_name', 'handlingstatus', 'service_order_id', 'order_id', 'express_id', 'express_company',
-                    'order_status', 'application_time', 'buyer_expectation', 'return_model']
-    search_fields = ['service_order_id', 'order_id', 'express_id']
-    list_filter = ['application_time', 'handlingstatus']
-    list_editable = ['handlingstatus']
-    actions = [ModifyAction, ]
-
     def queryset(self):
         qs = RefundResource.objects.all().filter(handlingstatus=0)
         return qs
@@ -228,5 +227,5 @@ class PendingRefundResourceAdmin(object):
         return False
 
 
-xadmin.site.register(RefundResource, RefundResourceAdmin)
 xadmin.site.register(PendingRefundResource, PendingRefundResourceAdmin)
+xadmin.site.register(RefundResource, RefundResourceAdmin)

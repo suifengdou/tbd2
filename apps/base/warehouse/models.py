@@ -18,7 +18,7 @@ class WarehouseTypeInfo(BaseModel):
     class Meta:
         verbose_name = '仓库类型'
         verbose_name_plural = verbose_name
-        db_table = 'base_w_category'
+        db_table = 'base_wah_category'
 
     def __str__(self):
         return self.category
@@ -36,9 +36,9 @@ class WarehouseInfo(BaseModel):
     status = models.IntegerField(choices=STATUS, default=0, verbose_name='仓库状态')
 
     class Meta:
-        verbose_name = '仓库类型'
+        verbose_name = '仓库'
         verbose_name_plural = verbose_name
-        db_table = 'base_w_warehouse'
+        db_table = 'base_wah_warehouse'
 
     def __str__(self):
         return self.warehouse_name

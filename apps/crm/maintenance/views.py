@@ -16,7 +16,7 @@ import pandas as pd
 
 from apps.crm.maintenance.models import MaintenanceInfo, MaintenanceHandlingInfo, MaintenanceSummary
 from .forms import UploadFileForm
-from apps.oms.machine.models import MachineSN, FaultMachineSN
+
 # Create your views here.
 
 
@@ -937,114 +937,114 @@ class MaintenanceWorkList(LoginRequiredMixin, View):
         return HttpResponse('{"status": "success"}', content_type='application/json')
 
 
-class MaintenanceToSN(LoginRequiredMixin, View):
-    QUERY_FIELD = ['machine_sn', 'appraisal', 'finish_time', ]
-
-    def post(self, request):
-        # 定义递交工作台订单的报告字典，以及整体的数据的报告字典
-        report_dic_tosn = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "repeat_num": 0,
-                             "error": [], "discard": 0}
-        command_id = request.POST.get("tosn", None)
-
-        creator = request.user.username
-
-        if command_id == '1':
-            while True:
-                pending_orders = MaintenanceHandlingInfo.objects.filter(tomachinesn_status=0)[0:50]
-                if len(pending_orders) == 0:
-                    break
-                # # 获取到对应的sn列表，进行列表查询
-                # sn_list = []
-                # for order in pending_orders:
-                #     # 创建一个工作台订单对象，
-                #     if re.match(r'^[0-9A-Z]+', order.machine_sn):
-                #         sn_list.append(str(order.machine_sn))
-                # # 获取到对应sn的批次序列号编码表
-                # machine_orders = MachineSN.objects.filter(m_sn__in=sn_list)
-                # 再次循环数据，创建对应的问题编码表
-                for order in pending_orders:
-                    # 如果没有序列号，则直接抛弃此维修单
-                    if len(order.machine_sn) == 0:
-                        report_dic_tosn['discard'] += 1
-                        try:
-                            order.tomachinesn_status = 3
-                            order.save()
-                            report_dic_tosn['ori_successful'] += 1
-                        except Exception as e:
-                            report_dic_tosn['error'].append(e)
-                            report_dic_tosn['ori_order_error'] += 1
-                        continue
-
-                    faultmachine_order = FaultMachineSN()
-
-                    faultmachine_order.finish_time = order.finish_time
-                    faultmachine_order.appraisal = order.appraisal
-                    faultmachine_order.m_sn = order.machine_sn
-                    faultmachine_order.creator = creator
-
-                    # 验证一下重复值，如果重复，则丢弃数据。
-                    if FaultMachineSN.objects.filter(finish_time=order.finish_time, appraisal=order.appraisal, m_sn=order.machine_sn).exists():
-                        report_dic_tosn['repeat_num'] += 1
-                        try:
-                            order.tomachinesn_status = 1
-                            order.save()
-                            report_dic_tosn['ori_successful'] += 1
-                        except Exception as e:
-                            report_dic_tosn['error'].append(e)
-                            report_dic_tosn['ori_order_error'] += 1
-                        continue
-
-                    machine_order = MachineSN.objects.filter(m_sn=order.machine_sn)
-
-                    if machine_order.count() == 0:
-                        report_dic_tosn['discard'] += 1
-                        try:
-                            order.tomachinesn_status = 2
-                            order.save()
-                            report_dic_tosn['ori_successful'] += 1
-                        except Exception as e:
-                            report_dic_tosn['error'].append(e)
-                            report_dic_tosn['ori_order_error'] += 1
-                        continue
-
-                    faultmachine_order.batch_number = machine_order[0].batch_number
-                    faultmachine_order.goods_id = machine_order[0].goods_id
-                    faultmachine_order.manufactory = machine_order[0].manufactory
-                    faultmachine_order.mfd = machine_order[0].mfd
-
-                    try:
-                        faultmachine_order.save()
-                        report_dic_tosn["successful"] += 1
-                        try:
-                            order.tomachinesn_status = 1
-                            order.save()
-                            report_dic_tosn['ori_successful'] += 1
-                        except Exception as e:
-                            report_dic_tosn['error'].append(e)
-                            report_dic_tosn['ori_order_error'] += 1
-                    except Exception as e:
-                        report_dic_tosn['error'].append(e)
-                        report_dic_tosn['false'] += 1
-
-            # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
-            elements = MainUtils.elementsnum()
-
-            return render(request, "crm/maintenance/upload.html", {
-                "index_tag": "crm_maintenance_orders",
-                "elements": elements,
-                "report_dic_tosn": report_dic_tosn,
-            })
-
-        else:
-
-            elements = MainUtils.elementsnum()
-            report_dic_tosn['error'] = '请联系管理员，出现了内部错误'
-
-            return render(request, 'crm/maintenance/upload.html', {
-                "index_tag": "crm_maintenance_orders",
-                "report_dic_tosn": report_dic_tosn,
-                "elements": elements,
-            })
+# class MaintenanceToSN(LoginRequiredMixin, View):
+#     QUERY_FIELD = ['machine_sn', 'appraisal', 'finish_time', ]
+#
+#     def post(self, request):
+#         # 定义递交工作台订单的报告字典，以及整体的数据的报告字典
+#         report_dic_tosn = {"successful": 0, "ori_successful": 0, "false": 0, "ori_order_error": 0, "repeat_num": 0,
+#                              "error": [], "discard": 0}
+#         command_id = request.POST.get("tosn", None)
+#
+#         creator = request.user.username
+#
+#         if command_id == '1':
+#             while True:
+#                 pending_orders = MaintenanceHandlingInfo.objects.filter(tomachinesn_status=0)[0:50]
+#                 if len(pending_orders) == 0:
+#                     break
+#                 # # 获取到对应的sn列表，进行列表查询
+#                 # sn_list = []
+#                 # for order in pending_orders:
+#                 #     # 创建一个工作台订单对象，
+#                 #     if re.match(r'^[0-9A-Z]+', order.machine_sn):
+#                 #         sn_list.append(str(order.machine_sn))
+#                 # # 获取到对应sn的批次序列号编码表
+#                 # machine_orders = MachineSN.objects.filter(m_sn__in=sn_list)
+#                 # 再次循环数据，创建对应的问题编码表
+#                 for order in pending_orders:
+#                     # 如果没有序列号，则直接抛弃此维修单
+#                     if len(order.machine_sn) == 0:
+#                         report_dic_tosn['discard'] += 1
+#                         try:
+#                             order.tomachinesn_status = 3
+#                             order.save()
+#                             report_dic_tosn['ori_successful'] += 1
+#                         except Exception as e:
+#                             report_dic_tosn['error'].append(e)
+#                             report_dic_tosn['ori_order_error'] += 1
+#                         continue
+#
+#                     faultmachine_order = FaultMachineSN()
+#
+#                     faultmachine_order.finish_time = order.finish_time
+#                     faultmachine_order.appraisal = order.appraisal
+#                     faultmachine_order.m_sn = order.machine_sn
+#                     faultmachine_order.creator = creator
+#
+#                     # 验证一下重复值，如果重复，则丢弃数据。
+#                     if FaultMachineSN.objects.filter(finish_time=order.finish_time, appraisal=order.appraisal, m_sn=order.machine_sn).exists():
+#                         report_dic_tosn['repeat_num'] += 1
+#                         try:
+#                             order.tomachinesn_status = 1
+#                             order.save()
+#                             report_dic_tosn['ori_successful'] += 1
+#                         except Exception as e:
+#                             report_dic_tosn['error'].append(e)
+#                             report_dic_tosn['ori_order_error'] += 1
+#                         continue
+#
+#                     machine_order = MachineSN.objects.filter(m_sn=order.machine_sn)
+#
+#                     if machine_order.count() == 0:
+#                         report_dic_tosn['discard'] += 1
+#                         try:
+#                             order.tomachinesn_status = 2
+#                             order.save()
+#                             report_dic_tosn['ori_successful'] += 1
+#                         except Exception as e:
+#                             report_dic_tosn['error'].append(e)
+#                             report_dic_tosn['ori_order_error'] += 1
+#                         continue
+#
+#                     faultmachine_order.batch_number = machine_order[0].batch_number
+#                     faultmachine_order.goods_id = machine_order[0].goods_id
+#                     faultmachine_order.manufactory = machine_order[0].manufactory
+#                     faultmachine_order.mfd = machine_order[0].mfd
+#
+#                     try:
+#                         faultmachine_order.save()
+#                         report_dic_tosn["successful"] += 1
+#                         try:
+#                             order.tomachinesn_status = 1
+#                             order.save()
+#                             report_dic_tosn['ori_successful'] += 1
+#                         except Exception as e:
+#                             report_dic_tosn['error'].append(e)
+#                             report_dic_tosn['ori_order_error'] += 1
+#                     except Exception as e:
+#                         report_dic_tosn['error'].append(e)
+#                         report_dic_tosn['false'] += 1
+#
+#             # 整体数据的报告字典，对维修单进行基础性统计，罗列在网页上。所有订单数，未递交数，二次维修数，未核定二次维修原因数等
+#             elements = MainUtils.elementsnum()
+#
+#             return render(request, "crm/maintenance/upload.html", {
+#                 "index_tag": "crm_maintenance_orders",
+#                 "elements": elements,
+#                 "report_dic_tosn": report_dic_tosn,
+#             })
+#
+#         else:
+#
+#             elements = MainUtils.elementsnum()
+#             report_dic_tosn['error'] = '请联系管理员，出现了内部错误'
+#
+#             return render(request, 'crm/maintenance/upload.html', {
+#                 "index_tag": "crm_maintenance_orders",
+#                 "report_dic_tosn": report_dic_tosn,
+#                 "elements": elements,
+#             })
 
 
 class MainUtils(object):

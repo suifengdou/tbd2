@@ -64,6 +64,13 @@ INSTALLED_APPS = [
     'apps.crm.refurbishment.apps.RefurbishmentConfig',
     'apps.utils.geography.apps.GeographyConfig',
     'apps.assistants.undelivered.apps.UndeliveredConfig',
+    'apps.base.manufactory.apps.ManufactoryConfig',
+    'apps.base.warehouse.apps.WarehouseConfig',
+    'apps.base.relationship.apps.RelationshipConfig',
+    'apps.oms.planorder.apps.PlanorderConfig',
+    'apps.oms.manuorder.apps.MachineorderConfig',
+    'apps.oms.qcorder.apps.QcorderConfig',
+    'apps.wms.stock.apps.StockConfig',
 
 
 ]

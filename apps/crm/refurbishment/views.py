@@ -100,8 +100,8 @@ class RefurbishTask(LoginRequiredMixin, View):
                     refurbish.technician = str(order.created_by.username)
                     refurbish.appraisal = str(order.appraisal.appraisal)
                     refurbish.ref_time = current_time
-                    refurbish.goods_name = str(order.goods_name.good_name)
-                    refurbish.goods_id = str(order.goods_name.good_id)
+                    refurbish.goods_name = str(order.goods_name.goods_name)
+                    refurbish.goods_id = str(order.goods_name.goods_id)
                     refurbish.creator = str(request.user.username)
 
                     try:

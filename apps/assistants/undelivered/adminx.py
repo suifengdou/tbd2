@@ -5,13 +5,65 @@
 # @File    : adminx.py.py
 # @Software: PyCharm
 
+
+from django.core.exceptions import PermissionDenied
 import pandas as pd
 import xadmin
+from xadmin.plugins.actions import BaseActionView
+from xadmin.views.base import filter_hook
+from xadmin.util import model_ngettext
+
 
 from .models import OriorderInfo, PendingOrderInfo, SpecialOrderInfo, RefundOrderInfo
 
 
+class ModifyAction(BaseActionView):
+    action_name = "update_selected"
+    description = '审核对应项目为暂不处理'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    modify_models_batch = True
+
+    model_perm = 'change'
+    icon = 'fa fa-flag'
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has change permission for the actual model
+        if not self.has_change_permission():
+            raise PermissionDenied
+
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量修改了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status=3)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+                    obj.update(status=3)
+            self.message_user("成功审核 %(count)d %(items)s." % {
+                "count": n, "items": model_ngettext(self.opts, n)
+            }, 'success')
+        # Return None to display the change list page again.
+        return None
+
+
 class OriorderInfoAdmin(object):
+
+    list_display = ['order_id', 'nickname', 'total_amount', 'payment_amount', 'order_status', 'payment_time', 'goods_title',
+                    'goods_quantity', 'shop_name', 'refund_amount','create_time', 'creator', 'status']
+    list_filter = ['payment_time', 'shop_name', 'status']
+    search_fields = ["order_id", "nickname"]
+    # model_icon = 'fa fa-refresh'
+    ordering = ['payment_time']
+    exclude = ['creator']
+
+
+class PendingOrderInfoAdmin(object):
     INIT_FIELDS_DIC = {
         '订单编号': 'order_id',
         '买家会员名': 'nickname',
@@ -44,13 +96,16 @@ class OriorderInfoAdmin(object):
         '退款金额': 'refund_amount',
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
-    list_display = ['order_id', 'nickname', 'total_amount', 'payment_amount', 'order_status', 'payment_time', 'goods_title',
-                    'goods_quantity', 'shop_name', 'refund_amount','create_time', 'creator', 'status']
-    list_filter = ['payment_time', 'shop_name', 'status']
+    list_display = ['goods_title', 'status', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
+                    'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
+                    'creator']
+    list_filter = ['payment_time', 'shop_name', 'goods_title', 'payment_amount', 'refund_amount']
     search_fields = ["order_id", "nickname"]
     # model_icon = 'fa fa-refresh'
+    list_editable = ['status', 'memorandum']
     ordering = ['payment_time']
     exclude = ['creator']
+    actions = [ModifyAction, ]
     import_data = True
 
     def post(self, request, *args, **kwargs):
@@ -63,7 +118,7 @@ class OriorderInfoAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (result['false'],result['error']), 'warning')
             if result['repeated'] > 0:
                 self.message_user('包含更新重复数据%s条' % result['repeated'], 'error')
-        return super(OriorderInfoAdmin, self).post(request, args, kwargs)
+        return super(PendingOrderInfoAdmin, self).post(request, args, kwargs)
 
     def handle_upload_file(self, _file, creator):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -203,18 +258,6 @@ class OriorderInfoAdmin(object):
                 report_dic["false"] += 1
         return report_dic
 
-
-class PendingOrderInfoAdmin(object):
-    list_display = ['goods_title', 'status', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
-                    'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
-                    'creator']
-    list_filter = ['payment_time', 'shop_name', 'status']
-    search_fields = ["order_id", "nickname"]
-    # model_icon = 'fa fa-refresh'
-    list_editable = ['status', 'memorandum']
-    ordering = ['payment_time']
-    exclude = ['creator']
-
     def queryset(self):
         qs = OriorderInfo.objects.all().filter(status=0)
         return qs
@@ -260,7 +303,7 @@ class RefundOrderInfoAdmin(object):
         return False
 
 
-xadmin.site.register(OriorderInfo, OriorderInfoAdmin)
 xadmin.site.register(PendingOrderInfo, PendingOrderInfoAdmin)
 xadmin.site.register(SpecialOrderInfo, SpecialOrderInfoAdmin)
 xadmin.site.register(RefundOrderInfo, RefundOrderInfoAdmin)
+xadmin.site.register(OriorderInfo, OriorderInfoAdmin)
