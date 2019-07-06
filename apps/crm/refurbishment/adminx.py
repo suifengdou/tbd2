@@ -8,49 +8,46 @@
 
 import xadmin
 
-from .models import OriRefurbishInfo, ApprasialInfo, PrivateOriRefurbishInfo, RefurbishInfo, RefurbishTechSummary, PrivateRefurbishTechSummary, RefurbishGoodSummary
+from .models import OriRefurbishInfo, ApprasialInfo, PrivateOriRefurbishInfo, RefurbishInfo, RefurbishTechSummary, PrivateRefurbishTechSummary
 
 
-class SetUserAdminMixin(object):
-    def save_models(self):
-        obj = self.new_obj
-        request = self.request
-        if obj.created_by_id is None:
-            obj.created_by_id = request.user.id
-            obj.creator = request.user.username
-            obj.save()
-        super().save_models()
-
-
-class OriRefurbishAdmin(SetUserAdminMixin, object):
+class OriRefurbishAdmin(object):
     list_display = ['ref_time', 'goods_name', 'appraisal', 'pre_sn', 'mid_batch', 'tail_sn', 'submit_tag', 'creator',
-                    'create_time', 'created_by', 'new_sn']
+                    'create_time', 'new_sn']
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
     search_fields = ["tail_sn", "pre_sn", "new_sn"]
     model_icon = 'fa fa-refresh'
     ordering = ['-ref_time']
-    exclude = ['creator', 'created_by']
+    exclude = ['creator']
 
     def has_add_permission(self):
         # 禁用添加按钮
         return False
 
 
-class PrivateOriRefurbishInfoAdmin(SetUserAdminMixin, object):
+class PrivateOriRefurbishInfoAdmin(object):
     list_display = ['ref_time', 'goods_name', 'appraisal', 'pre_sn', 'mid_batch', 'tail_sn', 'submit_tag', 'creator',
-                    'create_time', 'created_by', 'new_sn']
+                    'create_time', 'new_sn']
     list_filter = ['ref_time', 'goods_name', 'appraisal', 'creator', 'create_time', 'submit_tag']
     search_fields = ["tail_sn"]
     model_icon = 'fa fa-gear'
     readonly_fields = ['submit_tag']
     ordering = ['-ref_time']
-    exclude = ['creator', 'created_by']
+    exclude = ['creator']
 
     def queryset(self):
         request = self.request
         qs = super(PrivateOriRefurbishInfoAdmin, self).queryset()
-        qs = qs.filter(created_by=request.user.id)
+        qs = qs.filter(creator=request.user.username)
         return qs
+
+    def save_models(self):
+        obj = self.new_obj
+        request = self.request
+        if obj.creator == 'system':
+            obj.creator = request.user.username
+            obj.save()
+        super().save_models()
 
 
 class RefurbishInfoAdmin(object):

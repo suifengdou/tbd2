@@ -131,7 +131,7 @@ class MaintenanceInfo(BaseModel):
     towork_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
 
     class Meta:
-        verbose_name = '原始保修单'
+        verbose_name = 'CRM-M-原始保修单'
         verbose_name_plural = verbose_name
         db_table = 'crm_m_maintenanceinfo'
 
@@ -191,7 +191,7 @@ class MaintenanceHandlingInfo(BaseModel):
     tomachinesn_status = models.SmallIntegerField(default=0, choices=ODER_STATUS, verbose_name='递交序列号列表状态')
 
     class Meta:
-        verbose_name = '保修单明细'
+        verbose_name = 'CRM-M-保修单明细'
         verbose_name_plural = verbose_name
         db_table = 'crm_m_maintenancehandlinginfo'
 
@@ -206,7 +206,7 @@ class MaintenanceSummary(BaseModel):
     repeat_count = models.IntegerField(default=0, verbose_name='30天二次维修量')
 
     class Meta:
-        verbose_name = '保修单汇总'
+        verbose_name = 'CRM-M-保修单汇总'
         verbose_name_plural = verbose_name
         db_table = 'crm_m_maintenancesummary'
 

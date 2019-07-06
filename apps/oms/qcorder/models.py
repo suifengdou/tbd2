@@ -15,9 +15,9 @@ from django.db.models import Count, Avg, Max, Min, Sum
 
 class QCOriInfo(BaseModel):
     ORDERSTATUS = (
-        (0, '取消'),
+        (0, '已取消'),
         (1, '未递交'),
-        (2, '有错误'),
+        (2, '异常'),
         (3, '已递交'),
     )
     RESULT = (
@@ -44,7 +44,7 @@ class QCOriInfo(BaseModel):
     qc_order_id = models.CharField(null=True, blank=True, unique=True, max_length=30, verbose_name='质检单号')
 
     class Meta:
-        verbose_name = '原始质检单明细表'
+        verbose_name = 'OMS-QC-原始质检单明细表'
         verbose_name_plural = verbose_name
         db_table = 'oms_qc_oriorder'
 
@@ -55,18 +55,18 @@ class QCOriInfo(BaseModel):
 class QCSubmitOriInfo(QCOriInfo):
 
     class Meta:
-        verbose_name = '未递交原始质检单'
+        verbose_name = 'OMS-QC-未递交原始质检单'
         verbose_name_plural = verbose_name
         proxy = True
 
 
-
 class QCInfo(BaseModel):
     ORDERSTATUS = (
-        (0, '取消'),
+        (0, '已取消'),
         (1, '未处理'),
-        (2, '已确认'),
-        (3, '已递交'),
+        (2, '异常'),
+        (3, '已确认'),
+        (4, '已递交'),
     )
     RESULT = (
         (0, '合格'),
@@ -79,7 +79,7 @@ class QCInfo(BaseModel):
     )
 
     batch_num = models.CharField(max_length=30, verbose_name='批次号码')
-    qc_order_id = models.CharField(max_length=30, verbose_name='质检单号')
+    qc_order_id = models.CharField(unique=True, max_length=30, verbose_name='质检单号')
     goods_name = models.CharField(max_length=60, verbose_name='货品名称')
     status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
     manufactory = models.CharField(max_length=60, verbose_name='工厂名称')
@@ -95,9 +95,9 @@ class QCInfo(BaseModel):
     b1_flaw = models.IntegerField(verbose_name='B1类缺陷')
     b2_flaw = models.IntegerField(verbose_name='B2类缺陷')
     c_flaw = models.IntegerField(verbose_name='C类缺陷')
-    memorandum = models.CharField(max_length=200, verbose_name='备注')
+    memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
 
     class Meta:
-        verbose_name = '工厂验货明细表'
+        verbose_name = 'OMS-QC-工厂验货明细表'
         verbose_name_plural = verbose_name
         db_table = 'oms_qc_order'

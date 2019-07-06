@@ -9,7 +9,6 @@
 from django.db import models
 
 from db.base_model import BaseModel
-from tbd2.settings import AUTH_USER_MODEL
 
 
 class OriorderInfo(BaseModel):
@@ -55,7 +54,7 @@ class OriorderInfo(BaseModel):
 
 
     class Meta:
-        verbose_name = "订单查询表"
+        verbose_name = "ASS-订单查询表"
         verbose_name_plural = verbose_name
         db_table = 'ass_und_undelivered'
 
@@ -73,7 +72,7 @@ class OriorderInfo(BaseModel):
 
 class PendingOrderInfo(OriorderInfo):
     class Meta:
-        verbose_name = '待处理订单'
+        verbose_name = 'ASS-待处理订单'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -83,14 +82,14 @@ class PendingOrderInfo(OriorderInfo):
 
 class SpecialOrderInfo(OriorderInfo):
     class Meta:
-        verbose_name = '特别跟进等订单'
+        verbose_name = 'ASS-特别跟进等订单'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class RefundOrderInfo(OriorderInfo):
     class Meta:
-        verbose_name = '部分退款订单'
+        verbose_name = 'ASS-部分退款订单'
         verbose_name_plural = verbose_name
         proxy = True
 

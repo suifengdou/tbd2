@@ -9,15 +9,14 @@ from django.db import models
 import django.utils.timezone as timezone
 
 from db.base_model import BaseModel
-from apps.oms.machine.models import MachineInfo, GoodsInfo
-from tbd2.settings import AUTH_USER_MODEL
+from apps.base.goods.models import MachineInfo
 
 
 class ApprasialInfo(BaseModel):
     appraisal = models.CharField(unique=True, max_length=30, verbose_name='故障判断')
 
     class Meta:
-        verbose_name = '故障列表'
+        verbose_name = 'CRM-RE-故障列表'
         verbose_name_plural = verbose_name
         db_table = 'crm_ref_appraisalinfo'
         index_together = [
@@ -29,7 +28,7 @@ class ApprasialInfo(BaseModel):
 
 
 class OriRefurbishInfo(BaseModel):
-    ODER_STATUS = (
+    ORDER_STATUS = (
         (0, '未递交'),
         (1, '已处理'),
         (2, '重复订单'),
@@ -47,12 +46,12 @@ class OriRefurbishInfo(BaseModel):
     pre_sn = models.CharField(max_length=20, verbose_name="序列号前缀")
     mid_batch = models.CharField(default="A", choices=BATCH, max_length=1, verbose_name='中间批次识别')
     tail_sn = models.CharField(null=True, max_length=5, verbose_name='尾号')
-    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
+    submit_tag = models.IntegerField(default=0, choices=ORDER_STATUS, verbose_name='生成状态')
     new_sn = models.CharField(null=True, blank=True, max_length=30, verbose_name='新序列号')
-    created_by = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='%(class)s_createdby', verbose_name='翻新人', null=True)
+
 
     class Meta:
-        verbose_name = '原始翻新列表'
+        verbose_name = 'CRM-RE-原始翻新列表'
         verbose_name_plural = verbose_name
         db_table = 'crm_ref_orirefurbinshinfo'
 
@@ -62,13 +61,13 @@ class OriRefurbishInfo(BaseModel):
 
 class PrivateOriRefurbishInfo(OriRefurbishInfo):
     class Meta:
-        verbose_name = '私有翻新列表'
+        verbose_name = 'CRM-RE-私有翻新列表'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class RefurbishInfo(BaseModel):
-    ODER_STATUS = (
+    ORDER_STATUS = (
         (0, '未递交'),
         (1, '已处理'),
         (2, '售后质量'),
@@ -81,11 +80,11 @@ class RefurbishInfo(BaseModel):
     m_sn = models.CharField(max_length=30, verbose_name='机器序列号')
     technician = models.CharField(max_length=30, verbose_name='技术员')
     memo = models.CharField(null=True, blank=True, max_length=60, verbose_name='备注信息')
-    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='递交状态')
-    summary_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='统计状态')
+    submit_tag = models.IntegerField(default=0, choices=ORDER_STATUS, verbose_name='递交状态')
+    summary_tag = models.IntegerField(default=0, choices=ORDER_STATUS, verbose_name='统计状态')
 
     class Meta:
-        verbose_name = '翻新列表'
+        verbose_name = 'CRM-RE-翻新列表'
         verbose_name_plural = verbose_name
         db_table = 'crm_ref_refurbinshinfo'
 
@@ -99,7 +98,7 @@ class RefurbishTechSummary(BaseModel):
     quantity = models.IntegerField(verbose_name='翻新数量')
 
     class Meta:
-        verbose_name = '技术员翻新统计列表'
+        verbose_name = 'CRM-RE-技术员翻新统计列表'
         verbose_name_plural = verbose_name
         db_table = 'crm_ref_refurbishtechsummary'
 
@@ -109,13 +108,13 @@ class RefurbishTechSummary(BaseModel):
 
 class PrivateRefurbishTechSummary(RefurbishTechSummary):
     class Meta:
-        verbose_name = '私有技术员翻新统计列表'
+        verbose_name = 'CRM-RE-私有技术员翻新统计列表'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class RefurbishGoodSummary(BaseModel):
-    ODER_STATUS = (
+    ORDER_STATUS = (
         (0, '未递交'),
         (1, '已处理'),
         (2, '已出库'),
@@ -125,10 +124,10 @@ class RefurbishGoodSummary(BaseModel):
     goods_name = models.CharField(max_length=60, verbose_name='机器名称')
     goods_id = models.CharField(max_length=30, verbose_name='机器编码')
     quantity = models.IntegerField(verbose_name='翻新数量')
-    submit_tag = models.IntegerField(default=0, choices=ODER_STATUS, verbose_name='生成状态')
+    submit_tag = models.IntegerField(default=0, choices=ORDER_STATUS, verbose_name='生成状态')
 
     class Meta:
-        verbose_name = '翻新机器统计列表'
+        verbose_name = 'CRM-RE-翻新机器统计列表'
         verbose_name_plural = verbose_name
         db_table = 'crm_ref_refurbishgoodsummary'
 

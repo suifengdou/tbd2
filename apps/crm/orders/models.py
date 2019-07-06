@@ -153,7 +153,7 @@ class OriOrderInfo(BaseModel):
     exception_tag = models.BooleanField(default=0, verbose_name='手机异常标记')
 
     class Meta:
-        verbose_name = '订单'
+        verbose_name = 'CRM-D-原始订单'
         verbose_name_plural = verbose_name
         db_table = 'crm_o_oriorderinfo'
 
@@ -228,7 +228,7 @@ class OrderInfo(BaseModel):
     exception_tag = models.BooleanField(default=0, verbose_name='手机异常标记')
 
     class Meta:
-        verbose_name = '订单'
+        verbose_name = 'CRM-D-订单'
         verbose_name_plural = verbose_name
         db_table = 'crm_o_orderinfo'
 

@@ -49,7 +49,7 @@ class CustomerInfo(BaseModel):
 
 
     class Meta:
-        verbose_name = '客户信息'
+        verbose_name = 'CRM-C-客户信息'
         verbose_name_plural = verbose_name
         db_table = 'crm_c_customerinfo'
 
@@ -66,7 +66,7 @@ class CustomerTendency(BaseModel):
     ability_consume = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='消费能力趋向')
 
     class Meta:
-        verbose_name = '客户积分卡'
+        verbose_name = 'CRM-C-客户积分卡'
         verbose_name_plural = verbose_name
         db_table = 'crm_c_customertendency'
 

@@ -17,7 +17,7 @@ class NationalityInfo(BaseModel):
     area_code = models.CharField(unique=True, max_length=10, verbose_name='电话区号')
 
     class Meta:
-        verbose_name = '国家及地区'
+        verbose_name = 'UTL-G-国家及地区'
         verbose_name_plural = verbose_name
         db_table = 'util_geo_nationality'
 
@@ -31,7 +31,7 @@ class ProvinceInfo(BaseModel):
     area_code = models.CharField(unique=True, max_length=10, verbose_name='电话区号')
 
     class Meta:
-        verbose_name = '省份'
+        verbose_name = 'UTL-G-省份'
         verbose_name_plural = verbose_name
         db_table = 'util_geo_province'
 
@@ -46,7 +46,7 @@ class CityInfo(BaseModel):
     area_code = models.CharField(max_length=10, verbose_name='电话区号')
 
     class Meta:
-        verbose_name = '城市'
+        verbose_name = 'UTL-G-城市'
         verbose_name_plural = verbose_name
         db_table = 'util_geo_city'
 

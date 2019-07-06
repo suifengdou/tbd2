@@ -17,7 +17,7 @@ from apps.utils.geography.models import CityInfo
 class ManufactoryInfo(BaseModel):
     CATEGORY = (
         (0, '整机厂'),
-        (1, '配件厂')
+        (1, '配件厂'),
     )
     name = models.CharField(unique=True, max_length=60, verbose_name='工厂名称')
     code = models.CharField(unique=True, null=True, blank=True, max_length=20, verbose_name='工厂代码')
@@ -28,7 +28,7 @@ class ManufactoryInfo(BaseModel):
     memorandum = models.CharField(max_length=150, verbose_name='备注')
 
     class Meta:
-        verbose_name = '工厂信息'
+        verbose_name = 'BASE-工厂信息'
         verbose_name_plural = verbose_name
         db_table = 'base_manu_manufactory'
 

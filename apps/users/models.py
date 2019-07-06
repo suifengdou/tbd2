@@ -14,7 +14,7 @@ class UserProfile(AbstractUser, BaseModel):
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
 
     class Meta:
-        verbose_name = u'用户信息'
+        verbose_name = u'USR-用户信息'
         verbose_name_plural = verbose_name
         db_table = 'usr_userprofile'
 
@@ -29,7 +29,7 @@ class EmailVerifyRecord(models.Model):
     send_time = models.DateTimeField(default=datetime.now, verbose_name=u'发送时间')
 
     class Meta:
-        verbose_name = u'邮箱验证码'
+        verbose_name = u'USR-邮箱验证码'
         verbose_name_plural = verbose_name
         db_table = 'usr_emailverifyrecord'
 

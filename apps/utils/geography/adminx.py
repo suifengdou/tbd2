@@ -23,12 +23,11 @@ class ProvinceAdmin(object):
         return qs
 
 
-
 class CityAdmin(object):
 
     def queryset(self):
         request = self.request
-        qs = super(ProvinceAdmin, self).queryset()
+        qs = super(CityAdmin, self).queryset()
         return qs
 
 

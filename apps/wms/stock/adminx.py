@@ -12,24 +12,52 @@ from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 
-from .models import StockInfo, StockInOrderInfo, StockOutInfo
-
-
-class StockInOrderInfoAdmin(object):
-    list_display = ["source_order_id", "status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity", "occupied_inventory", "available_inventory"]
-    list_filter = ["category", "warehouse", "goods_name"]
-
-
-class StockOutInfoAdmin(object):
-    list_display = ["stockout_id", "source_order_id", "status", "category", "goods_name", "goods_id", "quantity",
-                    "warehouse", "nickname", "receiver", "province", "city", "district", "mobile", "memorandum"]
-
+from .models import StockInfo, StockMachineInfo, StockPartInfo, StockGiftInfo
 
 
 class StockInfoAdmin(object):
-    list_display = ["goods_name", "goods_id", "category", "size", "warehouse", "inventory", "occupied_inventory", "available_inventory"]
+    list_display = ["goods_name", "goods_id", "category", "size", "warehouse", "quantity", "occupied_quantity", "available_quantity"]
 
 
-xadmin.site.register(StockInOrderInfo, StockInOrderInfoAdmin)
-xadmin.site.register(StockOutInfo, StockOutInfoAdmin)
+class StockMachineInfoAdmin(object):
+    list_display = ["goods_name", "goods_id", "category", "size", "warehouse", "quantity", "occupied_quantity",
+                    "available_quantity"]
+    list_filter = ["warehouse"]
+    search_fields = ["goods_name", "goods_id"]
+
+    def queryset(self):
+        queryset = super(StockMachineInfoAdmin, self).queryset()
+        queryset = queryset.filter(category=0)
+        return queryset
+
+
+class StockPartInfoAdmin(object):
+    list_display = ["goods_name", "goods_id", "category", "size", "warehouse", "quantity", "occupied_quantity",
+                    "available_quantity"]
+    list_filter = ["warehouse"]
+    search_fields = ["goods_name", "goods_id"]
+
+    def queryset(self):
+        queryset = super(StockPartInfoAdmin, self).queryset()
+        queryset = queryset.filter(category=1)
+        return queryset
+
+
+class StockGiftInfoAdmin(object):
+    list_display = ["goods_name", "goods_id", "category", "size", "warehouse", "quantity", "occupied_quantity",
+                    "available_quantity"]
+    list_filter = ["warehouse"]
+    search_fields = ["goods_name", "goods_id"]
+
+    def queryset(self):
+        queryset = super(StockGiftInfoAdmin, self).queryset()
+        queryset = queryset.filter(category=2)
+        return queryset
+
+
+xadmin.site.register(StockMachineInfo, StockMachineInfoAdmin)
+xadmin.site.register(StockPartInfo, StockPartInfoAdmin)
+xadmin.site.register(StockGiftInfo, StockGiftInfoAdmin)
 xadmin.site.register(StockInfo, StockInfoAdmin)
+
+

@@ -406,63 +406,6 @@
 
 
 
-        <!--
-        <div class="card">
-            <div class="card-header">
-                <h5>递交维修单到SN列表</h5>
-                <span>导入的维修单需直接递交到sn列表</span>
-            </div>
-            <div class="card-block">
-                <form id="tomachinesn" method="post" action="{% url 'crm_maintenance:tomachinesn' %}"
-                      novalidate="">
-                    {% csrf_token %}
-
-                    <div class="row">
-                        <div class="col-4">
-                            <div class="big-icon">
-                                <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">全部维修单数</span>
-                            </div>
-                            <div class="card bg-c-green order-card">
-                                <div class="card-block">
-                                    <h6></h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.total_num }}</span></h2>
-                                    <p class="m-b-0"><span class="f-right"></span></p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="big-icon">
-                                <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">未递交维修单数</span>
-                            </div>
-                            <div class="card bg-c-pink order-card">
-                                <div class="card-block">
-                                    <h6></h6>
-                                    <h2 class="text-right"><i class="ti-tag f-left"></i><span>{{ elements.pending_tosn_num }}</span></h2>
-                                    <p class="m-b-0"><span class="f-right"></span></p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="big-icon">
-                                <i class="icofont icofont-favourite"></i>
-                                <span style="font-size: x-large">递交之后就牛逼了</span>
-                            </div>
-                            <div class="card-block">
-                                <h6></h6>
-                                <input type="text" name="tosn" value="1" style="display:none">
-                                <button type="submit" class="btn btn-out btn-primary btn-square">点我递交sn</button>
-                            </div>
-
-                        </div>
-
-                    </div>
-                </form>
-            </div>
-        </div>
-        -->
-
 
 
     {% endblock %}

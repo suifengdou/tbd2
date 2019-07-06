@@ -16,7 +16,7 @@ class WarehouseTypeInfo(BaseModel):
     category = models.CharField(unique=True, max_length=30, verbose_name='仓库类型')
 
     class Meta:
-        verbose_name = '仓库类型'
+        verbose_name = 'BASE-仓库类型'
         verbose_name_plural = verbose_name
         db_table = 'base_wah_category'
 
@@ -36,7 +36,7 @@ class WarehouseInfo(BaseModel):
     status = models.IntegerField(choices=STATUS, default=0, verbose_name='仓库状态')
 
     class Meta:
-        verbose_name = '仓库'
+        verbose_name = 'BASE-仓库'
         verbose_name_plural = verbose_name
         db_table = 'base_wah_warehouse'
 
