@@ -4,3 +4,15 @@
 # @Site    : 
 # @File    : adminx.py
 # @Software: PyCharm
+
+import xadmin
+
+
+from .models import CompanyInfo
+
+
+class CompanyInfoAdmin(object):
+    pass
+
+
+xadmin.site.register(CompanyInfo, CompanyInfoAdmin)

@@ -23,7 +23,10 @@ class CompanyInfo(BaseModel):
     status = models.IntegerField(choices=ORDER_STATUS, default=1, verbose_name='状态')
 
     class Meta:
-        verbose_name = '公司'
+        verbose_name = 'BASE-公司'
         verbose_name_plural = verbose_name
         db_table = 'base_company'
+
+    def __str__(self):
+        return self.company_name
 

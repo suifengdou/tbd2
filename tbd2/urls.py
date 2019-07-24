@@ -21,7 +21,7 @@ from apps.users.views import IndexView
 
 urlpatterns = [
     url(r'^xadmin/', xadmin.site.urls),
-    # url(r'^users/', include('apps.users.urls', namespace='users')),
+    url(r'^users/', include('apps.users.urls', namespace='users')),
     url(r'^assistants/refund/jdfbp/', include('apps.assistants.refund_jdfbp.urls', namespace='ass_ref_jdfbp')),
     url(r'^external/express/sf/', include('apps.ext.sf_consignation.urls', namespace='ext_exp_sf')),
     # url(r'^crm/orders/', include('apps.crm.orders.urls', namespace='crm_orders')),

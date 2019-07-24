@@ -14,12 +14,12 @@ from db.base_model import BaseModel
 class OriorderInfo(BaseModel):
     VERIFY_FIELD = ['order_id', 'nickname', 'payment_amount', 'order_status', 'payment_time', 'goods_title', 'memorandum', 'refund_amount']
     STATUS = (
+        (0, '等待处理'),
         (1, '无需处理'),
         (2, '特别跟进'),
         (3, '暂不处理'),
         (4, '半退未发'),
         (5, '未发订金'),
-        (0, '等待处理'),
     )
     order_id = models.CharField(max_length=30, verbose_name='订单编号')
     nickname = models.CharField(max_length=60, verbose_name='买家会员名')

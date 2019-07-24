@@ -93,7 +93,7 @@ class OriTMShopKPI(BaseModel):
         "无线端支付老买家数": "mobile_payment_repeat_visitor",
         "老买家支付金额": "amount_repeat_visitor",
         "直通车消耗": "fee_through_train",
-        "钻石展位消耗": "cost_per_mille",
+        "钻石展位消耗": "cost_per_thousand",
         "淘宝客佣金": "commission_promoter",
         "成功退款金额": "refund_amount",
         "评价数": "comment",
@@ -121,6 +121,33 @@ class OriTMShopKPI(BaseModel):
         "PC端店铺收藏买家数": "pc_shop_favorite_buyers",
         "无线端店铺收藏买家数": "mobile_shop_favorite_buyers",
     }
+    VERIFY_FIELD = ['statistical_time', 'pc_unique_visitor', 'pc_page_views', 'unique_visitor', 'mobile_unique_visitor',
+                    'page_views', 'mobile_page_views', 'product_unique_visitor', 'mobile_product_unique_visitor',
+                    'pc_product_unique_visitor', 'product_page_views', 'mobile_product_page_views',
+                    'pc_product_page_views', 'avg_stay_time', 'mobile_avg_stay_time', 'pc_avg_stay_time', 'bounce_rate',
+                    'mobile_bounce_rate', 'pc_bounce_rate', 'product_favorite_buyers', 'mobile_product_favorite_buyers',
+                    'pc_product_favorite_buyers', 'favorite_number', 'mobile_favorite_number', 'pc_favorite_number',
+                    'shopping_buyers', 'mobile_shopping_buyers', 'pc_shopping_buyers', 'payment_amount',
+                    'pc_payment_amount', 'mobile_payment_amount', 'payment_buyers', 'pc_payment_buyers',
+                    'mobile_payment_buyers', 'payment_suborder', 'pc_payment_suborder', 'mobile_payment_suborder',
+                    'payment_quantity', 'pc_payment_quantity', 'mobile_payment_quantity', 'order_amount',
+                    'pc_order_amount', 'mobile_order_amount', 'order_buyers', 'pc_order_buyers', 'mobile_order_buyers',
+                    'order_quantity', 'pc_order_quantity', 'mobile_order_quantity', 'avg_page_views',
+                    'pc_avg_page_views', 'mobile_avg_page_views', 'order_conversion_rate', 'pc_order_conversion_rate',
+                    'mobile_order_conversion_rate', 'payment_conversion_rate', 'pc_payment_conversion_rate',
+                    'mobile_payment_conversion_rate', 'per_customer_transaction', 'pc_per_customer_transaction',
+                    'mobile_per_customer_transaction', 'uv_value', 'pc_uv_value', 'mobile_uv_value', 'repeat_visitor',
+                    'new_visitor', 'mobile_repeat_visitor', 'mobile_new_visitor', 'pc_repeat_visitor', 'pc_new_visitor',
+                    'shopping_goods', 'pc_shopping_goods', 'mobile_shopping_goods', 'payment_repeat_visitor',
+                    'pc_payment_repeat_visitor', 'mobile_payment_repeat_visitor', 'amount_repeat_visitor',
+                    'fee_through_train', 'cost_per_thousand', 'commission_promoter', 'refund_amount', 'comment',
+                    'has_photograph_comment', 'positive_comment', 'negative_comment', 'repeat_visitor_positive_comment',
+                    'repeat_visitor_negative_comment', 'payment_parents_order', 'packages_collect',
+                    'packages_delivering', 'packages_delivered', 'packages_sign', 'avg_trading_time',
+                    'description_points', 'delivery_points', 'service_points', 'order_payment_conversion_rate',
+                    'pc_order_payment_conversion_rate', 'mobile_order_payment_conversion_rate', 'goods_paid',
+                    'pc_goods_paid', 'mobile_goods_paid', 'shop_favorite_buyers', 'pc_shop_favorite_buyers',
+                    'mobile_shop_favorite_buyers']
 
     ORDERSTATUS = (
         (0, '已取消'),
@@ -243,4 +270,13 @@ class OriTMShopKPI(BaseModel):
 
     def __str__(self):
         return self.statistical_time
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
+
 

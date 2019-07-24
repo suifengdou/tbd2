@@ -53,14 +53,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'apps.users.apps.UsersConfig',
     'pure_pagination',
-    'apps.ext.sf_consignation.apps.SfConsignationConfig',
     'xadmin',
     'crispy_forms',
+    'apps.ext.sf_consignation.apps.SfConsignationConfig',
     'apps.crm.maintenance.apps.MaintenanceConfig',
+    'apps.crm.refurbishment.apps.RefurbishmentConfig',
     'apps.base.manufactory.apps.ManufactoryConfig',
     'apps.base.warehouse.apps.WarehouseConfig',
     'apps.base.relationship.apps.RelationshipConfig',
     'apps.base.goods.apps.GoodsConfig',
+    'apps.base.company.apps.CompanyConfig',
+    'apps.base.shop.apps.ShopConfig',
     'apps.utils.geography.apps.GeographyConfig',
     'apps.wms.stock.apps.StockConfig',
     'apps.wms.stockin.apps.StockinConfig',
@@ -69,12 +72,12 @@ INSTALLED_APPS = [
     'apps.oms.qcorder.apps.QcorderConfig',
     'apps.oms.cusrequisition.apps.CusrequisitionConfig',
     'apps.oms.planorderofpart.apps.PlanorderofpartConfig',
-    'apps.crm.refurbishment.apps.RefurbishmentConfig',
+    'apps.oms.planorder.apps.PlanorderConfig',
     'apps.assistants.refund_jdfbp.apps.RefundJdfbpConfig',
     'apps.assistants.undelivered.apps.UndeliveredConfig',
-    'apps.oms.planorder.apps.PlanorderConfig',
-
-
+    'apps.ops.tbgoodskpi.apps.TbgoodskpiConfig',
+    'apps.ops.tbshopkpi.apps.ShopkpiConfig',
+    'apps.ops.tbwangwang.apps.TbwangwangConfig',
 
 ]
 

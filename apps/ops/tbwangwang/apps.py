@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class TbwangwangConfig(AppConfig):
-    name = 'tbwangwang'
+    name = 'apps.ops.tbwangwang'
+    verbose_name = 'ops-tbwangwang'

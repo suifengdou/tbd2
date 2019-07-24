@@ -38,6 +38,7 @@ class ShopInfo(BaseModel):
     )
 
     shop_name = models.CharField(unique=True, max_length=30, verbose_name='店铺名', db_index=True)
+    shop_id = models.CharField(unique=True, max_length=30, verbose_name='店铺ID', db_index=True, null=True, blank=True)
     platform = models.ForeignKey(PlatformInfo, on_delete=models.SET_NULL, verbose_name='平台', null=True, blank=True)
     group_name = models.CharField(max_length=30, verbose_name='店铺分组')
     company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, verbose_name='公司', null=True, blank=True)

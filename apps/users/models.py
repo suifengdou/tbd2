@@ -7,11 +7,18 @@ from django.contrib.auth.models import AbstractUser
 
 
 from db.base_model import BaseModel
+from apps.base.company.models import CompanyInfo
 
 
 # Create your models here.
 class UserProfile(AbstractUser, BaseModel):
+    STATUS = (
+        (0, '非管理'),
+        (1, '管理'),
+    )
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
+    is_manager = models.IntegerField(choices=STATUS, default=0, verbose_name='是否管理')
+    company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属公司')
 
     class Meta:
         verbose_name = u'USR-用户信息'

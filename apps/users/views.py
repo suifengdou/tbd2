@@ -76,7 +76,7 @@ class IndexView(LoginRequiredMixin, View):
         print(request.user.username)
         print(request)
 
-        return redirect('/xadmin')
+        return render(request, "index.html", {})
 
 
 class LoginView(View):
