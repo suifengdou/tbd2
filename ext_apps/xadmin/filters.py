@@ -488,12 +488,12 @@ class MultiSelectFieldListFilter(ListFieldFilter):
                 return
             
         # Else rebuild it
-        queryset = self.admin_view.queryset().exclude(**{"%s__isnull"%field_path:True}).values_list(field_path, flat=True).distinct() 
+        queryset = self.admin_view.queryset.exclude(**{"%s__isnull" % field_path:True}).values_list(field_path, flat=True).distinct()
         #queryset = self.admin_view.queryset().distinct(field_path).exclude(**{"%s__isnull"%field_path:True})
         
         if field_order_by is not None:
             # Do a subquery to order the distinct set
-            queryset = self.admin_view.queryset().filter(id__in=queryset).order_by(field_order_by)
+            queryset = self.admin_view.queryset.filter(id__in=queryset).order_by(field_order_by)
             
         if field_limit is not None and type(field_limit)==int and queryset.count()>field_limit:
             queryset = queryset[:field_limit]

@@ -42,8 +42,6 @@ AUTHENTICATION_BACKENDS = (
     'apps.users.views.CustomBackend',
 )
 
-
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -56,6 +54,7 @@ INSTALLED_APPS = [
     'xadmin',
     'crispy_forms',
     'apps.ext.sf_consignation.apps.SfConsignationConfig',
+    'apps.ext.workorder.apps.WorkOrderConfig',
     'apps.crm.maintenance.apps.MaintenanceConfig',
     'apps.crm.refurbishment.apps.RefurbishmentConfig',
     'apps.base.manufactory.apps.ManufactoryConfig',

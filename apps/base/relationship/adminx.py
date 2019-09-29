@@ -40,7 +40,7 @@ class PartToManufactoryInfoAdmin(object):
 
     def queryset(self):
         queryset = super(PartToManufactoryInfoAdmin, self).queryset()
-        queryset = queryset.filter(category=3)
+        queryset = queryset.filter(category=2)
         return queryset
 
 

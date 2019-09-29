@@ -210,9 +210,9 @@ class PendingOrderInfoAdmin(object):
             # ERP导出文档添加了等于号，毙掉等于号。
             order = OriorderInfo()  # 创建表格每一行为一个对象
             # 清除订单号的特殊字符
-            row['order_id'] = row['order_id'].replace("=", "").replace('"', "")
-            row['alipay_orer_id'] = row['alipay_order_id'].replace("=", "").replace('"', "")
-            row['mobile'] = row['mobile'].replace("'", "")
+            row['order_id'] = str(row['order_id']).replace("=", "").replace('"', "")
+            row['alipay_orer_id'] = str(row['alipay_order_id']).replace("=", "").replace('"', "")
+            row['mobile'] = str(row['mobile']).replace("'", "")
             reservation_keywords = ['定金', '预', '订金', '券']
             order_id = row['order_id']
 

@@ -131,7 +131,7 @@ class MaintenanceInfo(BaseModel):
     towork_status = models.SmallIntegerField(choices=ODER_STATUS, verbose_name='递交审核订单状态', default=0)
 
     class Meta:
-        verbose_name = 'CRM-M-原始保修单'
+        verbose_name = 'CRM-M-原始单查询'
         verbose_name_plural = verbose_name
         db_table = 'crm_m_maintenanceinfo'
 
@@ -145,6 +145,16 @@ class MaintenanceInfo(BaseModel):
                 return 'verify_field error, must have mandatory field: "{}""'.format(i)
         else:
             return None
+
+
+class MaintenanceSubmitInfo(MaintenanceInfo):
+    class Meta:
+        verbose_name = 'CRM-M-未递原始单'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+    def __str__(self):
+        return self.maintenance_order_id
 
 
 class MaintenanceHandlingInfo(BaseModel):
@@ -199,6 +209,28 @@ class MaintenanceHandlingInfo(BaseModel):
         return self.maintenance_order_id
 
 
+class MaintenanceCalcInfo(MaintenanceHandlingInfo):
+
+    class Meta:
+        verbose_name = 'CRM-M-保修单计算'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+    def __str__(self):
+        return self.maintenance_order_id
+
+
+class MaintenanceJudgeInfo(MaintenanceHandlingInfo):
+
+    class Meta:
+        verbose_name = 'CRM-M-保修单判责'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+    def __str__(self):
+        return self.maintenance_order_id
+
+
 class MaintenanceSummary(BaseModel):
     finish_time = models.DateTimeField(verbose_name='保修完成日期')
     order_count = models.IntegerField(default=0, verbose_name='完成保修数量')
@@ -206,7 +238,7 @@ class MaintenanceSummary(BaseModel):
     repeat_count = models.IntegerField(default=0, verbose_name='30天二次维修量')
 
     class Meta:
-        verbose_name = 'CRM-M-保修单汇总'
+        verbose_name = 'CRM-M-保修统计表'
         verbose_name_plural = verbose_name
         db_table = 'crm_m_maintenancesummary'
 

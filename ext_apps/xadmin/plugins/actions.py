@@ -62,7 +62,7 @@ class DeleteSelectedAction(BaseActionView):
 
     delete_models_batch = True
 
-    model_perm = 'delete'
+    model_perm = 'change'
     icon = 'fa fa-times'
 
     @filter_hook
@@ -71,11 +71,12 @@ class DeleteSelectedAction(BaseActionView):
         if n:
             if self.delete_models_batch:
                 self.log('delete', _('Batch delete %(count)d %(items)s.') % { "count": n, "items": model_ngettext(self.opts, n) })
-                queryset.delete()
+                queryset.update(is_delete=1)
             else:
                 for obj in queryset:
                     self.log('delete', '', obj)
-                    obj.delete()
+                    obj.is_delete = 1
+                    obj.save()
             self.message_user(_("Successfully deleted %(count)d %(items)s.") % {
                 "count": n, "items": model_ngettext(self.opts, n)
             }, 'success')
@@ -130,12 +131,98 @@ class DeleteSelectedAction(BaseActionView):
                                 self.get_template_list('views/model_delete_selected_confirm.html'), context)
 
 
+class RejectSelectedAction(BaseActionView):
+
+    action_name = "reject_selected"
+    description = _(u'Reject selected %(verbose_name_plural)s')
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    delete_models_batch = False
+
+    model_perm = 'change'
+    icon = 'fa fa-times'
+
+    @filter_hook
+    def delete_models(self, queryset):
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                if obj.order_status == 3:
+                    obj.order_status -= 3
+                    obj.save()
+                    self.message_user("%s 取消成功" % obj.express_id, "success")
+                elif obj.order_status in [1, 2, 4, 5]:
+                    if obj.wo_category == 1 and obj.order_status == 4:
+                        obj.order_status -= 2
+                        obj.save()
+                        self.message_user("%s 驳回上一级成功" % obj.express_id, "success")
+                    else:
+                        obj.order_status -= 1
+                        obj.save()
+                        self.message_user("%s 取消成功" % obj.express_id, "success")
+            self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has delete permission for the actual model
+        if not self.has_delete_permission():
+            raise PermissionDenied
+
+        using = router.db_for_write(self.model)
+
+        # Populate deletable_objects, a data structure of all related objects that
+        # will also be deleted.
+        deletable_objects, model_count, perms_needed, protected = get_deleted_objects(
+            queryset, self.opts, self.user, self.admin_site, using)
+
+        # The user has already confirmed the deletion.
+        # Do the deletion and return a None to display the change list view again.
+        if self.request.POST.get('post'):
+            if perms_needed:
+                raise PermissionDenied
+            self.delete_models(queryset)
+            # Return None to display the change list page again.
+            return None
+
+        if len(queryset) == 1:
+            objects_name = force_text(self.opts.verbose_name)
+        else:
+            objects_name = force_text(self.opts.verbose_name_plural)
+
+        if perms_needed or protected:
+            title = _("Cannot reject %(name)s") % {"name": objects_name}
+        else:
+            title = _("Are you sure?")
+
+        context = self.get_context()
+        context.update({
+            "title": title,
+            "objects_name": objects_name,
+            "deletable_objects": [deletable_objects],
+            'queryset': queryset,
+            "perms_lacking": perms_needed,
+            "protected": protected,
+            "opts": self.opts,
+            "app_label": self.app_label,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+        })
+
+        # Display the confirmation page
+        return TemplateResponse(self.request, self.delete_selected_confirmation_template or
+                                self.get_template_list('views/model_reject_selected_confirm.html'), context)
+
+
 class ActionPlugin(BaseAdminPlugin):
 
     # Actions
     actions = []
     actions_selection_counter = True
-    global_actions = [DeleteSelectedAction]
+    # global_actions = [DeleteSelectedAction] # 全局设置可以设置一下全局的执行处理逻辑插件
+    global_actions = []
 
     def init_request(self, *args, **kwargs):
         self.actions = self.get_actions()

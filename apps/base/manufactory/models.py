@@ -12,6 +12,7 @@ from db.base_model import BaseModel
 
 from tbd2.settings import AUTH_USER_MODEL
 from apps.utils.geography.models import CityInfo
+from apps.base.company.models import CompanyInfo
 
 
 class ManufactoryInfo(BaseModel):
@@ -26,6 +27,7 @@ class ManufactoryInfo(BaseModel):
     contacts = models.CharField(max_length=60, verbose_name='联系人')
     contacts_phone = models.CharField(max_length=30, verbose_name='电话')
     memorandum = models.CharField(max_length=150, verbose_name='备注')
+    company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属公司')
 
     class Meta:
         verbose_name = 'BASE-工厂信息'
