@@ -22,7 +22,8 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
-from .models import MaintenanceInfo, MaintenanceHandlingInfo, MaintenanceSummary, MaintenanceSubmitInfo, MaintenanceCalcInfo, MaintenanceJudgeInfo
+from .models import MaintenanceInfo, MaintenanceHandlingInfo, MaintenanceSummary, MaintenanceSubmitInfo, \
+    MaintenanceCalcInfo, MaintenanceJudgeInfo
 
 
 class SubmitAction(BaseActionView):
@@ -125,7 +126,9 @@ class SubmitAction(BaseActionView):
                     report_dic_towork["false"] += 1
                 self.log('change', '', order)
 
-            self.message_user('成功了递交 %s 条单据数据' % report_dic_towork['successful'], 'success')
+            self.message_user("成功递交 %(count)d %(items)s." % {
+                "count": report_dic_towork['successful'], "items": model_ngettext(self.opts, n)
+            }, 'success')
             self.message_user('成功更新了 %s 条原始单数据' % report_dic_towork['ori_successful'], 'success')
             if report_dic_towork['false'] > 0:
                 self.message_user('失败了 %s 条数据' % report_dic_towork['false'], 'error')
@@ -133,12 +136,9 @@ class SubmitAction(BaseActionView):
                 self.message_user('更新失败了 %s 条原始单数据' % report_dic_towork['ori_order_error'], 'error')
             if report_dic_towork['repeat_num'] > 0:
                 self.message_user('重复丢弃了 %s 条数据' % report_dic_towork['repeat_num'], 'error')
-            if report_dic_towork['error'] is not None:
+            if report_dic_towork['error']:
                 self.message_user('主要错误是 %s ' % report_dic_towork['error'], 'error')
 
-            self.message_user("成功审核 %(count)d %(items)s." % {
-                "count": n, "items": model_ngettext(self.opts, n)
-            }, 'success')
         # Return None to display the change list page again.
         return None
 
@@ -176,63 +176,100 @@ class CalcAction(BaseActionView):
             min_date = min(days)
             max_date = max(days) + datetime.timedelta(days=1)
             current_date = min_date
+            verify_date = min_date - datetime.timedelta(days=1)
+
+            verify_summary = MaintenanceSummary.objects.all().filter(finish_time=verify_date)
+            if MaintenanceSummary.objects.first() is not None:
+                if not verify_summary.exists():
+                    return self.message_user('亲，请按照时间顺序进行递交计算，别胡搞行吗。', 'error')
 
             while current_date < max_date:
-                repeat_dic = {"repeat_num": 0}
-                # 当前天减去一天，作为前一天，作为前三十天到基准时间。
-                current_date = current_date - datetime.timedelta(days=1)
-                _pre_thirtyday = current_date.date() - datetime.timedelta(days=31)
-                # 查询近三十天到所有sn码，准备进行匹配查询。
-                maintenance_msn = MaintenanceHandlingInfo.objects.values("machine_sn", "finish_date").filter(
-                    finish_time__gte=_pre_thirtyday, finish_time__lte=current_date)
+                repeat_dic = {"successful": 0, "tag_successful": 0, "false": 0, "error": []}
 
-                total_num = maintenance_msn.count()
-                # 创建sn码列表，汇总所有近三十天的sn码加入到列表中，
-                machine_sns = []
-                for machine_sn in maintenance_msn:
-                    _pre_msn = machine_sn["machine_sn"].upper().strip(" ")
+                # 当前天减去一天，作为前一天，作为前三十天的基准时间。
+                end_date = current_date - datetime.timedelta(days=1)
+                start_date = current_date.date() - datetime.timedelta(days=31)
+                # 查询近三十天到所有单据，准备进行匹配查询。
+                maintenance_checked = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_date,
+                                                                         finish_time__lte=end_date)
 
-                    if re.match(r'^[\w]', _pre_msn):
-                        machine_sns.append(_pre_msn)
-                # 恢复为当前天，查询当前天到sn码，准备进行查询。
-                current_date = current_date + datetime.timedelta(days=1)
-                next_date = current_date + datetime.timedelta(days=1)
-                # 取出当前时间段的所有单据，需要锁定未进行标记过的订单，已经标记过的订单需要排除在外。
-                current_orders = queryset.all().filter(finish_time__gte=current_date, finish_time__lte=next_date)
-                # 查询当前天的订单对象集。准备进行循环处理。
-                for current_order in current_orders:
-                    if current_order.machine_sn in machine_sns:
-                        current_order.repeat_tag = 1
-                        current_order.handling_status = 1
-                        report_dic_totag["tag_successful"] += 1
-                        repeat_dic["repeat_num"] += 1
-                    else:
-                        current_order.handling_status = 1
-
-                    current_order.save()
-                    report_dic_totag["successful"] += 1
-
-                # 创建二次维修率的表单对象，对当前天的数据进行保存，未来不再重复计算。
+                # 创建二次维修率的表单对象，
                 verify_condition = MaintenanceSummary.objects.all().filter(finish_time=current_date)
-
+                current_update_orders = queryset.filter(finish_date=current_date)
                 if verify_condition.exists():
-                    current_update_orders = MaintenanceHandlingInfo.objects.all().filter(finish_time__gte=current_date,finish_time__lte=next_date).count()
-                    update_summary = verify_condition[0]
-                    update_summary.order_count = current_update_orders
-                    update_summary.thirty_day_count = total_num
-                    update_summary.repeat_count = repeat_dic["repeat_num"]
-                    update_summary.save()
-                    report_dic_totag['error'].append("%s 已经重新计算了二次维修，重新递交了这个日期的保修单" % (current_date))
+                    current_summary = verify_condition[0]
+                    current_summary.order_count += current_update_orders.count()
+                    try:
+                        current_summary.save()
+                        repeat_dic['error'].append("%s 更新了这个日期的当日保修单数量，之前保修单导入时有遗漏！" % (current_date))
+                    except Exception as e:
+                        repeat_dic['error'].append(e)
                 else:
                     current_summary = MaintenanceSummary()
                     current_summary.finish_time = current_date
-                    current_summary.order_count = current_orders.count()
-                    current_summary.thirty_day_count = total_num
-                    current_summary.repeat_count = repeat_dic["repeat_num"]
+                    current_summary.order_count = current_update_orders.count()
                     current_summary.creator = creator
+                    try:
+                        current_summary.save()
+                    except Exception as e:
+                        repeat_dic['error'].append(e)
 
-                    current_summary.save()
-                report_dic_totag["torepeatsave"] += 1
+                # 首先生成统计表，然后更新累加统计表在每个循环。然后查询出二次维修，则检索二次维修当天统计表，进而更新二次维修数量。
+                # 当天的二次维修检查数量，是发现二次维修数量，而不是当天的二次维修数量，是客户在当天的不满意数量。
+                # 循环当前天的订单数据，根据当前天的sn查询出前三十天的二次维修问题。
+                current_summary = MaintenanceSummary.objects.all().filter(finish_time=current_date)[0]
+                for order in current_update_orders:
+                    if len(order.machine_sn) < 5:
+                        try:
+                            order.handling_status = 1
+                            order.save()
+                            repeat_dic['successful'] += 1
+                            continue
+                        except Exception as e:
+                            repeat_dic['error'].append(e)
+                            repeat_dic['false'] += 1
+                            continue
+                    result_checked = maintenance_checked.filter(machine_sn=order.machine_sn, repeat_tag=0)
+                    if result_checked.exists():
+                        number = result_checked.count()
+                        current_summary.repeat_found += number
+                        for repeat_order in result_checked:
+                            current_repeat_summary = MaintenanceSummary.objects.all().filter(finish_time=repeat_order.finish_date)[0]
+                            current_repeat_summary.repeat_today += 1
+                            current_repeat_summary.creator = creator
+                            repeat_order.repeat_tag = 1
+                            try:
+                                repeat_order.save()
+                                current_repeat_summary.save()
+                                current_summary.save()
+                            except Exception as e:
+                                repeat_dic['error'].append(e)
+
+                        try:
+                            order.handling_status = 1
+                            order.save()
+                            repeat_dic['successful'] += 1
+                            result_checked.update(repeat_tag=1)
+                            repeat_dic['tag_successful'] += number
+                        except Exception as e:
+                            repeat_dic['error'].append(e)
+                            repeat_dic['false'] += number
+                    else:
+                        try:
+                            order.handling_status = 1
+                            order.save()
+                            repeat_dic['successful'] += 1
+                        except Exception as e:
+                            repeat_dic['error'].append(e)
+                            repeat_dic['false'] += 1
+
+                # 对数据进行汇总，累加到repeat_dic_total的字典里面
+                report_dic_totag['successful'] += repeat_dic['successful']
+                report_dic_totag['false'] +=repeat_dic['false']
+                report_dic_totag['tag_successful'] = repeat_dic['tag_successful']
+                report_dic_totag['torepeatsave'] += 1
+                if repeat_dic['error']:
+                    report_dic_totag['error'].append(repeat_dic['error'])
 
                 current_date = current_date + datetime.timedelta(days=1)
 
@@ -241,7 +278,7 @@ class CalcAction(BaseActionView):
             self.message_user('计算了 %s 天统计数据' % report_dic_totag['torepeatsave'], 'success')
             if report_dic_totag['false'] > 0:
                 self.message_user('失败了 %s 条单据' % report_dic_totag['false'], 'error')
-            if report_dic_totag['error'] is not None:
+            if report_dic_totag['error']:
                 self.message_user('主要错误是 %s ' % report_dic_totag['error'], 'error')
 
         # Return None to display the change list page again.
@@ -249,7 +286,8 @@ class CalcAction(BaseActionView):
 
 
 class MaintenanceInfoAdmin(object):
-    list_display = ['maintenance_order_id', 'warehouse', 'completer', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal', 'shop', 'finish_time', 'buyer_nick', 'sender_mobile', 'goods_name', 'is_guarantee']
+    list_display = ['maintenance_order_id', 'warehouse', 'completer', 'maintenance_type', 'fault_type', 'machine_sn',
+                    'appraisal', 'shop', 'finish_time', 'buyer_nick', 'sender_mobile', 'goods_name', 'is_guarantee']
     search_fields = ['maintenance_order_id', 'sender_mobile']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
 
@@ -303,7 +341,8 @@ class MaintenanceSubmitInfoAdmin(object):
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
 
-    list_display = ['maintenance_order_id', 'towork_status', 'warehouse', 'completer', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal', 'shop']
+    list_display = ['maintenance_order_id', 'towork_status', 'warehouse', 'completer', 'maintenance_type', 'fault_type',
+                    'machine_sn', 'appraisal', 'shop']
 
     search_fields = ['maintenance_order_id', 'sender_mobile']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
@@ -474,10 +513,12 @@ class MaintenanceSubmitInfoAdmin(object):
 
 
 class MaintenanceCalcInfoAdmin(object):
-    list_display = ['maintenance_order_id', 'warehouse', 'completer', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal', 'shop']
+    list_display = ['maintenance_order_id', 'finish_date', 'completer', 'maintenance_type', 'fault_type', 'machine_sn',
+                    'appraisal', 'shop']
 
     search_fields = ['maintenance_order_id', 'sender_mobile']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
+    ordering = ['finish_date']
 
     actions = [CalcAction, ]
 
@@ -488,10 +529,13 @@ class MaintenanceCalcInfoAdmin(object):
 
 
 class MaintenanceJudgeInfoAdmin(object):
-    list_display = ['maintenance_order_id', 'warehouse', 'completer', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal', 'shop']
+    list_display = ['finish_date', 'repeat_tag', 'maintenance_order_id', 'machine_sn', 'appraisal',
+                    'fault_type', 'completer', 'maintenance_type', 'shop']
 
     search_fields = ['maintenance_order_id', 'sender_mobile']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
+    list_myeditable = ['repeat_tag']
+    ordering = ['machine_sn', 'finish_date']
 
     def queryset(self):
         queryset = super(MaintenanceJudgeInfoAdmin, self).queryset()
@@ -512,7 +556,7 @@ class MaintenanceHandlingInfoAdmin(object):
 
 
 class MaintenanceSummaryAdmin(object):
-    list_display = ['finish_time', 'order_count', 'thirty_day_count', 'repeat_count']
+    list_display = ['finish_time', 'order_count', 'repeat_found', 'repeat_today']
     list_filter = ['finish_time']
 
 

@@ -69,11 +69,6 @@
             <ul class="breadcrumb-title b-t-default p-t-10">
                 <li class="breadcrumb-item">
                     <a href="{% url 'index' %}"> <i class="fa fa-home"></i> </a>
-                </li>
-                <li class="breadcrumb-item"><a href="#!">中央维修</a>
-                </li>
-                <li class="breadcrumb-item"><a href="#!">中央维修单</a>
-                </li>
                 <li class="breadcrumb-item"><a href="#!">单据中控台</a>
                 </li>
             </ul>
@@ -87,18 +82,7 @@
                 <a class="nav-link active" href="{% url 'crm_maintenance:overview' %}">数据中控台</a>
                 <div class="slide"></div>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'crm_maintenance:list' %}">单据明细</a>
-                <div class="slide"></div>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'crm_maintenance:handlinglist' %}">工作台</a>
-                <div class="slide"></div>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'crm_maintenance:upload' %}">单据导入</a>
-                <div class="slide"></div>
-            </li>
+
         </ul>
     </div>
     <!-- tab header end -->
@@ -234,6 +218,56 @@
                                             <div class="row">
 
                                                 <div class="m_chart" id="m_repeat_ratio"></div>
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+                                <!-- 当天维修量和当天发现二次维修量对比图 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_repeat_found"></div>
+
+
+                                            </div>
+
+                                            <!-- end of col-sm-8 -->
+                                        </div>
+                                        <!-- end of row -->
+                                    </div>
+                                    <!-- end of card-block -->
+                                </div>
+
+                                <!-- 当天发现二次维修率和当天发现二次维修量 -->
+                                <div class="col-md-12">
+                                    <div class="card b-l-success business-info services m-b-20">
+                                        <div class="card-header">
+                                            <div class="service-header">
+                                                <a href="#">
+                                                    <h5 class="card-header-text">跳到开始</h5>
+                                                </a>
+                                            </div>
+
+                                        </div>
+                                        <div class="card-block">
+                                            <div class="row">
+
+                                                <div class="m_chart" id="m_repeat_found_ratio"></div>
 
                                             </div>
 
@@ -414,7 +448,7 @@
                 text: '数据来源: tbd.com'
             },
             xAxis: {
-                categories: {{ m_total.rt_summary_quantity_d | safe }},
+                categories: {{ m_total.rt_summary_date | safe }},
                 crosshair: true
             },
             yAxis: {
@@ -446,7 +480,7 @@
             },
             series: [{
                 name: '每天维修量',
-                data: {{ m_total.rt_summary_quantity_q | safe }}
+                data: {{ m_total.rt_summary_quantity | safe }}
             }]
         });
 
@@ -561,7 +595,7 @@
                 text: '数据来源: tbd'
             },
             xAxis: {
-                categories: {{ m_total.repeat_date | safe }},
+                categories: {{ m_total.rt_summary_date | safe }},
                 crosshair: true
             },
             yAxis: {
@@ -594,11 +628,11 @@
             series: [{
                 name: '日维修量',
                 color: Highcharts.getOptions().colors[7],
-                data: {{ m_total.order_day_q | safe }}
+                data: {{ m_total.rt_summary_quantity | safe }}
             }, {
                 name: '期间内二次维修量',
                 color: Highcharts.getOptions().colors[5],
-                data: {{ m_total.repeat_day_q | safe }}
+                data: {{ m_total.rt_summary_repeat_today | safe }}
             }]
         });
 
@@ -617,7 +651,7 @@
                 text: '数据来源: tbd'
             },
             xAxis: [{
-                categories: {{ m_total.repeat_date | safe }},
+                categories: {{ m_total.rt_summary_date | safe }},
                 crosshair: true
             }],
             yAxis: [{ // Primary yAxis
@@ -676,7 +710,7 @@
                 type: 'column',
                 yAxis: 1,
                 color: Highcharts.getOptions().colors[3],
-                data: {{ m_total.repeat_day_q | safe }},
+                data: {{ m_total.rt_summary_repeat_today | safe }},
                 tooltip: {
                     valueSuffix: ' 台'
                 }
@@ -684,12 +718,158 @@
                 name: '期间内二次维修率',
                 color: Highcharts.getOptions().colors[5],
                 type: 'spline',
-                data: {{ m_total.repeat_ratio | safe }},
+                data: {{ m_total.rt_summary_ratio_repeat_t | safe }},
                 tooltip: {
                     valueSuffix: '%'
                 }
             }]
         });
+
+        // 当天维修量和当天发现二次维修量对比图
+        Highcharts.chart('m_repeat_found', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: '维修量和当天发现二次维修订单对比图'
+            },
+            subtitle: {
+                text: '数据来源: tbd'
+            },
+            xAxis: {
+                categories: {{ m_total.rt_summary_date | safe }},
+                crosshair: true
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: '维修量 (台)'
+                }
+            },
+            tooltip: {
+                // head + 每个 point + footer 拼接成完整的 table
+                headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+                pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+                '<td style="padding:0"><b>{point.y} 台</b></td></tr>',
+                footerFormat: '</table>',
+                shared: true,
+                useHTML: true
+            },
+            plotOptions: {
+                series: {
+                    borderWidth: 0,
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.y}'
+                    }
+                },
+                column: {
+                    borderWidth: 0
+                }
+            },
+            series: [{
+                name: '日维修量',
+                color: Highcharts.getOptions().colors[7],
+                data: {{ m_total.rt_summary_quantity | safe }}
+            }, {
+                name: '期间内发现二次维修量',
+                color: Highcharts.getOptions().colors[5],
+                data: {{ m_total.rt_summary_repeat_found | safe }}
+            }]
+        });
+
+        // 当天发现二次维修率和当天发现二次维修量
+        var chart = Highcharts.chart('m_repeat_found_ratio', {
+            credits: {
+                        enabled: false
+                    },
+            chart: {
+                zoomType: 'xy'
+            },
+            title: {
+                text: '发现二次维修率和发现二次维修量'
+            },
+            subtitle: {
+                text: '数据来源: tbd'
+            },
+            xAxis: [{
+                categories: {{ m_total.rt_summary_date | safe }},
+                crosshair: true
+            }],
+            yAxis: [{ // Primary yAxis
+                labels: {
+                    format: '{value} %',
+                    style: {
+                        color: Highcharts.getOptions().colors[1]
+                    }
+                },
+                title: {
+                    text: '发现二次维修率（30天）',
+                    style: {
+                        color: Highcharts.getOptions().colors[1]
+                    }
+                }
+            }, { // Secondary yAxis
+                title: {
+                    text: '发现二次维修量（30天）',
+                    style: {
+                        color: Highcharts.getOptions().colors[7]
+                    }
+                },
+                labels: {
+                    format: '{value} 台',
+                    style: {
+                        color: Highcharts.getOptions().colors[7]
+                    }
+                },
+                opposite: true
+            }],
+            plotOptions: {
+                series: {
+                    dataLabels: {
+                        // 开启数据标签
+                        enabled: true,
+                        format: '{point.y}'
+                    },
+                    // 关闭鼠标跟踪，对应的提示框、点击事件会失效
+                    enableMouseTracking: true
+                }
+            },
+            tooltip: {
+                shared: true
+            },
+            legend: {
+                layout: 'vertical',
+                align: 'left',
+                x: 120,
+                verticalAlign: 'top',
+                y: 70,
+                floating: true,
+                backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+            },
+            series: [{
+                name: '期间内发现二次维修量',
+                type: 'column',
+                yAxis: 1,
+                color: Highcharts.getOptions().colors[3],
+                data: {{ m_total.rt_summary_repeat_found | safe }},
+                tooltip: {
+                    valueSuffix: ' 台'
+                }
+            }, {
+                name: '期间内发现二次维修率',
+                color: Highcharts.getOptions().colors[5],
+                type: 'spline',
+                data: {{ m_total.rt_summary_ratio_repeat_f | safe }},
+                tooltip: {
+                    valueSuffix: '%'
+                }
+            }]
+        });
+
 
         // 二次维修责任部门下钻型号比例图
         Highcharts.chart('m_responbility_depart', {

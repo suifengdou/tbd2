@@ -397,28 +397,31 @@ class MaintenanceOverview(LoginRequiredMixin, View):
             finish_time__gte=datetime.datetime.strptime(confirm_data["start_time"], "%Y-%m-%d %H:%M:%S"),
             finish_time__lte=datetime.datetime.strptime(confirm_data["end_time"], "%Y-%m-%d %H:%M:%S"))
         # 计算maintenance的完成时间维度的数量
-        summary_quantity = maintenance_quantity.filter(
-            finish_time__gte=datetime.datetime.strptime(confirm_data["start_time"], "%Y-%m-%d %H:%M:%S"),
-            finish_time__lte=datetime.datetime.strptime(confirm_data["end_time"], "%Y-%m-%d %H:%M:%S")).values(
-            "finish_time").annotate(quantity=Count('maintenance_order_id')).values("finish_time", "quantity").order_by(
-            "finish_time")
-
-        _rt_summary_quantity = {}
-        for date_data in summary_quantity:
-            date_str = date_data["finish_time"].strftime("%Y-%m-%d")
-            quantity = date_data["quantity"]
-            if _rt_summary_quantity.get(date_str, None) is None:
-                _rt_summary_quantity[date_str] = quantity
+        rt_summary_date = []
+        rt_summary_quantity = []
+        rt_summary_repeat_found = []
+        rt_summary_repeat_today = []
+        rt_summary_ratio_repeat_f = []
+        rt_summary_ratio_repeat_t = []
+        for date_data in repeat_quantity:
+            rt_summary_date.append(date_data.finish_time.strftime("%Y-%m-%d"))
+            rt_summary_quantity.append(date_data.order_count)
+            rt_summary_repeat_found.append(date_data.repeat_found)
+            rt_summary_repeat_today.append(date_data.repeat_today)
+            if date_data.order_count == 0:
+                rt_summary_ratio_repeat_f.append(float('%.2f' % (0)))
+                rt_summary_ratio_repeat_t.append(float('%.2f' % (0)))
             else:
-                _rt_summary_quantity[date_str] += quantity
-        rt_summary_quantity_d = []
-        rt_summary_quantity_q = []
-        for d, q in _rt_summary_quantity.items():
-            rt_summary_quantity_d.append(d)
-            rt_summary_quantity_q.append(q)
+                rt_summary_ratio_repeat_f.append(float('%.2f' % (date_data.repeat_found / date_data.order_count * 100)))
+                rt_summary_ratio_repeat_t.append(float('%.2f' % (date_data.repeat_today / date_data.order_count * 100)))
+
         # 把维修数量做到汇总字典中
-        m_total["rt_summary_quantity_d"] = rt_summary_quantity_d
-        m_total["rt_summary_quantity_q"] = rt_summary_quantity_q
+        m_total["rt_summary_date"] = rt_summary_date
+        m_total["rt_summary_quantity"] = rt_summary_quantity
+        m_total["rt_summary_repeat_found"] = rt_summary_repeat_found
+        m_total["rt_summary_repeat_today"] = rt_summary_repeat_today
+        m_total["rt_summary_ratio_repeat_f"] = rt_summary_ratio_repeat_f
+        m_total["rt_summary_ratio_repeat_t"] = rt_summary_ratio_repeat_t
 
         # 维修型号下钻图
         total_num = maintenance_quantity.count()
@@ -478,26 +481,6 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         # 把型号占比下钻图绝对数据整合到total字典。
         m_total["goods_type_total_q"] = goods_type_total_q
         m_total["reason_goods_total_q"] = reason_goods_total_q
-
-        # 二次维修率数据
-        _pre_repeat_num = repeat_quantity.values("finish_time", "order_count", "thirty_day_count",
-                                                 "repeat_count").order_by("finish_time")
-        repeat_date = []
-        order_day_q = []
-        order_thirtyday_q = []
-        repeat_day_q = []
-        repeat_ratio = []
-        for repeat_data in _pre_repeat_num:
-            repeat_date.append(repeat_data["finish_time"].strftime("%Y-%m-%d"))
-            order_day_q.append(int(repeat_data["order_count"]))
-            order_thirtyday_q.append(int(repeat_data["thirty_day_count"]))
-            repeat_day_q.append(int(repeat_data["repeat_count"]))
-            repeat_ratio.append(float("%.2f" % (repeat_data["repeat_count"] / repeat_data["thirty_day_count"] * 100)))
-        m_total["repeat_date"] = repeat_date
-        m_total["order_day_q"] = order_day_q
-        m_total["order_thirtyday_q"] = order_thirtyday_q
-        m_total["repeat_day_q"] = repeat_day_q
-        m_total["repeat_ratio"] = repeat_ratio
 
         # 二次维修责任部门下钻图
         # 二次维修型号下钻图。

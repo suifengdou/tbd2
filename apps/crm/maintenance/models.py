@@ -234,8 +234,8 @@ class MaintenanceJudgeInfo(MaintenanceHandlingInfo):
 class MaintenanceSummary(BaseModel):
     finish_time = models.DateTimeField(verbose_name='保修完成日期')
     order_count = models.IntegerField(default=0, verbose_name='完成保修数量')
-    thirty_day_count = models.IntegerField(default=0, verbose_name='近三十天维修量')
-    repeat_count = models.IntegerField(default=0, verbose_name='30天二次维修量')
+    repeat_found = models.IntegerField(default=0, verbose_name='当天发现30天二次维修量')
+    repeat_today = models.IntegerField(default=0, verbose_name='当天二次维修量')
 
     class Meta:
         verbose_name = 'CRM-M-保修统计表'

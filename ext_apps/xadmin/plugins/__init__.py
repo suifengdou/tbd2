@@ -29,7 +29,8 @@ PLUGINS = (
     'quickfilter',
     'sortablelist',
 	'importexport',
-    'excel'
+    'excel',
+    'myeditable'
 )
 
 
