@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class GiftintalkConfig(AppConfig):
-    name = 'giftintalk'
+    name = 'apps.assistants.giftintalk'
+    verbose_name = 'ass-giftintalk'

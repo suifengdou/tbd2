@@ -32,6 +32,9 @@ class WarehouseInfo(BaseModel):
     warehouse_name = models.CharField(unique=True, max_length=60, verbose_name='仓库名称')
     warehouse_id = models.CharField(unique=True, max_length=20, verbose_name='仓库ID')
     city = models.ForeignKey(CityInfo, on_delete=models.CASCADE, verbose_name='城市地点')
+    receiver = models.CharField(null=True, blank=True, max_length=50, verbose_name='收货人')
+    mobile = models.CharField(null=True, blank=True, max_length=30, verbose_name='电话')
+    address = models.CharField(null=True, blank=True, max_length=90, verbose_name='地址')
     category = models.ForeignKey(WarehouseTypeInfo, on_delete=models.CASCADE, verbose_name='仓库类型')
     status = models.IntegerField(choices=STATUS, default=0, verbose_name='仓库状态')
 

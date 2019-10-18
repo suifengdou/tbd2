@@ -32,7 +32,7 @@ class CompanyInfo(BaseModel):
     category = models.IntegerField(choices=CATEGORY, default=1, verbose_name='公司类型')
 
     class Meta:
-        verbose_name = 'BASE-公司管理'
+        verbose_name = 'BASE-公司-公司管理'
         verbose_name_plural = verbose_name
         db_table = 'base_company'
 
@@ -43,7 +43,7 @@ class CompanyInfo(BaseModel):
 class LogisticsInfo(CompanyInfo):
 
     class Meta:
-        verbose_name = 'BASE-快递物流'
+        verbose_name = 'BASE-公司-快递物流'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -53,7 +53,7 @@ class LogisticsInfo(CompanyInfo):
 
 class ManuInfo(CompanyInfo):
     class Meta:
-        verbose_name = 'BASE-生产制造'
+        verbose_name = 'BASE-公司-生产制造'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -63,7 +63,7 @@ class ManuInfo(CompanyInfo):
 
 class WareInfo(CompanyInfo):
     class Meta:
-        verbose_name = 'BASE-仓库存储'
+        verbose_name = 'BASE-公司-仓库存储'
         verbose_name_plural = verbose_name
         proxy = True
 

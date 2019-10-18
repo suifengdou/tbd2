@@ -112,6 +112,7 @@ class ListAdminView(ModelAdminView):
     paginator_class = Paginator
     ordering = None
 
+
     # Change list templates
     object_list_template = None
 
@@ -406,6 +407,7 @@ class ListAdminView(ModelAdminView):
         context.update(kwargs or {})
 
         response = self.get_response(context, *args, **kwargs)
+
         return response or TemplateResponse(request, self.object_list_template or
                                             self.get_template_list('views/model_list.html'), context)
 

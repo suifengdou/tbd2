@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class ZoneuConfig(AppConfig):
-    name = 'zoneu'
+    name = 'apps.base.zoneu'
+    verbose_name = 'zoneu'

@@ -7,7 +7,12 @@
 
 import datetime
 from django.core.exceptions import PermissionDenied
-import pandas as pd
+from django.db import router
+from django.utils.encoding import force_text
+from django.template.response import TemplateResponse
+
+from django.contrib.admin.utils import get_deleted_objects
+
 import xadmin
 from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
@@ -17,6 +22,94 @@ from xadmin.util import model_ngettext
 from .models import ManuOrderInfo, ManuOrderPenddingInfo, ManuOrderProcessingInfo
 from apps.oms.qcorder.models import QCSubmitOriInfo
 from apps.oms.cusrequisition.models import CusRequisitionInfo
+from apps.oms.planorder.models import PlanOrderInfo
+
+ACTION_CHECKBOX_NAME = '_selected_action'
+
+# 驳回审核
+class RejectSelectedAction(BaseActionView):
+
+    action_name = "reject_selected"
+    description = '驳回选中的工单'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    delete_models_batch = False
+
+    model_perm = 'change'
+    icon = 'fa fa-times'
+
+    @filter_hook
+    def delete_models(self, queryset):
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                if obj.order_status == 1:
+                    requisition = CusRequisitionInfo.objects.filter(batch_num=obj.batch_num, order_status__in=[1, 2])
+                    if requisition:
+                        self.message_user("%s 有存在对应的需求单未取消，请处理之后再驳回。" % obj.planorder_id, "error")
+                        n -= 1
+                    else:
+                        obj.order_status -= 1
+                        PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id).update(order_status=2)
+                        obj.save()
+                        self.message_user("%s 工厂订单取消成功，已驳回到计划单待递交界面。" % obj.planorder_id, "success")
+                else:
+                    self.message_user("%s 订单已经开始生产，无法驳回。" % obj.planorder_id, "success")
+                    n -= 1
+            self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has delete permission for the actual model
+        if not self.has_delete_permission():
+            raise PermissionDenied
+
+        using = router.db_for_write(self.model)
+
+        # Populate deletable_objects, a data structure of all related objects that
+        # will also be deleted.
+        deletable_objects, model_count, perms_needed, protected = get_deleted_objects(
+            queryset, self.opts, self.user, self.admin_site, using)
+
+        # The user has already confirmed the deletion.
+        # Do the deletion and return a None to display the change list view again.
+        if self.request.POST.get('post'):
+            if perms_needed:
+                raise PermissionDenied
+            self.delete_models(queryset)
+            # Return None to display the change list page again.
+            return None
+
+        if len(queryset) == 1:
+            objects_name = force_text(self.opts.verbose_name)
+        else:
+            objects_name = force_text(self.opts.verbose_name_plural)
+
+        if perms_needed or protected:
+            title = "Cannot reject %(name)s" % {"name": objects_name}
+        else:
+            title = "Are you sure?"
+
+        context = self.get_context()
+        context.update({
+            "title": title,
+            "objects_name": objects_name,
+            "deletable_objects": [deletable_objects],
+            'queryset': queryset,
+            "perms_lacking": perms_needed,
+            "protected": protected,
+            "opts": self.opts,
+            "app_label": self.app_label,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+        })
+
+        # Display the confirmation page
+        return TemplateResponse(self.request, self.delete_selected_confirmation_template or
+                                self.get_template_list('views/model_reject_selected_confirm.html'), context)
 
 
 class CheckAction(BaseActionView):
@@ -36,16 +129,16 @@ class CheckAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=2)
+                queryset.update(order_status=2)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    requisition = CusRequisitionInfo.objects.filter(batch_num=obj.batch_num, status__in=[1, 2])
+                    requisition = CusRequisitionInfo.objects.filter(batch_num=obj.batch_num, order_status=1)
                     if requisition:
                         self.message_user("%s 有存在未完成的需求单，请及时处理" % obj.planorder_id, "error")
-                        queryset.filter(planorder_id=obj.planorder_id).update(status=2)
+
                     else:
-                        queryset.filter(planorder_id=obj.planorder_id).update(status=3)
+                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
                         self.message_user("%s 审核完毕，等待生产" % obj.planorder_id, "info")
 
             self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
@@ -57,19 +150,19 @@ class CheckAction(BaseActionView):
 class QCOriInfoInline(object):
 
     model = QCSubmitOriInfo
-    exclude = ["status", "creator", "qc_order_id"]
+    exclude = ["order_status", "creator", "qc_order_id"]
     extra = 0
 
     def queryset(self):
-        queryset = super(QCOriInfoInline, self).queryset().filter(status__in=[1, 2])
+        queryset = super(QCOriInfoInline, self).queryset().filter(order_status=1)
         return queryset
 
 
 class ManuOrderInfoAdmin(object):
-    list_display = ["batch_num","planorder_id","goods_id","goods_name","quantity","status","manufactory","estimated_time","start_sn", "end_sn"]
-    list_filter = ["goods_id","goods_name","status","manufactory","estimated_time"]
+    list_display = ["batch_num","planorder_id","goods_id","goods_name","quantity","order_status","manufactory","estimated_time","start_sn", "end_sn"]
+    list_filter = ["goods_id","goods_name","order_status","manufactory","estimated_time"]
     search_fields = ["batch_num","planorder_id"]
-    readonly_fields = ["batch_num","planorder_id","goods_id","goods_name","quantity","status","manufactory","estimated_time","creator","start_sn", "end_sn"]
+    readonly_fields = ["batch_num","planorder_id","goods_id","goods_name","quantity","order_status","manufactory","estimated_time","creator","start_sn", "end_sn"]
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -77,15 +170,15 @@ class ManuOrderInfoAdmin(object):
 
 
 class ManuOrderPenddingInfoAdmin(object):
-    list_display = ["batch_num","planorder_id","goods_id","goods_name","quantity","status","manufactory","estimated_time","creator","start_sn", "end_sn"]
+    list_display = ["batch_num","planorder_id","goods_id","goods_name","quantity","order_status","manufactory","estimated_time","creator","start_sn", "end_sn"]
     list_filter = ["goods_id", "goods_name", "manufactory", "estimated_time"]
     search_fields = ["batch_num", "planorder_id"]
     readonly_fields = ["batch_num","planorder_id","goods_id","goods_name","creator"]
-    actions = [CheckAction, ]
+    actions = [CheckAction, RejectSelectedAction]
 
     def queryset(self):
         queryset = super(ManuOrderPenddingInfoAdmin, self).queryset()
-        queryset = queryset.filter(status__in=[1, 2])
+        queryset = queryset.filter(order_status=1)
         return queryset
 
     def has_add_permission(self):
@@ -94,15 +187,15 @@ class ManuOrderPenddingInfoAdmin(object):
 
 
 class ManuOrderProcessingInfoAdmin(object):
-    list_display = ["batch_num","planorder_id","goods_id", "status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum", "intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
+    list_display = ["batch_num","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum", "intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
     list_filter = ["goods_id", "goods_name", "manufactory", "estimated_time"]
     search_fields = ["batch_num", "planorder_id"]
-    readonly_fields = ["batch_num","planorder_id","goods_id", "status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum","intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
+    readonly_fields = ["batch_num","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum","intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
     inlines = [QCOriInfoInline, ]
 
     def queryset(self):
         queryset = super(ManuOrderProcessingInfoAdmin, self).queryset()
-        queryset = queryset.filter(status__in=[3, 4])
+        queryset = queryset.filter(order_status__in=[3, 4])
         return queryset
 
     def save_related(self):

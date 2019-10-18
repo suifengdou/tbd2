@@ -54,3 +54,16 @@ class CityInfo(BaseModel):
         return self.city
 
 
+class DistrictInfo(BaseModel):
+    nationality = models.ForeignKey(NationalityInfo, on_delete=models.CASCADE, verbose_name='国家')
+    province = models.ForeignKey(ProvinceInfo, on_delete=models.CASCADE, verbose_name='省份')
+    city = models.ForeignKey(CityInfo, on_delete=models.CASCADE, verbose_name='城市')
+    district = models.CharField(max_length=100, verbose_name='区县')
+
+    class Meta:
+        verbose_name = 'UTL-G-区县'
+        verbose_name_plural = verbose_name
+        db_table = 'util_geo_district'
+
+    def __str__(self):
+        return self.district

@@ -5,7 +5,7 @@
 # @File    : adminx.py
 # @Software: PyCharm
 
-import math
+import math, re
 import datetime
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -23,6 +23,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
 from .models import WorkOrder, WorkOrderApp, WorkOrderAppRev, WorkOrderHandle, WorkOrderHandleSto, WorkOrderKeshen, WorkOrderMine
+from apps.base.company.models import LogisticsInfo
 
 from apps.oms.qcorder.models import QCSubmitOriInfo
 from apps.oms.cusrequisition.models import CusRequisitionInfo
@@ -321,6 +322,150 @@ class WorkOrderAppRevAdmin(object):
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
                        'wo_category', 'memo']
     actions = [SubmitReverseAction, RejectSelectedAction]
+    ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+    INIT_FIELDS_DIC = {"源单号": "express_id", "初始问题信息": "information", "工单事项类型": "category"}
+    import_data = True
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file', None)
+        if file:
+            result = self.handle_upload_file(request, file)
+            self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
+            if result['false'] > 0 or result['error']:
+                self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
+            if result['repeated'] > 0:
+                self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
+        return super(WorkOrderAppRevAdmin, self).post(request, args, kwargs)
+
+    def handle_upload_file(self, request, _file):
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
+            df = pd.read_excel(_file, sheet_name=0)
+
+            # 获取表头，对表头进行转换成数据库字段名
+            columns_key = df.columns.values.tolist()
+            for i in range(len(columns_key)):
+                if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                    columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+
+            # 验证一下必要的核心字段是否存在
+            _ret_verify_field = WorkOrderAppRev.verify_mandatory(columns_key)
+            if _ret_verify_field is not None:
+                return _ret_verify_field
+
+            # 更改一下DataFrame的表名称
+            columns_key_ori = df.columns.values.tolist()
+            ret_columns_key = dict(zip(columns_key_ori, columns_key))
+            df.rename(columns=ret_columns_key, inplace=True)
+
+            # 更改一下DataFrame的表名称
+            num_end = 0
+            step = 300
+            step_num = int(len(df) / step) + 2
+            i = 1
+            while i < step_num:
+                num_start = num_end
+                num_end = step * i
+                intermediate_df = df.iloc[num_start: num_end]
+
+                # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+                _ret_list = intermediate_df.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+                i += 1
+            return report_dic
+        # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
+        elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
+            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
+
+            for piece in df:
+                # 获取表头
+                columns_key = piece.columns.values.tolist()
+                # 剔除表头中特殊字符等于号和空格
+                for i in range(len(columns_key)):
+                    columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+                # 循环处理对应的预先设置，转换成数据库字段名称
+                for i in range(len(columns_key)):
+                    if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                        columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+                # 直接调用验证函数进行验证
+                _ret_verify_field = WorkOrderAppRev.verify_mandatory(columns_key)
+                if _ret_verify_field is not None:
+                    return _ret_verify_field
+                # 验证通过进行重新处理。
+                columns_key_ori = piece.columns.values.tolist()
+                ret_columns_key = dict(zip(columns_key_ori, columns_key))
+                piece.rename(columns=ret_columns_key, inplace=True)
+                _ret_list = piece.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+            return report_dic
+
+        else:
+            report_dic["error"].append('只支持excel和csv文件格式！')
+            return report_dic
+
+    @staticmethod
+    def save_resources(request, resource):
+        # 设置初始报告
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error":[]}
+        category_dic = {'截单退回': 0, '无人收货': 1, '客户拒签': 2, '修改地址': 3, '催件派送': 4, '虚假签收': 5, '其他异常': 6}
+
+        # 开始导入数据
+        for row in resource:
+            service_order = WorkOrderAppRev()  # 创建表格每一行为一个对象
+            express_id = str(row["express_id"])
+            information = str(row["information"])
+            row["category"] = category_dic.get(str(row["category"]), None)
+
+            # 如果服务单号为空，就丢弃这个订单，计数为丢弃订单
+            if re.match(r'^[A-Za-z0-9]', express_id) is None:
+                report_dic["discard"] += 1
+                report_dic["error"].append("%s 快递单号错误" % express_id)
+                continue
+
+            if len(information) > 599:
+                row["information"] = information[:598]
+
+            if row["category"] is None:
+                report_dic["discard"] += 1
+                report_dic["error"].append("%s 类型填写错误" % express_id)
+
+            # 如果服务单号已经存在，丢弃订单，计数为重复订单
+            if WorkOrderAppRev.objects.filter(express_id=express_id).exists():
+                report_dic["repeated"] += 1
+                continue
+
+            else:
+                for k, v in row.items():
+
+                    # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
+                    if hasattr(service_order, k):
+                        if str(v) in ['nan', 'NaT']:
+                            pass
+                        else:
+                            setattr(service_order, k, v)  # 更新对象属性为字典对应键值
+                try:
+                    service_order.creator = request.user.username
+                    service_order.company = request.user.company
+                    service_order.wo_category = 1
+                    service_order.save()
+                    report_dic["successful"] += 1
+                # 保存出错，直接错误条数计数加一。
+                except Exception as e:
+                    report_dic["false"] += 1
+                    report_dic["error"].append(e)
+        return report_dic
 
     def save_models(self):
         obj = self.new_obj
@@ -355,6 +500,156 @@ class WorkOrderAppAdmin(object):
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
                        'wo_category', 'memo']
     actions = [SubmitAction, RejectSelectedAction]
+    ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+    INIT_FIELDS_DIC = {"源单号": "express_id", "初始问题信息": "information", "工单事项类型": "category", "快递公司": "company"}
+    import_data = True
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file', None)
+        if file:
+            result = self.handle_upload_file(request, file)
+            self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
+            if result['false'] > 0 or result['error']:
+                self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
+            if result['repeated'] > 0:
+                self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
+        return super(WorkOrderAppAdmin, self).post(request, args, kwargs)
+
+    def handle_upload_file(self, request, _file):
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
+            df = pd.read_excel(_file, sheet_name=0)
+
+            # 获取表头，对表头进行转换成数据库字段名
+            columns_key = df.columns.values.tolist()
+            for i in range(len(columns_key)):
+                if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                    columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+
+            # 验证一下必要的核心字段是否存在
+            _ret_verify_field = WorkOrderApp.verify_mandatory(columns_key)
+            if _ret_verify_field is not None:
+                return _ret_verify_field
+
+            # 更改一下DataFrame的表名称
+            columns_key_ori = df.columns.values.tolist()
+            ret_columns_key = dict(zip(columns_key_ori, columns_key))
+            df.rename(columns=ret_columns_key, inplace=True)
+
+            # 更改一下DataFrame的表名称
+            num_end = 0
+            step = 300
+            step_num = int(len(df) / step) + 2
+            i = 1
+            while i < step_num:
+                num_start = num_end
+                num_end = step * i
+                intermediate_df = df.iloc[num_start: num_end]
+
+                # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+                _ret_list = intermediate_df.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+                i += 1
+            return report_dic
+        # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
+        elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
+            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
+
+            for piece in df:
+                # 获取表头
+                columns_key = piece.columns.values.tolist()
+                # 剔除表头中特殊字符等于号和空格
+                for i in range(len(columns_key)):
+                    columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+                # 循环处理对应的预先设置，转换成数据库字段名称
+                for i in range(len(columns_key)):
+                    if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                        columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+                # 直接调用验证函数进行验证
+                _ret_verify_field = WorkOrderAppRev.verify_mandatory(columns_key)
+                if _ret_verify_field is not None:
+                    return _ret_verify_field
+                # 验证通过进行重新处理。
+                columns_key_ori = piece.columns.values.tolist()
+                ret_columns_key = dict(zip(columns_key_ori, columns_key))
+                piece.rename(columns=ret_columns_key, inplace=True)
+                _ret_list = piece.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+            return report_dic
+
+        else:
+            report_dic["error"].append('只支持excel和csv文件格式！')
+            return report_dic
+
+    @staticmethod
+    def save_resources(request, resource):
+        # 设置初始报告
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error":[]}
+        category_dic = {'截单退回': 0, '无人收货': 1, '客户拒签': 2, '修改地址': 3, '催件派送': 4, '虚假签收': 5, '其他异常': 6}
+
+        # 开始导入数据
+        for row in resource:
+            service_order = WorkOrderApp()  # 创建表格每一行为一个对象
+            express_id = str(row["express_id"])
+            information = str(row["information"])
+            row["category"] = category_dic.get(str(row["category"]), None)
+            if LogisticsInfo.objects.filter(company_name=row["company"]).exists():
+                row["company"] = LogisticsInfo.objects.filter(company_name=row["company"])[0]
+            else:
+                report_dic["discard"] += 1
+                report_dic["error"].append("%s 快递公司名称错误" % express_id)
+                continue
+
+            # 如果服务单号为空，就丢弃这个订单，计数为丢弃订单
+            if re.match(r'^[A-Za-z0-9]', express_id) is None:
+                report_dic["discard"] += 1
+                report_dic["error"].append("%s 快递单号错误" % express_id)
+                continue
+
+            if len(information) > 599:
+                row["information"] = information[:598]
+
+            if row["category"] is None:
+                report_dic["discard"] += 1
+                report_dic["error"].append("%s 类型填写错误" % express_id)
+
+            # 如果服务单号已经存在，丢弃订单，计数为重复订单
+            if WorkOrderAppRev.objects.filter(express_id=express_id).exists():
+                report_dic["repeated"] += 1
+                continue
+
+            else:
+                for k, v in row.items():
+
+                    # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
+                    if hasattr(service_order, k):
+                        if str(v) in ['nan', 'NaT']:
+                            pass
+                        else:
+                            setattr(service_order, k, v)  # 更新对象属性为字典对应键值
+                try:
+                    service_order.creator = request.user.username
+                    service_order.order_status = 3
+                    service_order.save()
+                    report_dic["successful"] += 1
+                # 保存出错，直接错误条数计数加一。
+                except Exception as e:
+                    report_dic["false"] += 1
+                    report_dic["error"].append(e)
+        return report_dic
+
 
     def save_models(self):
         obj = self.new_obj
@@ -472,7 +767,7 @@ class WorkOrderAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.id == 1:
+            if request.user.company.company_name == '小狗电器':
                 queryset = super(WorkOrderAdmin, self).queryset()
                 return queryset
             else:

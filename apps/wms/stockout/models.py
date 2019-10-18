@@ -40,6 +40,7 @@ class StockOutInfo(BaseModel):
     district = models.CharField(null=True, blank=True, max_length=60, verbose_name='区县')
     mobile = models.CharField(null=True, blank=True, max_length=30, verbose_name='收货人手机')
     memorandum = models.TextField(null=True, blank=True, verbose_name='备注')
+    address = models.CharField(null=True, blank=True, max_length=160, verbose_name='地址')
 
     class Meta:
         verbose_name = 'WMS-O-出库单'

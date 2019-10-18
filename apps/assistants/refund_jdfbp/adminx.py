@@ -56,9 +56,10 @@ class ModifyAction(BaseActionView):
 
 class RefundResourceAdmin(object):
     list_display = ['service_order_id', 'order_id', 'goods_id', 'goods_name', 'order_status', 'application_time',
-                    'buyer_expectation', 'return_model', 'handler_name', 'express_id', 'express_company', 'handlingstatus']
+                     'buyer_expectation', 'return_model', 'handler_name', 'express_id', 'express_company', 'handlingstatus']
     search_fields = ['service_order_id', 'order_id', 'express_id']
-    list_filter = ['goods_id', 'application_time', 'order_status', 'handlingstatus']
+    list_filter = ['goods_id', 'application_time', 'handlingstatus']
+    pass
 
 
 class PendingRefundResourceAdmin(object):

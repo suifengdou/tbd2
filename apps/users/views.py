@@ -72,40 +72,40 @@ class IndexView(LoginRequiredMixin, View):
     TBD首页
     """
     def get(self, request):
-        print(request.user)
-        print(request.user.username)
-        print(request)
 
-        return render(request, "index.html", {})
+        return redirect('/xadmin/')
 
 
 class LoginView(View):
     def get(self, request):
-        return render(request, "auth/auth-sign-in-social.html", {})
+        return redirect('/xadmin/')
+        # return render(request, "auth/auth-sign-in-social.html", {})
 
     def post(self, request):
-        login_form = LoginForm(request.POST)
-        if login_form.is_valid():
-            username = request.POST.get("username", None)
-            password = request.POST.get("password", None)
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                if user.is_active:
-                    login(request, user)
-                    return HttpResponseRedirect(reverse('index'))
-                else:
-                    return render(request, "auth/auth-sign-in-social.html", {"msg": "用户名未激活"})
-            else:
-                return render(request, "auth/auth-sign-in-social.html", {"msg": "用户名密码错误"})
-        else:
-            return render(request, "auth/auth-sign-in-social.html", {"login_form": login_form})
+        return redirect('/xadmin/')
+        # login_form = LoginForm(request.POST)
+        # if login_form.is_valid():
+        #     username = request.POST.get("username", None)
+        #     password = request.POST.get("password", None)
+        #     user = authenticate(username=username, password=password)
+        #     if user is not None:
+        #         if user.is_active:
+        #             login(request, user)
+        #             return HttpResponseRedirect(reverse('index'))
+        #         else:
+        #             return render(request, "auth/auth-sign-in-social.html", {"msg": "用户名未激活"})
+        #     else:
+        #         return render(request, "auth/auth-sign-in-social.html", {"msg": "用户名密码错误"})
+        # else:
+        #     return render(request, "auth/auth-sign-in-social.html", {"login_form": login_form})
 
 
 class LogoutView(View):
     def get(self, request):
-        logout(request)
-        from django.urls import reverse
-        return HttpResponseRedirect(reverse("index"))
+        return redirect('/xadmin/')
+        # logout(request)
+        # from django.urls import reverse
+        # return HttpResponseRedirect(reverse("index"))
 
 
 # class UserInfoView(View):

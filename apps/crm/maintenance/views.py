@@ -348,8 +348,8 @@ class MaintenanceOverview(LoginRequiredMixin, View):
                 start_time = datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
                 end_time = datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
                 d_value = end_time - start_time
-                # 计算一下时间间隔，是否是两个月内。如果超出或者选择错误。
-                if d_value.days in range(1, 61):
+                # 计算一下时间间隔，是否是三个月内。如果超出或者选择错误。
+                if d_value.days in range(1, 91):
                     confirm_data["start_time"] = start_time.strftime("%Y-%m-%d %H:%M:%S")
                     confirm_data["end_time"] = end_time.strftime("%Y-%m-%d %H:%M:%S")
                     confirm_data["tag_date"] = 0
@@ -367,13 +367,14 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         confirm_data["tag_date"] = confirm_data["week_num"]
         confirm_data["end_time"] = datetime.datetime.now().date().strftime("%Y-%m-%d %H:%M:%S")
         confirm_data["start_time"] = (
-        datetime.datetime.now().date() - datetime.timedelta(weeks=int(confirm_data["week_num"]))).strftime(
+            datetime.datetime.now().date() - datetime.timedelta(weeks=int(confirm_data["week_num"]))).strftime(
             "%Y-%m-%d %H:%M:%S")
         confirm_data["ori_start_time"] = confirm_data["start_time"].split(" ")[0]
         confirm_data["ori_end_time"] = confirm_data["end_time"].split(" ")[0]
         return confirm_data
 
     def get(self, request):
+
         m_total = {}
         confirm_data = {
             "week_num": request.GET.get("weeks_num", None),
@@ -547,6 +548,57 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         m_total["responbility_goods_total"] = responbility_goods_total
         m_total["repeat_goods_reason_total"] = repeat_goods_reason_total
 
+        # 二次维修的维修员数据
+        repairer_repeat_total = []
+        repairer_repeat_goods_total = []
+        # 维修员完成数量共享了一个查询。
+        repairer_repeat_num = maintenance_quantity.filter(repeat_tag__in=[1, 2, 3, 4]).values("completer").annotate(
+            quantity=Count("maintenance_order_id")).values("completer", "quantity").order_by("-quantity")
+        # 维修员完成数量的查询
+        repairers_num = maintenance_quantity.values("completer").annotate(quantity=Count("maintenance_order_id")).values("completer", "quantity").order_by("-quantity")
+        repairers_name = []
+        repairer_repeat_name_num = []
+        repairer_work_num = []
+        repairer_repeat_dic = {}
+        for repairer_repeat in repairer_repeat_num:
+            repairer_repeat_title = {
+                "name": repairer_repeat["completer"],
+                "y": repairer_repeat["quantity"],
+                "drilldown": repairer_repeat["completer"]
+            }
+            repairer_repeat_total.append(repairer_repeat_title)
+            repairer_repeat_goods = {
+                "name": repairer_repeat["completer"],
+                "id": repairer_repeat["completer"],
+            }
+            repairer_repeat_goods_data = []
+            repairer_goods_num = maintenance_quantity.exclude(repeat_tag=0).filter(
+                completer=repairer_repeat["completer"]).values("goods_type").annotate(
+                quantity=Count("maintenance_order_id")).values("goods_type", "quantity").order_by("-quantity")
+            for repairer_goods_temp in repairer_goods_num:
+                repairer_repeat_good_data = [repairer_goods_temp["goods_type"], int(repairer_goods_temp["quantity"])]
+                repairer_repeat_goods_data.append(repairer_repeat_good_data)
+            repairer_repeat_goods["data"] = repairer_repeat_goods_data
+            repairer_repeat_goods_total.append(repairer_repeat_goods)
+
+            # 维修员
+            repairer_repeat_dic[repairer_repeat["completer"]] = repairer_repeat["quantity"]
+
+        for repairer_num in repairers_num:
+            repairers_name.append(repairer_num["completer"])
+            repairer_work_num.append(repairer_num["quantity"])
+        for repairer_name in repairers_name:
+            repairer_repeat_name_num.append(repairer_repeat_dic.get(repairer_name, 0))
+
+        m_total["repairer_repeat_total"] = repairer_repeat_total
+        m_total["repairer_repeat_goods_total"] = repairer_repeat_goods_total
+
+        m_total["repairers_name"] = repairers_name
+        m_total["repairer_work_num"] = repairer_work_num
+        m_total["repairer_repeat_name_num"] = repairer_repeat_name_num
+
+
+
         return render(request, "crm/maintenance/overview.html", {
             "m_total": m_total,
             "index_tag": "crm_maintenance_orders",
@@ -589,7 +641,7 @@ class MaintenanceHandlinglist(LoginRequiredMixin, View):
             # 如果不是查询二次维修订单，则直接一个时间维度查询。
             else:
                 all_orders = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_time,
-                                                                finish_time__lte=end_time).order_by("-finish_time")
+                                                                    finish_time__lte=end_time).order_by("-finish_time")
 
         else:
             # 如果订单标记为9，则取出所有标记为二次维修的订单。
@@ -752,7 +804,6 @@ class MaintenanceSignRepeat(LoginRequiredMixin, View):
     def post(self, request):
         report_dic_totag = {"successful": 0, "tag_successful": 0, "false": 0, "torepeatsave": 0, "error": []}
         command_id = request.POST.get("signrepeat", None)
-
 
         if command_id == '1':
             # 按照未处理的标记，查询出表单对未处理订单。对订单的时间进行处理。
@@ -1031,7 +1082,6 @@ class MaintenanceWorkList(LoginRequiredMixin, View):
 
 
 class MainUtils(object):
-
     @staticmethod
     def elementsnum():
         elements = {"total_num": 0, "pending_num": 0, "repeat_num": 0, "unresolved_num": 0, "pending_tosn_num": 0}
@@ -1049,11 +1099,3 @@ class MainUtils(object):
         elements["pending_tosn_num"] = pending_tosn_num
 
         return elements
-
-
-
-
-
-
-
-

@@ -81,6 +81,7 @@ class MaintenanceInfo(BaseModel):
         (1, '未处理'),
         (2, '产品'),
         (3, '维修'),
+        (4, '其他'),
     )
 
     maintenance_order_id = models.CharField(max_length=50, verbose_name='保修单号')

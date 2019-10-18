@@ -67,9 +67,9 @@ class WorkOrder(BaseModel):
     company = models.ForeignKey(LogisticsInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='快递公司')
 
     class Meta:
-        verbose_name = 'EXT-工单-查询'
+        verbose_name = 'EXT-快递工单-查询'
         verbose_name_plural = verbose_name
-        db_table = 'ext_workorder'
+        db_table = 'ext_workorderex'
 
     def __str__(self):
         return self.express_id
@@ -84,43 +84,61 @@ class WorkOrder(BaseModel):
 
 
 class WorkOrderAppRev(WorkOrder):
+    VERIFY_FIELD = ['express_id', 'information', 'category']
     class Meta:
-        verbose_name = 'EXT-工单-逆向建单'
+        verbose_name = 'EXT-快递工单-逆向'
         verbose_name_plural = verbose_name
         proxy = True
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
 
 
 class WorkOrderApp(WorkOrder):
+    VERIFY_FIELD = ['express_id', 'information', 'category', 'company']
     class Meta:
-        verbose_name = 'EXT-工单-正向建单'
+        verbose_name = 'EXT-快递工单-正向'
         verbose_name_plural = verbose_name
         proxy = True
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
 
 
 class WorkOrderHandle(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-工单处理-客服'
+        verbose_name = 'EXT-快递工单处理-客服'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class WorkOrderHandleSto(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-工单处理-供应商'
+        verbose_name = 'EXT-快递工单处理-供应商'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class WorkOrderKeshen(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-工单复核-客审'
+        verbose_name = 'EXT-快递工单复核-客审'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class WorkOrderMine(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-工单-只看自己'
+        verbose_name = 'EXT-快递工单-只看自己'
         verbose_name_plural = verbose_name
         proxy = True
 

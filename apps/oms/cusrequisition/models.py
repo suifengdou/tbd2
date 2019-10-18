@@ -10,7 +10,7 @@ from django.db import models
 
 
 from db.base_model import BaseModel
-from apps.base.manufactory.models import ManufactoryInfo
+from apps.base.company.models import ManuInfo
 from apps.wms.stock.models import StockInfo
 
 
@@ -18,8 +18,8 @@ class CusRequisitionInfo(BaseModel):
     ORDERSTATUS = (
         (0, '已取消'),
         (1, '未处理'),
-        (2, '异常'),
-        (3, '已递交'),
+        (2, '已递交'),
+        (3, '异常'),
     )
     planorder_id = models.CharField(max_length=30, verbose_name='计划采购单号', db_index=True)
     batch_num = models.CharField(max_length=30, verbose_name='批次号', db_index=True)
@@ -28,8 +28,8 @@ class CusRequisitionInfo(BaseModel):
     quantity = models.IntegerField(verbose_name='货品数量')
 
     estimated_time = models.DateTimeField(verbose_name='期望到货时间')
-    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='需求单单状态')
-    manufactory = models.ForeignKey(ManufactoryInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='工厂名称')
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='需求单单状态')
+    manufactory = models.ForeignKey(ManuInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='工厂名称')
     cus_requisition_id = models.CharField(null=True, blank=True, unique=True, max_length=30, verbose_name='需求单号')
 
     class Meta:

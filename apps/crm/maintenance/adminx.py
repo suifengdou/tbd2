@@ -52,92 +52,92 @@ class SubmitAction(BaseActionView):
             raise PermissionDenied
 
         n = queryset.count()
-        if n:
-            for order in queryset:
-                # 创建一个工作台订单对象，
-                handling_order = MaintenanceHandlingInfo()
-                if MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order.maintenance_order_id).exists():
-                    report_dic_towork["repeat_num"] += 1
-                    try:
-                        ori_orders = MaintenanceInfo.objects.all().filter(
-                            maintenance_order_id=order.maintenance_order_id, towork_status=0)
-                        for ori_order in ori_orders:
-                            ori_order.towork_status = 1
-                            ori_order.save()
-                            report_dic_towork["ori_successful"] += 1
-                    except Exception as e:
-                        report_dic_towork["error"].append(e)
-                        report_dic_towork["ori_order_error"] += 1
-                    continue
-                # 对原单字段进行直接赋值操作。排除machine_sn，此字段单独进行处理。包含了空值。
-                for key in self.__class__.QUERY_FIELD[1:]:
-                    if hasattr(handling_order, key):
-                        re_val = order.__getattribute__(key)
-                        if re_val is None:
-                            report_dic_towork["error"] = "递交订单出现了不可预料的内部错误！"
-                        else:
-                            setattr(handling_order, key, re_val)
-                # 处理省市区
-                _pre_area = str(order.sender_area).split(" ")
-                if len(_pre_area) == 3:
-                    handling_order.province = _pre_area[0]
-                    handling_order.city = _pre_area[1]
-                    handling_order.district = _pre_area[2]
-                elif len(_pre_area) == 2:
-                    handling_order.province = _pre_area[0]
-                    handling_order.city = _pre_area[1]
-                else:
-                    pass
-                # 处理产品名称
-                _pre_goods_name = re.findall(r'([A-Z][\w\s-]+)', order.goods_name)
-                if _pre_goods_name:
-                    handling_order.goods_type = _pre_goods_name[0]
-                else:
-                    handling_order.goods_type = "未知"
 
-                # 处理货品sn码，
-                if re.match(r'^[0-9a-zA-Z]{8,}', str(order.machine_sn).strip(" ")):
-                    handling_order.machine_sn = str(order.machine_sn).upper().strip(" ")
-                else:
-                    handling_order.machine_sn = ""
-
-                handling_order.creator = creator
-                # 处理日期的年月日
-                _pre_time = order.finish_time
-                handling_order.finish_date = _pre_time.strftime("%Y-%m-%d")
-                handling_order.finish_month = _pre_time.strftime("%Y-%m")
-                handling_order.finish_year = _pre_time.strftime("%Y")
-
+        for order in queryset:
+            # 创建一个工作台订单对象，
+            handling_order = MaintenanceHandlingInfo()
+            if MaintenanceHandlingInfo.objects.filter(maintenance_order_id=order.maintenance_order_id).exists():
+                report_dic_towork["repeat_num"] += 1
                 try:
-                    handling_order.save()
-                    report_dic_towork["successful"] += 1
-                    try:
-                        ori_orders = MaintenanceInfo.objects.all().filter(
-                            maintenance_order_id=order.maintenance_order_id, towork_status=0)
-                        for ori_order in ori_orders:
-                            ori_order.towork_status = 1
-                            ori_order.save()
-                            report_dic_towork["ori_successful"] += 1
-                    except Exception as e:
-                        report_dic_towork["error"].append(e)
-                        report_dic_towork["ori_order_error"] += 1
+                    ori_orders = MaintenanceInfo.objects.all().filter(
+                        maintenance_order_id=order.maintenance_order_id, towork_status=0)
+                    for ori_order in ori_orders:
+                        ori_order.towork_status = 1
+                        ori_order.save()
+                        report_dic_towork["ori_successful"] += 1
                 except Exception as e:
                     report_dic_towork["error"].append(e)
-                    report_dic_towork["false"] += 1
-                self.log('change', '', order)
+                    report_dic_towork["ori_order_error"] += 1
+                continue
+            # 对原单字段进行直接赋值操作。排除machine_sn，此字段单独进行处理。包含了空值。
+            for key in self.__class__.QUERY_FIELD[1:]:
+                if hasattr(handling_order, key):
+                    re_val = order.__getattribute__(key)
+                    if re_val is None:
+                        report_dic_towork["error"] = "递交订单出现了不可预料的内部错误！"
+                    else:
+                        setattr(handling_order, key, re_val)
+            # 处理省市区
+            _pre_area = str(order.sender_area).split(" ")
+            if len(_pre_area) == 3:
+                handling_order.province = _pre_area[0]
+                handling_order.city = _pre_area[1]
+                handling_order.district = _pre_area[2]
+            elif len(_pre_area) == 2:
+                handling_order.province = _pre_area[0]
+                handling_order.city = _pre_area[1]
+            else:
+                pass
+            # 处理产品名称
+            _pre_goods_name = re.findall(r'([A-Z][\w\s-]+)', order.goods_name)
+            if _pre_goods_name:
+                handling_order.goods_type = _pre_goods_name[0]
+            else:
+                handling_order.goods_type = "未知"
 
-            self.message_user("成功递交 %(count)d %(items)s." % {
-                "count": report_dic_towork['successful'], "items": model_ngettext(self.opts, n)
-            }, 'success')
-            self.message_user('成功更新了 %s 条原始单数据' % report_dic_towork['ori_successful'], 'success')
-            if report_dic_towork['false'] > 0:
-                self.message_user('失败了 %s 条数据' % report_dic_towork['false'], 'error')
-            if report_dic_towork['ori_order_error'] > 0:
-                self.message_user('更新失败了 %s 条原始单数据' % report_dic_towork['ori_order_error'], 'error')
-            if report_dic_towork['repeat_num'] > 0:
-                self.message_user('重复丢弃了 %s 条数据' % report_dic_towork['repeat_num'], 'error')
-            if report_dic_towork['error']:
-                self.message_user('主要错误是 %s ' % report_dic_towork['error'], 'error')
+            # 处理货品sn码，
+            if re.match(r'^[0-9a-zA-Z]{8,}', str(order.machine_sn).strip(" ")):
+                handling_order.machine_sn = str(order.machine_sn).upper().strip(" ")
+            else:
+                handling_order.machine_sn = ""
+
+            handling_order.creator = creator
+            # 处理日期的年月日
+            _pre_time = order.finish_time
+            handling_order.finish_date = _pre_time.strftime("%Y-%m-%d")
+            handling_order.finish_month = _pre_time.strftime("%Y-%m")
+            handling_order.finish_year = _pre_time.strftime("%Y")
+
+            try:
+                handling_order.save()
+                report_dic_towork["successful"] += 1
+                try:
+                    ori_orders = MaintenanceInfo.objects.all().filter(
+                        maintenance_order_id=order.maintenance_order_id, towork_status=0)
+                    for ori_order in ori_orders:
+                        ori_order.towork_status = 1
+                        ori_order.save()
+                        report_dic_towork["ori_successful"] += 1
+                except Exception as e:
+                    report_dic_towork["error"].append(e)
+                    report_dic_towork["ori_order_error"] += 1
+            except Exception as e:
+                report_dic_towork["error"].append(e)
+                report_dic_towork["false"] += 1
+            self.log('change', '', order)
+
+        self.message_user("成功递交 %(count)d %(items)s." % {
+            "count": report_dic_towork['successful'], "items": model_ngettext(self.opts, n)
+        }, 'success')
+        self.message_user('成功更新了 %s 条原始单数据' % report_dic_towork['ori_successful'], 'success')
+        if report_dic_towork['false'] > 0:
+            self.message_user('失败了 %s 条数据' % report_dic_towork['false'], 'error')
+        if report_dic_towork['ori_order_error'] > 0:
+            self.message_user('更新失败了 %s 条原始单数据' % report_dic_towork['ori_order_error'], 'error')
+        if report_dic_towork['repeat_num'] > 0:
+            self.message_user('重复丢弃了 %s 条数据' % report_dic_towork['repeat_num'], 'error')
+        if report_dic_towork['error']:
+            self.message_user('主要错误是 %s ' % report_dic_towork['error'], 'error')
 
         # Return None to display the change list page again.
         return None
@@ -176,7 +176,7 @@ class CalcAction(BaseActionView):
             min_date = min(days)
             max_date = max(days) + datetime.timedelta(days=1)
             current_date = min_date
-            verify_date = min_date - datetime.timedelta(days=1)
+            verify_date = min_date - datetime.timedelta(days=2)
 
             verify_summary = MaintenanceSummary.objects.all().filter(finish_time=verify_date)
             if MaintenanceSummary.objects.first() is not None:
@@ -191,7 +191,7 @@ class CalcAction(BaseActionView):
                 start_date = current_date.date() - datetime.timedelta(days=31)
                 # 查询近三十天到所有单据，准备进行匹配查询。
                 maintenance_checked = MaintenanceHandlingInfo.objects.filter(finish_time__gte=start_date,
-                                                                         finish_time__lte=end_date)
+                                                                             finish_time__lte=end_date)
 
                 # 创建二次维修率的表单对象，
                 verify_condition = MaintenanceSummary.objects.all().filter(finish_time=current_date)
@@ -201,7 +201,7 @@ class CalcAction(BaseActionView):
                     current_summary.order_count += current_update_orders.count()
                     try:
                         current_summary.save()
-                        repeat_dic['error'].append("%s 更新了这个日期的当日保修单数量，之前保修单导入时有遗漏！" % (current_date))
+                        repeat_dic['error'].append("%s 更新了这个日期的当日保修单数量，之前保修单导入时有遗漏！" % current_date)
                     except Exception as e:
                         repeat_dic['error'].append(e)
                 else:
@@ -265,7 +265,7 @@ class CalcAction(BaseActionView):
 
                 # 对数据进行汇总，累加到repeat_dic_total的字典里面
                 report_dic_totag['successful'] += repeat_dic['successful']
-                report_dic_totag['false'] +=repeat_dic['false']
+                report_dic_totag['false'] += repeat_dic['false']
                 report_dic_totag['tag_successful'] = repeat_dic['tag_successful']
                 report_dic_totag['torepeatsave'] += 1
                 if repeat_dic['error']:
@@ -288,7 +288,7 @@ class CalcAction(BaseActionView):
 class MaintenanceInfoAdmin(object):
     list_display = ['maintenance_order_id', 'warehouse', 'completer', 'maintenance_type', 'fault_type', 'machine_sn',
                     'appraisal', 'shop', 'finish_time', 'buyer_nick', 'sender_mobile', 'goods_name', 'is_guarantee']
-    search_fields = ['maintenance_order_id', 'sender_mobile']
+    search_fields = ['maintenance_order_id', 'machine_sn']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
 
 
@@ -344,7 +344,7 @@ class MaintenanceSubmitInfoAdmin(object):
     list_display = ['maintenance_order_id', 'towork_status', 'warehouse', 'completer', 'maintenance_type', 'fault_type',
                     'machine_sn', 'appraisal', 'shop']
 
-    search_fields = ['maintenance_order_id', 'sender_mobile']
+    search_fields = ['maintenance_order_id', 'sender_mobile', 'machine_sn']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
     import_data = True
     actions = [SubmitAction, ]
@@ -516,7 +516,7 @@ class MaintenanceCalcInfoAdmin(object):
     list_display = ['maintenance_order_id', 'finish_date', 'completer', 'maintenance_type', 'fault_type', 'machine_sn',
                     'appraisal', 'shop']
 
-    search_fields = ['maintenance_order_id', 'sender_mobile']
+    search_fields = ['maintenance_order_id', 'sender_mobile', 'machine_sn']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
     ordering = ['finish_date']
 
@@ -532,7 +532,7 @@ class MaintenanceJudgeInfoAdmin(object):
     list_display = ['finish_date', 'repeat_tag', 'maintenance_order_id', 'machine_sn', 'appraisal',
                     'fault_type', 'completer', 'maintenance_type', 'shop']
 
-    search_fields = ['maintenance_order_id', 'sender_mobile']
+    search_fields = ['maintenance_order_id', 'sender_mobile', 'machine_sn']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']
     list_myeditable = ['repeat_tag']
     ordering = ['machine_sn', 'finish_date']
@@ -551,7 +551,7 @@ class MaintenanceHandlingInfoAdmin(object):
     list_display = ['maintenance_order_id', 'warehouse', 'maintenance_type', 'fault_type', 'machine_sn', 'appraisal',
                     'shop', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile', 'sender_area', 'goods_name',
                     'is_guarantee', 'province', 'city', 'district', 'handling_status', 'repeat_tag', 'goods_type']
-    search_fields = ['maintenance_order_id', 'sender_mobile']
+    search_fields = ['maintenance_order_id', 'sender_mobile', 'machine_sn']
     list_filter = ['shop', 'goods_type', 'finish_time', 'repeat_tag', 'handling_status']
 
 

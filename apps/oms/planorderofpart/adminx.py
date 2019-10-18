@@ -37,11 +37,11 @@ class CheckAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=2)
+                queryset.update(order_status=2)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    obj.update(status=2)
+                    obj.update(order_status=2)
             self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
 
@@ -65,7 +65,7 @@ class SubmitAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=3)
+                queryset.update(order_status=3)
             else:
                 i = 1
                 for obj in queryset:
@@ -93,10 +93,9 @@ class SubmitAction(BaseActionView):
                     try:
                         stockin_order.save()
                         self.message_user("%s 计划单入库单 %s 创建完毕" % (obj.planorder_id, stockin_order.stockin_id), 'success')
-                        queryset.filter(id=obj.id).update(status=4)
+                        queryset.filter(id=obj.id).update(order_status=3)
                     except Exception as e:
                         self.message_user("%s 计划单出现错误，错误原因：%s" % (obj.planorder_id, e), 'error')
-                        queryset.filter(id=obj.id).update(status=3)
 
             self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -105,7 +104,7 @@ class SubmitAction(BaseActionView):
 
 
 class CusPartOrderInfoAdmin(object):
-    list_display = ["planorder_id", "goods_name", "quantity", "estimated_time", "status", "category", "order_attribute", "source_order_id", "manufactory"]
+    list_display = ["planorder_id", "goods_name", "quantity", "estimated_time", "order_status", "category", "order_attribute", "source_order_id", "manufactory"]
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -113,23 +112,23 @@ class CusPartOrderInfoAdmin(object):
 
 
 class CusPartPenddingOrderInfoAdmin(object):
-    list_display = ["planorder_id", "goods_name", "quantity", "estimated_time", "status", "category", "order_attribute", "source_order_id", "manufactory"]
+    list_display = ["planorder_id", "goods_name", "quantity", "estimated_time", "order_status", "category", "order_attribute", "source_order_id", "manufactory"]
     actions = [CheckAction, ]
 
     def queryset(self):
         queryset = super(CusPartPenddingOrderInfoAdmin, self).queryset()
-        queryset = queryset.filter(status=1)
+        queryset = queryset.filter(order_status=1)
         return queryset
 
 
 class CusPartProductOrderInfoAdmin(object):
-    list_display = ["planorder_id", "goods_name", "quantity", "estimated_time", "status", "category", "order_attribute",
+    list_display = ["planorder_id", "goods_name", "quantity", "estimated_time", "order_status", "category", "order_attribute",
                     "source_order_id", "manufactory"]
     actions = [SubmitAction, ]
 
     def queryset(self):
         queryset = super(CusPartProductOrderInfoAdmin, self).queryset()
-        queryset = queryset.filter(status__in=[2, 3])
+        queryset = queryset.filter(order_status=2)
         return queryset
 
     def has_add_permission(self):

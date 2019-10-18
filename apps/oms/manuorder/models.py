@@ -13,7 +13,7 @@ from django.db.models import Sum, Avg, Min, Max
 
 from db.base_model import BaseModel
 from apps.wms.stockin.models import StockInInfo
-from apps.base.manufactory.models import ManufactoryInfo
+from apps.base.company.models import ManuInfo
 
 
 
@@ -23,18 +23,17 @@ class ManuOrderInfo(BaseModel):
     ORDERSTATUS = (
         (0, '取消'),
         (1, '待处理'),
-        (2, '异常'),
-        (3, '待生产'),
-        (4, '在生产'),
-        (5, '已完成'),
+        (2, '待生产'),
+        (3, '在生产'),
+        (4, '已完成'),
     )
     batch_num = models.CharField(unique=True, max_length=30, verbose_name='批次号', db_index=True)
     planorder_id = models.CharField(unique=True, max_length=30, verbose_name='计划采购单号', db_index=True)
     goods_id = models.CharField(max_length=30, verbose_name='货品编码')
     goods_name = models.CharField(max_length=60, verbose_name='货品名称')
     quantity = models.IntegerField(verbose_name='货品数量')
-    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='生产单状态')
-    manufactory = models.ForeignKey(ManufactoryInfo, on_delete=models.CASCADE, verbose_name='工厂名称')
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='生产单状态')
+    manufactory = models.ForeignKey(ManuInfo, on_delete=models.CASCADE, verbose_name='工厂名称')
     estimated_time = models.DateTimeField(verbose_name='期望到货时间')
     start_sn = models.CharField(null=True, max_length=30, verbose_name='首号')
     end_sn = models.CharField(null=True, max_length=30, verbose_name='尾号')
@@ -48,13 +47,13 @@ class ManuOrderInfo(BaseModel):
         return self.batch_num
 
     def completednum(self):
-        completed_num = StockInInfo.objects.filter(batch_num=self.batch_num, status=3).aggregate(Sum("quantity"))["quantity__sum"]
+        completed_num = StockInInfo.objects.filter(batch_num=self.batch_num, order_status=3).aggregate(Sum("quantity"))["quantity__sum"]
         if completed_num:
-            if self.status == 3:
-                self.status = 4
+            if self.order_status == 2:
+                self.order_status = 3
                 self.save()
             elif completed_num == self.quantity:
-                self.status = 5
+                self.order_status = 4
                 self.save()
         else:
             completed_num = 0
@@ -63,14 +62,14 @@ class ManuOrderInfo(BaseModel):
     completednum.short_description = '已完成'
 
     def processingnum(self):
-        processing_num = self.qcoriinfo_set.all().filter(status__in=[1, 2], result=0).aggregate(Sum("quantity"))["quantity__sum"]
+        processing_num = self.qcoriinfo_set.all().filter(order_status=1, result=0).aggregate(Sum("quantity"))["quantity__sum"]
         if not processing_num:
             processing_num = 0
         return processing_num
     processingnum.short_description = '验货中'
 
     def failurenum(self):
-        failure_num = self.qcoriinfo_set.all().filter(status__in=[1, 2, 3], result=1).aggregate(Sum("quantity"))["quantity__sum"]
+        failure_num = self.qcoriinfo_set.all().filter(order_status__in=[1, 2], result=1).aggregate(Sum("quantity"))["quantity__sum"]
         return failure_num
     failurenum.short_description = '验货失败'
 
@@ -80,11 +79,11 @@ class ManuOrderInfo(BaseModel):
     penddingnum.short_description = '待生产'
 
     def intransitnum(self):
-        intransit_num = StockInInfo.objects.filter(batch_num=self.batch_num, status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
+        intransit_num = StockInInfo.objects.filter(batch_num=self.batch_num, order_status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
         if not intransit_num:
             intransit_num = 0
         return intransit_num
-    intransitnum.short_description = '待入库'
+    intransitnum.short_description = '入库合计'
 
 
 class ManuOrderPenddingInfo(ManuOrderInfo):

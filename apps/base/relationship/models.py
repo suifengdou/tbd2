@@ -10,9 +10,9 @@ import django.utils.timezone as timezone
 
 from db.base_model import BaseModel
 from apps.base.goods.models import MachineInfo, PartInfo, GoodsInfo
-from apps.base.manufactory.models import ManufactoryInfo
+from apps.base.company.models import ManuInfo
 from apps.base.warehouse.models import WarehouseInfo
-from tbd2.settings import AUTH_USER_MODEL
+
 from apps.utils.geography.models import CityInfo
 from apps.oms.qcorder.models import QCOriInfo
 from apps.oms.manuorder.models import ManuOrderInfo
@@ -29,7 +29,7 @@ class GoodsToManufactoryInfo(BaseModel):
         (2, '常规配件'),
     )
     goods_name = models.OneToOneField(GoodsInfo, on_delete=models.CASCADE, verbose_name='机器名称')
-    manufactory = models.ForeignKey(ManufactoryInfo, on_delete=models.CASCADE, verbose_name='工厂名字')
+    manufactory = models.ForeignKey(ManuInfo, on_delete=models.CASCADE, verbose_name='工厂名字')
     status = models.IntegerField(choices=STATUS,  default=1, verbose_name='状态')
     category = models.IntegerField(choices=CATEGORY,  default=0, verbose_name='对照类型')
 
@@ -83,7 +83,7 @@ class ManufactoryToWarehouse(BaseModel):
         (0, '停用'),
         (1, '正常'),
     )
-    manufactory = models.OneToOneField(ManufactoryInfo, on_delete=models.CASCADE, verbose_name='工厂')
+    manufactory = models.OneToOneField(ManuInfo, on_delete=models.CASCADE, verbose_name='工厂')
     warehouse = models.ForeignKey(WarehouseInfo, on_delete=models.CASCADE, verbose_name='仓库')
     status = models.IntegerField(choices=STATUS, default=1, verbose_name='状态')
 

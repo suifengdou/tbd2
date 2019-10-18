@@ -137,6 +137,7 @@ class LogisticsInfoAdmin(object):
 
 class WareInfoAdmin(object):
     list_display = ['company_name', 'tax_fil_number', 'status', 'category']
+    relfield_style = 'fk-ajax'
 
     def queryset(self):
         queryset = super(WareInfoAdmin, self).queryset()
@@ -150,6 +151,7 @@ class WareInfoAdmin(object):
 
 class ManuInfoAdmin(object):
     list_display = ['company_name', 'tax_fil_number', 'status', 'category']
+    relfield_style = 'fk-ajax'
 
     def queryset(self):
         queryset = super(ManuInfoAdmin, self).queryset()

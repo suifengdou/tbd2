@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class WorkOrderConfig(AppConfig):
-    name = 'apps.ext.workorder'
-    verbose_name = 'ext-workorder'
+class WorkOrderExConfig(AppConfig):
+    name = 'apps.ext.workorderex'
+    verbose_name = 'ext-workorderEx'

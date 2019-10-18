@@ -16,8 +16,8 @@ class StockInInfo(BaseModel):
     ORDERSTATUS = (
         (0, '已取消'),
         (1, '未处理'),
-        (2, '异常'),
-        (3, '已入库'),
+        (2, '已入库'),
+        (3, '异常'),
     )
     CATEGORY = (
         (0, '质检入库'),
