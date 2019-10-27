@@ -108,7 +108,7 @@ class RejectSelectedAction(BaseActionView):
                                 self.get_template_list('views/model_reject_selected_confirm.html'), context)
 
 
-# 提交赠品订单
+# 提交赠品信息到订单
 class SubmitGiftAction(BaseActionView):
     action_name = "submit_r_wo"
     description = "提交选中的赠品订单"
@@ -143,31 +143,53 @@ class SubmitGiftAction(BaseActionView):
                             else:
                                 self.message_user("%s货品名称错误，修正后再次重新提交，如果名称无误，请联系管理员" % obj.order_id, "error")
                                 n -= 1
+                                obj.mistakes = 0
+                                obj.save()
                                 continue
-                        gift_order.order_id = str(obj.order_id).replace("订单号", "").replace(" ", "")
+                        order_id = str(obj.order_id).replace("订单号", "").replace(" ", "").replace("：", "")
+                        if re.match("^[0-9]+$", order_id):
+                            gift_order.order_id = order_id
+                        else:
+                            self.message_user("%s订单号输入错误，请修正！" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 1
+                            obj.save()
+                            continue
                         # 用订单号和货品确认递交是否是唯一
                         if GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id, order_id=gift_order.order_id).exists():
                             self.message_user("%s重复提交，请查询无误后取消！" % obj.order_id, "error")
                             n -= 1
+                            obj.mistakes = 2
+                            obj.save()
                             continue
-                        cs_info = str(obj.cs_information).replace("收货信息", "").split(" ")
+                        cs_info = str(obj.cs_information).replace("收货信息", "").replace("：", "").split(" ")
                         if len(cs_info) == 3:
                             gift_order.receiver = cs_info[0]
                             gift_order.mobile = cs_info[1]
                             gift_order.address = cs_info[2]
+                        elif len(cs_info) > 3:
+                            gift_order.receiver = cs_info[0]
+                            gift_order.mobile = cs_info[1]
+                            address = str(cs_info[2])
+                            for i in range(len(cs_info)):
+                                if i > 2:
+                                    address = address + str(cs_info[i])
+                            gift_order.address = address
                         else:
                             self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
                             n -= 1
+                            obj.mistakes = 3
+                            obj.save()
                             continue
 
                         _province_key = gift_order.address[:2]
                         if _province_key in ['内蒙', '黑龙']:
                             _province_key = gift_order.address[:3]
 
-
-                        _city_key = gift_order.address[len(_province_key):len(_province_key)+2]
                         if _province_key in ['北京', '天津', '上海', '重庆']:
                             _city_key = _province_key + "市"
+                        else:
+                            _city_key = gift_order.address[len(_province_key):len(_province_key)+3]
 
                         _rt_city = CityInfo.objects.filter(city__contains=_city_key)
                         if _rt_city.exists():
@@ -178,15 +200,20 @@ class SubmitGiftAction(BaseActionView):
                                             '陵水黎族自治县', '临高县', '乐东黎族自治县', '东方市', '定安县', '儋州市', '澄迈县', '昌江黎族自治县', '保亭黎族苗族自治县',
                                             '白沙黎族自治县', '中山市', '东莞市']
                             if _province_key in ['北京', '天津', '上海', '重庆']:
-                                _district_key = gift_order.address[len(_province_key) :len(_province_key) + 2]
+                                _district_key = gift_order.address[len(_province_key):len(_province_key) + 2]
                                 _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
                                                                             district__contains=_district_key)
                                 if _rt_districts.exists():
                                     gift_order.district = _rt_districts[0].district
                                 else:
                                     gift_order.district = '其他区'
+
                             elif "州" in gift_order.city:
+
                                 _district_key = gift_order.address[len(_province_key) + 3:len(_province_key) + 3 + 2]
+                                if gift_order.city[:3] in ["巴音郭", "博尔塔"]:
+                                    _district_key = gift_order.address[
+                                                    len(_province_key) + 5:len(_province_key) + 5 + 2]
                                 _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
                                                                             district__contains=_district_key)
                                 if _rt_districts.exists():
@@ -206,17 +233,30 @@ class SubmitGiftAction(BaseActionView):
                         else:
                             self.message_user("%s地址中二级城市出错，请修正后提交" % obj.order_id, "error")
                             n -= 1
+                            obj.mistakes = 4
+                            obj.save()
+                            continue
+                        gift_order.nickname = str(obj.nickname).replace("客户ID", "").replace(" ", "").replace("：","").replace("顾客ID", "")
+                        if len(gift_order.nickname) == 0:
+                            self.message_user("%s客户网名错误" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 5
+                            obj.save()
                             continue
 
                         gift_order.shop = '小狗京东自营'
-                        gift_order.nickname = str(obj.nickname).replace("客户ID", "").replace(" ", "")
+
+
                         gift_order.buyer_remark = "京东自营客服%s赠送客户%s赠品%sx%s" % (obj.servicer, gift_order.nickname, gift_order.goods_name, gift_order.quantity)
+                        gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
                         gift_order.submit_user = self.request.user.username
                         try:
                             gift_order.save()
                         except Exception as e:
                             self.message_user("%s出错:%s" % (obj.order_id, e), "error")
                             n -= 1
+                            obj.mistakes = 6
+                            obj.save()
                             continue
 
                         self.log('change', '', obj)
@@ -234,13 +274,16 @@ class SubmitGiftAction(BaseActionView):
             goods_group = goods.split("+")
         else:
             goods_group = [goods]
+
+        for i in range(len(goods_group)):
+            goods_group[i] = str(goods_group[i]).replace("\xa0", " ")
         return goods_group
 
 
-# 正向工单提交
+# 礼品订单提交
 class SubmitAction(BaseActionView):
     action_name = "submit_wo"
-    description = "提交选中的工单"
+    description = "提交选中的订单"
     model_perm = 'change'
     icon = "fa fa-flag"
 
@@ -264,8 +307,28 @@ class SubmitAction(BaseActionView):
                         repeat_cs_order = repeat_cs[0]
                         add_goods = "%sx%s" % (obj.goods_name, obj.quantity)
                         repeat_cs_order.buyer_remark = repeat_cs_order.buyer_remark + "+" + add_goods
-                        repeat_cs_order.save()
+                        repeat_cs_order.cs_memoranda = repeat_cs_order.cs_memoranda + "+" + add_goods
+                        # 针对那种强迫症，玩命点递交的人，需要进行去重。
+                        goods_list = repeat_cs_order.cs_memoranda
+                        if "+" in goods_list:
+                            goods_list = str(goods_list).split("+")
+                            goods_list = [i[:-2] for i in goods_list]
+                        repeat_tag = True
+                        for i in goods_list:
+                            if goods_list.count(i) > 1:
+                                self.message_user("%s不要重复递交，不要重复递交！点一次等着就好！！！" % obj.order_id, "error")
+                                obj.order_status = 2
+                                obj.save()
+                                repeat_tag = False
+                                break
+                        if repeat_tag:
+                            repeat_cs_order.save()
                     else:
+                        _prefix = "GT"
+                        serial_number = str(datetime.datetime.now())
+                        serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".",
+                                                                                                                 "")
+                        import_order.erp_order_id = _prefix + str(serial_number)[0:17] + "A"
                         import_order.shop = obj.shop
                         import_order.nickname = obj.nickname
                         import_order.receiver = obj.receiver
@@ -279,6 +342,7 @@ class SubmitAction(BaseActionView):
                         import_order.district = obj.district
                         import_order.order_id = obj.order_id
                         import_order.buyer_remark = obj.buyer_remark
+                        import_order.cs_memoranda = obj.cs_memoranda
                         try:
                             import_order.save()
                         except Exception as e:
@@ -297,7 +361,7 @@ class SubmitAction(BaseActionView):
 
 class SubmitImportAction(BaseActionView):
     action_name = "submit_wo"
-    description = "提交选中的工单"
+    description = "提交选中的订单"
     model_perm = 'change'
     icon = "fa fa-flag"
 
@@ -327,8 +391,9 @@ class SubmitImportAction(BaseActionView):
 
 
 class GiftInTalkPenddingAdmin(object):
-    list_display = ['order_status', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
-    search_fields = ['order_id']
+    list_display = ['order_status', 'mistakes', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
+    list_filter = ['mistakes']
+    search_fields = ['order_id', 'nickname']
 
     ALLOWED_EXTENSIONS = ['log',]
     actions = [SubmitGiftAction, RejectSelectedAction]
@@ -398,7 +463,8 @@ class GiftInTalkAdmin(object):
 class GiftOrderPenddingAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
-                    'buyer_remark', 'province', 'city', 'district']
+                    'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
+    list_filter = ['district']
     search_fields = ['nickname', 'mobile', 'order_id']
     actions = [SubmitAction, RejectSelectedAction, ]
 
@@ -415,7 +481,8 @@ class GiftOrderPenddingAdmin(object):
 class GiftOrderInfoAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
-                    'buyer_remark', 'province', 'city', 'district']
+                    'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
+    list_filter = ['creator', 'update_time']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):
@@ -424,9 +491,9 @@ class GiftOrderInfoAdmin(object):
 
 
 class GiftImportPenddingAdmin(object):
-    list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
+    list_display = ['erp_order_id', 'shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
-                    'buyer_remark', 'province', 'city', 'district']
+                    'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
     search_fields = ['nickname', 'mobile', 'order_id']
     actions = [SubmitImportAction, RejectSelectedAction, ]
 
@@ -441,9 +508,10 @@ class GiftImportPenddingAdmin(object):
 
 
 class GiftImportAdmin(object):
-    list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
+    list_display = ['erp_order_id', 'shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
-                    'buyer_remark', 'province', 'city', 'district']
+                    'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
+    list_filter = ['creator', 'update_time']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):

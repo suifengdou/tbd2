@@ -18,6 +18,8 @@ class NationalityAdmin(object):
 
 class ProvinceAdmin(object):
     list_display = ['nationality', 'province', 'area_code']
+    relfield_style = 'fk-ajax'
+
 
     def queryset(self):
         request = self.request
@@ -27,6 +29,8 @@ class ProvinceAdmin(object):
 
 class CityAdmin(object):
     list_display = ['nationality', 'province', 'city', 'area_code']
+    search_fields = ['city']
+    relfield_style = 'fk-ajax'
 
     def queryset(self):
         request = self.request
@@ -35,6 +39,8 @@ class CityAdmin(object):
 
 class DistrictInfoAdmin(object):
     list_display = ['nationality', 'province', 'city', 'district']
+    list_filter = ['province', 'city']
+    search_fields = ['district']
 
 
 xadmin.site.register(NationalityInfo, NationalityAdmin)

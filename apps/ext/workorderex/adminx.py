@@ -30,6 +30,7 @@ from apps.oms.cusrequisition.models import CusRequisitionInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
+
 # 驳回审核
 class RejectSelectedAction(BaseActionView):
 
@@ -650,7 +651,6 @@ class WorkOrderAppAdmin(object):
                     report_dic["error"].append(e)
         return report_dic
 
-
     def save_models(self):
         obj = self.new_obj
         request = self.request
@@ -669,7 +669,7 @@ class WorkOrderAppAdmin(object):
 # 客服工单审核
 class WorkOrderHandleAdmin(object):
     list_display = ['company', 'express_id', 'feedback', 'category', 'information', 'create_time', 'creator', 'update_time']
-    list_filter = ['category']
+    list_filter = ['category',]
     search_fields = ['express_id']
     list_editable = ['feedback']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
@@ -690,7 +690,7 @@ class WorkOrderHandleAdmin(object):
 # 申通工单审核
 class WorkOrderHandleStoAdmin(object):
     list_display = ['company', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'category', 'create_time', 'servicer', 'submit_time']
-    list_filter = ['category', 'submit_time']
+    list_filter = ['category', 'submit_time', 'wo_category', 'is_losing']
     search_fields = ['express_id']
     list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'submit_time', 'creator',
@@ -733,7 +733,7 @@ class WorkOrderKeshenAdmin(object):
 class WorkOrderMineAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
                     'express_id', 'category', 'creator', 'servicer', 'handler']
-    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category']
+    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category']
     search_fields = ['express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
@@ -753,7 +753,7 @@ class WorkOrderMineAdmin(object):
 class WorkOrderAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
                     'express_id', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
-    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category']
+    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category']
     search_fields = ['express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',

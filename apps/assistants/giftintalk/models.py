@@ -17,12 +17,23 @@ class GiftInTalkInfo(BaseModel):
         (1, '未处理'),
         (2, '已完成'),
     )
+    MISTAKE_LIST = (
+        (0, '货品名称错误'),
+        (1, '订单号错误'),
+        (2, '订单重复'),
+        (3, '收货人，电话，地址不全'),
+        (4, '地址中，二级市出错，请使用京东系统信息'),
+        (5, '网名错误'),
+        (6, '系统出错，请重复提交，无法解决时联系管理员'),
+
+    )
 
     cs_information = models.CharField(max_length=300, verbose_name='收件信息')
     goods = models.CharField(max_length=50, verbose_name='赠品信息')
     servicer = models.CharField(max_length=50, verbose_name='客服')
     nickname = models.CharField(max_length=50, verbose_name='用户网名')
     order_id = models.CharField(max_length=50, verbose_name='订单号')
+    mistakes = models.IntegerField(choices=MISTAKE_LIST, null=True, blank=True, verbose_name='错误信息')
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='赠品单状态')
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='操作人')
 
@@ -68,6 +79,7 @@ class GiftOrderInfo(BaseModel):
 
     category = models.CharField(max_length=20, default="线下零售", verbose_name='订单类别')
     buyer_remark = models.CharField(max_length=300, default="线下零售", verbose_name='买家备注')
+    cs_memoranda = models.CharField(null=True, blank=True, max_length=300, default="线下零售", verbose_name='客服备注')
 
     province = models.CharField(max_length=50, verbose_name='省')
     city = models.CharField(max_length=50, verbose_name='市')
@@ -118,7 +130,8 @@ class GiftImportInfo(BaseModel):
     quantity = models.SmallIntegerField(verbose_name='货品数量')
 
     category = models.CharField(max_length=20, default="线下零售", verbose_name='订单类别')
-    buyer_remark = models.CharField(max_length=300, default="线下零售", verbose_name='买家备注')
+    buyer_remark = models.CharField(max_length=300, verbose_name='买家备注')
+    cs_memoranda = models.CharField(max_length=300, verbose_name='客服备注')
 
     province = models.CharField(max_length=50, verbose_name='省')
     city = models.CharField(max_length=50, verbose_name='市')
@@ -127,6 +140,7 @@ class GiftImportInfo(BaseModel):
     order_id = models.CharField(max_length=50, verbose_name='订单号')
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='赠品单状态')
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='处理人')
+    erp_order_id = models.CharField(null=True, blank=True, unique=True, max_length=50, verbose_name='原始单号')
 
     class Meta:
         verbose_name = 'ASS-GT-赠品ERP导入单据查询'
