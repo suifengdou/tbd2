@@ -25,7 +25,7 @@ class StockInInfo(BaseModel):
     )
     stockin_id = models.CharField(null=True, blank=True, unique=True, max_length=30, verbose_name='入库单号')
     source_order_id = models.CharField(null=True, blank=True, max_length=30, verbose_name='来源单号')
-    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='状态')
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='状态')
     category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='入库单类型')
     batch_num = models.CharField(null=True, blank=True, max_length=30, verbose_name='批次号')
     planorder_id = models.CharField(null=True, blank=True, max_length=30, verbose_name='采购单号')

@@ -27,7 +27,7 @@ class StockOutInfo(BaseModel):
 
     stockout_id = models.CharField(null=True, blank=True, unique=True, max_length=30, verbose_name='出库单号')
     source_order_id = models.CharField(max_length=30, verbose_name='关联单号')
-    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='状态')
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='状态')
     category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='出库类型')
     goods_name = models.CharField(max_length=60, verbose_name='货品名称')
     goods_id = models.CharField(max_length=30, verbose_name='货品编码')

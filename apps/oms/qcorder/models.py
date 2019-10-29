@@ -31,7 +31,7 @@ class QCOriInfo(BaseModel):
     )
 
     batch_num = models.ForeignKey(ManuOrderInfo, on_delete=models.CASCADE, verbose_name='批次号码')
-    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
     quantity = models.IntegerField(verbose_name='验货数量')
     result = models.IntegerField(choices=RESULT, default=0, verbose_name='验货结果')
     category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='验货类型')
@@ -64,9 +64,9 @@ class QCInfo(BaseModel):
     ORDERSTATUS = (
         (0, '已取消'),
         (1, '未处理'),
-        (2, '异常'),
-        (3, '已确认'),
-        (4, '已递交'),
+        (2, '已确认'),
+        (3, '已递交'),
+        (4, '异常'),
     )
     RESULT = (
         (0, '合格'),
@@ -81,7 +81,7 @@ class QCInfo(BaseModel):
     batch_num = models.CharField(max_length=30, verbose_name='批次号码')
     qc_order_id = models.CharField(unique=True, max_length=30, verbose_name='质检单号')
     goods_name = models.CharField(max_length=60, verbose_name='货品名称')
-    status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
     manufactory = models.CharField(max_length=60, verbose_name='工厂名称')
     goods_id = models.CharField(max_length=30, verbose_name='货品编码')
 

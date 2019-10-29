@@ -195,7 +195,7 @@ class ManuOrderProcessingInfoAdmin(object):
 
     def queryset(self):
         queryset = super(ManuOrderProcessingInfoAdmin, self).queryset()
-        queryset = queryset.filter(order_status__in=[3, 4])
+        queryset = queryset.filter(order_status__in=[2, 3])
         return queryset
 
     def save_related(self):

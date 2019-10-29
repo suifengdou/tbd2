@@ -38,7 +38,7 @@ class SubmitAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量修改了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=3)
+                queryset.update(order_status=3)
             else:
                 i = 0
                 for obj in queryset:
@@ -47,7 +47,7 @@ class SubmitAction(BaseActionView):
                     accumulation = int(obj.batch_num.completednum()) + int(obj.batch_num.processingnum())
                     if accumulation > obj.batch_num.quantity:
                         self.message_user("此原始质检单号ID：%s，验货数量超过了订单数量，请修正" % obj.qc_order_id, "error")
-                        queryset.filter(id=obj.id).update(status=2)
+                        queryset.filter(id=obj.id).update(order_status=2)
                         continue
 
                     stockin_order = StockInInfo()
@@ -57,7 +57,7 @@ class SubmitAction(BaseActionView):
                         stockin_order.warehouse = warehouse
                     else:
                         self.message_user("此原始质检单号ID：%s，工厂未关联仓库，请添加工厂关联到仓库" % obj.qc_order_id, "error")
-                        queryset.filter(id=obj.id).update(status=2)
+                        queryset.filter(id=obj.id).update(order_status=2)
                         continue
 
                     prefix = "SI"
@@ -77,7 +77,7 @@ class SubmitAction(BaseActionView):
                     try:
                         if StockInInfo.objects.filter(source_order_id=obj.qc_order_id).exists():
                             self.message_user("单号ID：%s，已经生成过入库单，此次未生成入库单" % obj.qc_order_id, "error")
-                            queryset.filter(id=obj.id).update(status=2)
+                            queryset.filter(id=obj.id).update(order_status=2)
                         elif obj.result == 1:
                             self.message_user("%s，验货失败，不生成入库单" % obj.qc_order_id, "success")
                         else:
@@ -85,7 +85,7 @@ class SubmitAction(BaseActionView):
                             self.message_user("%s，生成入库单号：%s" % (obj.qc_order_id, stockin_order.stockin_id), "success")
                     except Exception as e:
                         self.message_user("此原始质检单号ID：%s，出现错误，错误原因：%s" % (obj.id, e), "error")
-                        queryset.filter(id=obj.id).update(status=2)
+                        queryset.filter(id=obj.id).update(order_status=2)
                         continue
 
                     qc_order = QCInfo()
@@ -111,14 +111,14 @@ class SubmitAction(BaseActionView):
                     try:
                         if QCInfo.objects.filter(qc_order_id=obj.qc_order_id).exists():
                             self.message_user("单号ID：%s，已经递交过质检单，此次未生成质检单" % obj.qc_order_id, "error")
-                            queryset.filter(id=obj.id).update(status=2)
+                            queryset.filter(id=obj.id).update(order_status=2)
                         else:
                             qc_order.save()
-                            queryset.filter(id=obj.id).update(status=3)
+                            queryset.filter(id=obj.id).update(order_status=3)
                             self.message_user("ID：%s，递交质检单成功" % obj.qc_order_id, "success")
                     except Exception as e:
                         self.message_user("此原始质检单号ID：%s，递交到质检单明细出现错误，错误原因：%s" % (obj.qc_order_id, e))
-                        queryset.filter(id=obj.id).update(status=2)
+                        queryset.filter(id=obj.id).update(order_status=2)
                         continue
 
             self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
@@ -128,9 +128,9 @@ class SubmitAction(BaseActionView):
 
 
 class QCOriInfoAdmin(object):
-    list_display = ['creator', "qc_order_id", "status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
+    list_display = ['creator', "qc_order_id", "order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
     search_fields = ["batch_num"]
-    readonly_fields = ["status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum", 'creator', "qc_order_id"]
+    readonly_fields = ["order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum", 'creator', "qc_order_id"]
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -138,7 +138,7 @@ class QCOriInfoAdmin(object):
 
 
 class QCSubmitOriInfoAdmin(object):
-    list_display = ['creator', "qc_order_id", "status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
+    list_display = ['creator', "qc_order_id", "order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
     search_fields = ["batch_num"]
     readonly_fields = ['creator', "qc_order_id"]
 
@@ -146,7 +146,7 @@ class QCSubmitOriInfoAdmin(object):
 
     def queryset(self):
         qs = super(QCSubmitOriInfoAdmin, self).queryset()
-        qs = qs.filter(status__in=[1, 2])
+        qs = qs.filter(order_status__in=[1, 2])
         return qs
 
     def save_models(self):
@@ -167,7 +167,7 @@ class QCSubmitOriInfoAdmin(object):
 
 
 class QCInfoAdmin(object):
-    list_display = ["batch_num","qc_order_id","goods_name","status","manufactory","goods_id","quantity","total_quantity","accumulation","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
+    list_display = ["batch_num","qc_order_id","goods_name","order_status","manufactory","goods_id","quantity","total_quantity","accumulation","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
     list_filter = ["goods_name", "manufactory", "goods_id", "category"]
 
     def has_add_permission(self):

@@ -188,6 +188,8 @@ class SubmitGiftAction(BaseActionView):
 
                         if _province_key in ['北京', '天津', '上海', '重庆']:
                             _city_key = _province_key + "市"
+                        elif "州" in gift_order.address:
+                            _city_key = gift_order.address[len(_province_key):len(_province_key) + 2]
                         else:
                             _city_key = gift_order.address[len(_province_key):len(_province_key)+3]
 
