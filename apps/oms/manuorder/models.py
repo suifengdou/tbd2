@@ -28,7 +28,7 @@ class ManuOrderInfo(BaseModel):
         (4, '已完成'),
     )
     batch_num = models.CharField(unique=True, max_length=30, verbose_name='批次号', db_index=True)
-    planorder_id = models.CharField(unique=True, max_length=30, verbose_name='计划采购单号', db_index=True)
+    planorder_id = models.CharField(max_length=30, verbose_name='计划采购单号', db_index=True)
     goods_id = models.CharField(max_length=30, verbose_name='货品编码')
     goods_name = models.CharField(max_length=60, verbose_name='货品名称')
     quantity = models.IntegerField(verbose_name='货品数量')
@@ -70,6 +70,8 @@ class ManuOrderInfo(BaseModel):
 
     def failurenum(self):
         failure_num = self.qcoriinfo_set.all().filter(order_status__in=[1, 2], result=1).aggregate(Sum("quantity"))["quantity__sum"]
+        if failure_num is None:
+            failure_num = 0
         return failure_num
     failurenum.short_description = '验货失败'
 

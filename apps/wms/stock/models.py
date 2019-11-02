@@ -38,7 +38,7 @@ class StockInfo(BaseModel):
     available_quantity.short_description = '可用库存'
 
     def occupied_quantity(self):
-        stockout_orders = StockOutInfo.objects.filter(goods_id=self.goods_id, status__in=[1, 2])
+        stockout_orders = StockOutInfo.objects.filter(goods_id=self.goods_id, order_status__in=[1, 2])
         occupied_quantity = 0
         if stockout_orders:
             for stockout_order in stockout_orders:

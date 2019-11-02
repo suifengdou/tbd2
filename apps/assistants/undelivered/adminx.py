@@ -289,7 +289,7 @@ class RefundOrderInfoAdmin(object):
     list_display = ['goods_title', 'status', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
                     'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
                     'creator']
-    list_filter = ['payment_time', 'shop_name', 'status']
+    list_filter = ['create_time', 'payment_time', 'shop_name', 'status']
     list_editable = ['status', 'memorandum']
     ordering = ['payment_time']
     exclude = ['creator']

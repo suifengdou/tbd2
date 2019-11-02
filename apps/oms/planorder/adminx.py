@@ -163,106 +163,105 @@ class SubmitActionPO(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    # 创建工厂订单
-                    manufactory_order = ManuOrderInfo()
-
-                    estimated_time = obj.estimated_time
-                    pre_year_num = int(datetime.datetime.strftime(estimated_time, "%Y")[-2:]) + 17
-                    pre_week_num = int(datetime.datetime.strftime(estimated_time, "%U")) + 1
-                    goods_number = obj.goods_name.goods_number
-                    category = obj.goods_name.category
-
-                    batch_tag = ["A", "B", "C", "D", "E", "F", "G"]
-                    for tag in batch_tag:
-                        batch_num = str(pre_year_num) + str(pre_week_num) + str(category) + str(goods_number) + str(tag)
-                        if ManuOrderInfo.objects.filter(batch_num=batch_num).exists():
-                            manufactory_order.batch_num = None
-                            continue
-                        else:
-                            manufactory_order.batch_num = batch_num
-                            break
-                    if manufactory_order.batch_num is None:
-                        self.message_user("存在异常订单 %s 请修正此订单之后再递交" % obj.planorder_id, "error")
-                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
-                        continue
-
-                    if ManuOrderInfo.objects.filter(planorder_id=obj.planorder_id).exists():
-                        self.message_user("此订单%s已经递交，请不要重复递交" % obj.planorder_id, "error")
-                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
+                    manu_order = ManuOrderInfo.objects.filter(planorder_id=obj.planorder_id, order_status__in=[1, 2, 3, 4])
+                    if manu_order.exists():
+                        self.message_user("此订单%s已经存在工厂订单，请不要重复递交" % obj.planorder_id, "error")
                         continue
                     else:
+
+                        # 创建工厂订单
+                        manufactory_order = ManuOrderInfo()
                         manufactory_order.planorder_id = obj.planorder_id
+                        estimated_time = obj.estimated_time
+                        pre_year_num = int(datetime.datetime.strftime(estimated_time, "%Y")[-2:]) + 17
+                        pre_week_num = int(datetime.datetime.strftime(estimated_time, "%U")) + 1
+                        goods_number = obj.goods_name.goods_number
+                        category = obj.goods_name.category
 
-                    manufactory_machine_qs = GoodsToManufactoryInfo.objects.filter(goods_name=obj.goods_name)
-                    if manufactory_machine_qs:
-                        manufactory_order.manufactory = manufactory_machine_qs[0].manufactory
-                    else:
-                        self.message_user("此订单%s货品没有关联工程，请先设置货品关联工厂" % obj.planorder_id, "error")
-                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
-                        continue
-
-                    manufactory_order.estimated_time = estimated_time
-                    manufactory_order.goods_id = obj.goods_name.goods_id
-                    manufactory_order.goods_name = obj.goods_name.goods_name
-                    manufactory_order.quantity = obj.quantity
-                    manufactory_order.start_sn = batch_num + str("00001")
-
-                    transition_num = 100000 + int(obj.quantity)
-                    manufactory_order.end_sn = batch_num + str(transition_num)[-5:]
-
-                    try:
-                        manufactory_order.save()
-                        self.message_user("订单 %s 工厂订单创建完毕" % obj.planorder_id, 'success')
-                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=3)
-                    except Exception as e:
-                        self.message_user("订单 %s 创建错误，错误原因：%s" % (obj.planorder_id, e))
-                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
-
-                    # 创建客供需求单
-                    parts_qs = PartToProductInfo.objects.filter(machine_name=obj.goods_name)
-                    if parts_qs:
-                        num = 1
-                        for part in parts_qs:
-                            customer_requisition = CusRequisitionInfo()
-
-                            if CusRequisitionInfo.objects.filter(batch_num=batch_num, goods_id=customer_requisition.goods_id).exists():
-                                self.message_user("此订单%s,此货品%s,已经创建需求单，请不要重复递交" % (obj.planorder_id, customer_requisition.goods_id))
+                        batch_tag = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"]
+                        for tag in batch_tag:
+                            batch_num = str(pre_year_num) + str(pre_week_num) + str(category) + str(goods_number) + str(tag)
+                            if ManuOrderInfo.objects.filter(batch_num=batch_num).exists():
+                                manufactory_order.batch_num = None
                                 continue
-
-                            prefix = "CQ"
-                            serial_number = str(datetime.datetime.now())
-                            serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(
-                                ".", "")
-                            serial_number = str(int(serial_number[0:17]) + num)
-                            customer_requisition.cus_requisition_id = prefix + serial_number + "A"
-                            customer_requisition.creator = self.request.user.username
-
-                            customer_requisition.planorder_id = obj.planorder_id
-                            customer_requisition.batch_num = batch_num
-                            customer_requisition.quantity = obj.quantity
-                            customer_requisition.estimated_time = estimated_time
-                            customer_requisition.goods_id = part.part_name.goods_id
-                            customer_requisition.goods_name = part.part_name.goods_name
-
-                            manufactory_part_qs = GoodsToManufactoryInfo.objects.filter(goods_name=part.part_name)
-                            if manufactory_part_qs:
-                                customer_requisition.manufactory = manufactory_part_qs[0].manufactory
                             else:
-                                self.message_user("注意：订单 %s 配件 %s 没有关联工厂，需要请设置货品关联工厂" % (obj.planorder_id, customer_requisition.goods_name), 'error')
+                                manufactory_order.batch_num = batch_num
+                                break
+                        if manufactory_order.batch_num is None:
+                            self.message_user("存在异常订单 %s 请修正此订单之后再递交" % obj.planorder_id, "error")
+                            continue
 
-                            try:
-                                customer_requisition.save()
-                                self.message_user("订单 %s 客供需求货品%s订单创建完毕" % (obj.planorder_id, customer_requisition.goods_name), 'success')
-                            except Exception as e:
-                                self.message_user("此订单%s的客户需求单，创建出错，错误原因：%s" % (obj.planorder_id, e))
-                            num += 1
-                    else:
-                        self.message_user("注意：订单 %s 生产的货品 %s 没有客供件" % (obj.planorder_id, obj.goods_name), 'error')
+                        manufactory_machine_qs = GoodsToManufactoryInfo.objects.filter(goods_name=obj.goods_name)
+                        if manufactory_machine_qs:
+                            manufactory_order.manufactory = manufactory_machine_qs[0].manufactory
+                        else:
+                            self.message_user("此订单%s货品没有关联工程，请先设置货品关联工厂" % obj.planorder_id, "error")
+                            continue
+
+                        manufactory_order.estimated_time = estimated_time
+                        manufactory_order.goods_id = obj.goods_name.goods_id
+                        manufactory_order.goods_name = obj.goods_name.goods_name
+                        manufactory_order.quantity = obj.quantity
+                        manufactory_order.start_sn = batch_num + str("00001")
+
+                        transition_num = 100000 + int(obj.quantity)
+                        manufactory_order.end_sn = batch_num + str(transition_num)[-5:]
+
+                        try:
+                            manufactory_order.save()
+                            self.message_user("订单 %s 工厂订单创建完毕" % obj.planorder_id, 'success')
+                            queryset.filter(planorder_id=obj.planorder_id).update(order_status=3)
+                        except Exception as e:
+                            self.message_user("订单 %s 创建错误，错误原因：%s" % (obj.planorder_id, e))
+
+                        # 创建客供需求单
+                        parts_qs = PartToProductInfo.objects.filter(machine_name=obj.goods_name, status=1)
+                        if parts_qs:
+                            num = 1
+                            for part in parts_qs:
+                                customer_requisition = CusRequisitionInfo()
+
+                                if CusRequisitionInfo.objects.filter(batch_num=batch_num, goods_id=customer_requisition.goods_id).exists():
+                                    self.message_user("此订单%s,此货品%s,已经创建需求单，请不要重复递交" % (obj.planorder_id, customer_requisition.goods_id))
+                                    continue
+
+                                prefix = "CQ"
+                                serial_number = str(datetime.datetime.now())
+                                serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(
+                                    ".", "")
+                                serial_number = str(int(serial_number[0:17]) + num)
+                                customer_requisition.cus_requisition_id = prefix + serial_number + "A"
+                                customer_requisition.creator = self.request.user.username
+
+                                customer_requisition.planorder_id = obj.planorder_id
+                                customer_requisition.batch_num = batch_num
+                                customer_requisition.quantity = obj.quantity
+                                customer_requisition.estimated_time = estimated_time
+                                customer_requisition.goods_id = part.part_name.goods_id
+                                customer_requisition.goods_name = part.part_name.goods_name
+
+                                manufactory_part_qs = GoodsToManufactoryInfo.objects.filter(goods_name=part.part_name)
+                                if manufactory_part_qs:
+                                    customer_requisition.manufactory = manufactory_part_qs[0].manufactory
+                                else:
+                                    self.message_user("注意：订单 %s 配件 %s 没有关联工厂，需要请设置货品关联工厂" % (obj.planorder_id, customer_requisition.goods_name), 'error')
+
+                                try:
+                                    customer_requisition.save()
+                                    self.message_user("订单 %s 客供需求货品%s订单创建完毕" % (obj.planorder_id, customer_requisition.goods_name), 'success')
+                                except Exception as e:
+                                    self.message_user("此订单%s的客户需求单，创建出错，错误原因：%s" % (obj.planorder_id, e))
+                                num += 1
+                        else:
+                            self.message_user("注意：订单 %s 生产的货品 %s 没有客供件" % (obj.planorder_id, obj.goods_name), 'error')
 
             self.message_user("成功处理完毕 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
 
         return None
+
+    def update_data(self, obj, target_obj):
+        pass
 
 
 class PlanOrderInfoAdmin(object):

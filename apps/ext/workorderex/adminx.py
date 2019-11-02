@@ -308,7 +308,7 @@ class PassedAction(BaseActionView):
 
 # 逆向工单创建
 class WorkOrderAppRevAdmin(object):
-    list_display = ['company', 'express_id', 'information', 'category', 'create_time', 'creator', 'update_time']
+    list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'creator', 'update_time']
     list_filter = ['creator']
     search_fields = ['express_id']
     form_layout = [
@@ -317,7 +317,7 @@ class WorkOrderAppRevAdmin(object):
         Fieldset(None,
                  'submit_time', 'creator', 'services_interval', 'handler', 'handle_time','servicer',
                  'express_interval', 'feedback', 'return_express_id', 'order_status', 'wo_category',
-                 'is_delete', 'is_losing', 'is_return', 'memo', 'company', **{"style": "display:None"}),
+                 'is_delete', 'is_losing', 'is_return', 'memo', 'company', 'process_tag', **{"style": "display:None"}),
     ]
     readonly_fields = ['is_delete', 'is_losing', 'is_return', 'submit_time', 'creator', 'services_interval', 'handler',
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
@@ -486,7 +486,7 @@ class WorkOrderAppRevAdmin(object):
 
 # 正向工单创建
 class WorkOrderAppAdmin(object):
-    list_display = ['company', 'express_id', 'information', 'category', 'create_time', 'servicer', 'update_time']
+    list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'servicer', 'update_time']
     list_filter = ['servicer']
     search_fields = ['express_id']
     form_layout = [
@@ -495,7 +495,7 @@ class WorkOrderAppAdmin(object):
         Fieldset(None,
                  'submit_time', 'creator', 'services_interval', 'handler', 'handle_time', 'servicer',
                  'express_interval', 'feedback', 'return_express_id', 'order_status', 'wo_category',
-                 'is_delete', 'is_losing', 'is_return', 'memo', **{"style": "display:None"}),
+                 'is_delete', 'is_losing', 'is_return', 'memo', 'process_tag', **{"style": "display:None"}),
     ]
     readonly_fields = ['is_delete', 'is_losing', 'is_return', 'submit_time', 'creator', 'services_interval', 'handler',
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
@@ -669,9 +669,9 @@ class WorkOrderAppAdmin(object):
 # 客服工单审核
 class WorkOrderHandleAdmin(object):
     list_display = ['company', 'express_id', 'feedback', 'category', 'information', 'create_time', 'creator', 'update_time']
-    list_filter = ['category',]
+    list_filter = ['category']
     search_fields = ['express_id']
-    list_editable = ['feedback']
+    list_editable = ['feedback', 'process_tag']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
@@ -689,10 +689,10 @@ class WorkOrderHandleAdmin(object):
 
 # 申通工单审核
 class WorkOrderHandleStoAdmin(object):
-    list_display = ['company', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'category', 'create_time', 'servicer', 'submit_time']
-    list_filter = ['category', 'submit_time', 'wo_category', 'is_losing']
+    list_display = ['company', 'process_tag', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'category', 'create_time', 'servicer', 'submit_time']
+    list_filter = ['category', 'submit_time', 'wo_category', 'is_losing', 'process_tag']
     search_fields = ['express_id']
-    list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id']
+    list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id', 'process_tag']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'submit_time', 'creator',
                        'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval', 'order_status',
                        'wo_category', 'company', 'memo']
@@ -714,7 +714,7 @@ class WorkOrderKeshenAdmin(object):
                     'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
     list_filter = ['company', 'is_return', 'is_losing']
     search_fields = ['return_express_id', 'express_id']
-    list_editable = ['memo']
+    list_editable = ['feedback', 'memo']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'feedback', 'return_express_id', 'order_status', 'wo_category', 'company']
@@ -753,7 +753,7 @@ class WorkOrderMineAdmin(object):
 class WorkOrderAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
                     'express_id', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
-    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category']
+    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category', 'order_status']
     search_fields = ['express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',

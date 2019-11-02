@@ -36,7 +36,7 @@ class SubmitAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=2)
+                queryset.update(order_status=2)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
@@ -47,10 +47,10 @@ class SubmitAction(BaseActionView):
                         try:
                             stock_order.save()
                             self.message_user("%s 入库单，入库完毕" % obj.stockin_id, 'success')
-                            queryset.filter(stockin_id=obj.stockin_id).update(status=3)
+                            queryset.filter(stockin_id=obj.stockin_id).update(order_status=2)
                         except Exception as e:
                             self.message_user("%s 入库单出现错误，错误原因：%s" % (obj.stockin_id, e), 'error')
-                            queryset.filter(stockin_id=obj.stockin_id).update(status=2)
+
                     else:
                         stock_order = StockInfo()
                         stock_order.goods_name = obj.goods_name
@@ -69,10 +69,9 @@ class SubmitAction(BaseActionView):
                         try:
                             stock_order.save()
                             self.message_user("%s 入库单，入库完毕" % obj.stockin_id, 'success')
-                            queryset.filter(stockin_id=obj.stockin_id).update(status=3)
+                            queryset.filter(stockin_id=obj.stockin_id).update(order_status=2)
                         except Exception as e:
                             self.message_user("%s 入库单出现错误，错误原因：%s" % (obj.stockin_id, e), 'error')
-                            queryset.filter(stockin_id=obj.stockin_id).update(status=2)
 
             self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -81,7 +80,7 @@ class SubmitAction(BaseActionView):
 
 
 class StockInInfoAdmin(object):
-    list_display = ["stockin_id", "source_order_id", "status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
+    list_display = ["stockin_id", "source_order_id", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
     list_filter = ["category", "warehouse", "goods_name"]
 
     def has_add_permission(self):
@@ -90,13 +89,13 @@ class StockInInfoAdmin(object):
 
 
 class StockInPenddingInfoAdmin(object):
-    list_display = ["stockin_id", "source_order_id", "status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
+    list_display = ["stockin_id", "source_order_id", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
 
     actions = [SubmitAction, ]
 
     def queryset(self):
         queryset = super(StockInPenddingInfoAdmin, self).queryset()
-        queryset = queryset.filter(status__in=[1, 2])
+        queryset = queryset.filter(order_status=1)
         return queryset
 
 

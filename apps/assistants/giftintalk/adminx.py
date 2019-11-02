@@ -248,7 +248,6 @@ class SubmitGiftAction(BaseActionView):
 
                         gift_order.shop = '小狗京东自营'
 
-
                         gift_order.buyer_remark = "京东自营客服%s赠送客户%s赠品%sx%s" % (obj.servicer, gift_order.nickname, gift_order.goods_name, gift_order.quantity)
                         gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
                         gift_order.submit_user = self.request.user.username
@@ -392,9 +391,11 @@ class SubmitImportAction(BaseActionView):
         return None
 
 
+# 对话信息导入和处理
 class GiftInTalkPenddingAdmin(object):
     list_display = ['order_status', 'mistakes', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
     list_filter = ['mistakes']
+    list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
     search_fields = ['order_id', 'nickname']
 
     ALLOWED_EXTENSIONS = ['log',]
@@ -438,7 +439,7 @@ class GiftInTalkPenddingAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
             if result['discard'] > 0:
                 self.message_user('丢弃无效对话数据%s条' % int(result['discard']), 'error')
-        return super(GiftInTalkPenddingAdmin, self).post(request, args, kwargs)
+        return super(GiftInTalkPenddingAdmin, self).post(request, *args, **kwargs)
 
     def save_models(self):
         obj = self.new_obj
@@ -453,8 +454,10 @@ class GiftInTalkPenddingAdmin(object):
         return queryset
 
 
+# 对话信息查询
 class GiftInTalkAdmin(object):
     list_display = ['servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
+    list_filter = ['creator', 'update_time', 'order_status']
     search_fields = ['order_id']
 
     def has_add_permission(self):
@@ -462,6 +465,7 @@ class GiftInTalkAdmin(object):
         return False
 
 
+# 赠品订单处理
 class GiftOrderPenddingAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
@@ -480,11 +484,12 @@ class GiftOrderPenddingAdmin(object):
         return False
 
 
+# 赠品订单查询
 class GiftOrderInfoAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['creator', 'update_time']
+    list_filter = ['creator', 'update_time', 'order_status']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):
@@ -492,6 +497,7 @@ class GiftOrderInfoAdmin(object):
         return False
 
 
+# 赠品导入单据处理
 class GiftImportPenddingAdmin(object):
     list_display = ['erp_order_id', 'shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
@@ -509,6 +515,7 @@ class GiftImportPenddingAdmin(object):
         return False
 
 
+# 赠品导入单据查询
 class GiftImportAdmin(object):
     list_display = ['erp_order_id', 'shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',

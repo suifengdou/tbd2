@@ -44,6 +44,15 @@ class WorkOrder(BaseModel):
         (0, '否'),
         (1, '是'),
     )
+    PROCESSTAG = (
+        (0, '未分类'),
+        (1, '待截单'),
+        (2, '催派查'),
+        (3, '签复核'),
+        (4, '丢件核'),
+        (5, '纠纷中'),
+        (6, '其他'),
+    )
 
     express_id = models.CharField(unique=True, max_length=100, verbose_name='源单号')
     information = models.TextField(max_length=600, verbose_name='初始问题信息')
@@ -65,6 +74,7 @@ class WorkOrder(BaseModel):
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='工单事项类型')
     wo_category = models.SmallIntegerField(choices=WO_CATEGORY, default=0, verbose_name='工单类型')
     company = models.ForeignKey(LogisticsInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='快递公司')
+    process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
 
     class Meta:
         verbose_name = 'EXT-快递工单-查询'

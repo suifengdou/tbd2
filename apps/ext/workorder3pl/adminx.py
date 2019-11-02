@@ -391,7 +391,7 @@ class WorkOrder3PLHandleAdmin(object):
         return False
 
 
-# 申通工单审核
+# 工单审核
 class WorkOrder3PLHandleStoAdmin(object):
     list_display = ['company', 'keyword', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'category', 'creator', 'create_time', 'servicer', 'submit_time']
     list_filter = ['category', 'submit_time']
@@ -454,10 +454,11 @@ class WorkOrder3PLMineAdmin(object):
         return False
 
 
+# 工单查询
 class WorkOrder3PLAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
                     'keyword', 'category', 'create_time', 'creator', 'servicer', 'submit_time', 'handle_time', 'handler']
-    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category']
+    list_filter = ['order_status', 'create_time', 'handle_time', 'is_return', 'is_losing', 'category']
     search_fields = ['keyword']
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
