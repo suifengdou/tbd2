@@ -58,7 +58,6 @@ INSTALLED_APPS = [
     'apps.ext.workorder3pl.apps.Workorder3PlConfig',
     'apps.crm.maintenance.apps.MaintenanceConfig',
     'apps.crm.refurbishment.apps.RefurbishmentConfig',
-    'apps.base.manufactory.apps.ManufactoryConfig',
     'apps.base.warehouse.apps.WarehouseConfig',
     'apps.base.relationship.apps.RelationshipConfig',
     'apps.base.goods.apps.GoodsConfig',

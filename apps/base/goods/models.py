@@ -22,6 +22,8 @@ class GoodsInfo(BaseModel):
         ("VAC", "吸尘器"),
         ("DMC", "除螨仪"),
         ("VAR", "智能机器人"),
+        ("HUM", "加湿器"),
+        ("MOP", "拖把"),
         ("OTH", "其他"),
     )
 

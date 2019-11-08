@@ -19,6 +19,8 @@ from .models import GoodsToManufactoryInfo, PartToProductInfo, CusPartToManufact
 
 class MachineToManufactoryInfoAdmin(object):
     list_display = ["goods_name", "manufactory", "status", "category"]
+    search_fields = ["goods_name__goods_name"]
+    list_filter = ["manufactory"]
 
     def queryset(self):
         queryset = super(MachineToManufactoryInfoAdmin, self).queryset()
@@ -52,15 +54,15 @@ class PartToProductInfoAdmin(object):
     list_display = ["machine_name", "part_name", "magnification", "status"]
 
 
-
 class ManufactoryToWarehouseAdmin(object):
     list_display = ["manufactory", "warehouse", "status"]
+    list_filter = ['status']
+    search_fields = ['manufactory']
 
 
-
+xadmin.site.register(ManufactoryToWarehouse, ManufactoryToWarehouseAdmin)
 xadmin.site.register(MachineToManufactoryInfo, MachineToManufactoryInfoAdmin)
 xadmin.site.register(CusPartToManufactoryInfo, CusPartToManufactoryInfoAdmin)
 xadmin.site.register(PartToManufactoryInfo, PartToManufactoryInfoAdmin)
 xadmin.site.register(GoodsToManufactoryInfo, GoodsToManufactoryInfoAdmin)
 xadmin.site.register(PartToProductInfo, PartToProductInfoAdmin)
-xadmin.site.register(ManufactoryToWarehouse, ManufactoryToWarehouseAdmin)

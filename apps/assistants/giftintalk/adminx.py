@@ -27,9 +27,10 @@ from apps.base.goods.models import GoodsInfo
 from apps.utils.geography.models import CityInfo, DistrictInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
+
+
 # 驳回审核
 class RejectSelectedAction(BaseActionView):
-
     action_name = "reject_selected"
     description = '驳回选中的订单'
 
@@ -49,7 +50,7 @@ class RejectSelectedAction(BaseActionView):
                 if obj.order_status == 1:
                     obj.order_status -= 1
                     obj.save()
-                    self.message_user("%s 取消成功" % obj.order_id, "success")
+                    self.message_user("%s 取消成功，仅仅是单纯的取消掉这个订单，未来不允许递交同单号的相同订单货品" % obj.order_id, "success")
 
                 else:
                     self.message_user("%s 状态不对，不可以取消" % obj.order_id, "error")
@@ -211,17 +212,21 @@ class SubmitGiftAction(BaseActionView):
                                     gift_order.district = '其他区'
 
                             elif "州" in gift_order.city:
-
-                                _district_key = gift_order.address[len(_province_key) + 3:len(_province_key) + 3 + 2]
-                                if gift_order.city[:3] in ["巴音郭", "博尔塔"]:
-                                    _district_key = gift_order.address[
-                                                    len(_province_key) + 5:len(_province_key) + 5 + 2]
+                                tag_position = gift_order.address.index("州", 3)
+                                _district_key = gift_order.address[tag_position+1:tag_position+2]
                                 _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
                                                                             district__contains=_district_key)
                                 if _rt_districts.exists():
                                     gift_order.district = _rt_districts[0].district
                                 else:
-                                    gift_order.district = '其他区'
+                                    tag_position = gift_order.address.index("市", 4)
+                                    _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                                    _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                district__contains=_district_key)
+                                    if _rt_districts.exists():
+                                        gift_order.district = _rt_districts[0].district
+                                    else:
+                                        gift_order.district = '其他区'
                             elif gift_order.city not in special_city:
                                 _district_key = gift_order.address[
                                                 len(_province_key) + len(_rt_city[0].city):len(_province_key) + len(
@@ -248,7 +253,7 @@ class SubmitGiftAction(BaseActionView):
 
                         gift_order.shop = '小狗京东自营'
 
-                        gift_order.buyer_remark = "京东自营客服%s赠送客户%s赠品%sx%s" % (obj.servicer, gift_order.nickname, gift_order.goods_name, gift_order.quantity)
+                        gift_order.buyer_remark = "京东自营%s客服%s赠送客户%s赠品%sx%s" % (str(obj.update_time)[:11], obj.servicer, gift_order.nickname, gift_order.goods_name, gift_order.quantity)
                         gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
                         gift_order.submit_user = self.request.user.username
                         try:
@@ -472,7 +477,7 @@ class GiftOrderPenddingAdmin(object):
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
     list_filter = ['district']
     search_fields = ['nickname', 'mobile', 'order_id']
-    actions = [SubmitAction, RejectSelectedAction, ]
+    actions = [SubmitAction, RejectSelectedAction]
 
     def queryset(self):
         queryset = super(GiftOrderPenddingAdmin, self).queryset()
@@ -489,7 +494,7 @@ class GiftOrderInfoAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['creator', 'update_time', 'order_status']
+    list_filter = ['creator', 'update_time', 'order_status', 'city', 'district']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):
@@ -503,7 +508,7 @@ class GiftImportPenddingAdmin(object):
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
     search_fields = ['nickname', 'mobile', 'order_id']
-    actions = [SubmitImportAction, RejectSelectedAction, ]
+    actions = [SubmitImportAction, RejectSelectedAction]
 
     def queryset(self):
         queryset = super(GiftImportPenddingAdmin, self).queryset()

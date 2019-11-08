@@ -267,7 +267,7 @@ class SubmitActionPO(BaseActionView):
 class PlanOrderInfoAdmin(object):
     list_display = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
     list_filter = ["goods_name", "category"]
-    search_fields = ["planorder_id","goods_name"]
+    search_fields = ["planorder_id"]
     readonly_fields = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
 
     def has_add_permission(self):

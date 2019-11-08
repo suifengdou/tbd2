@@ -34,7 +34,7 @@ class GoodsToManufactoryInfo(BaseModel):
     category = models.IntegerField(choices=CATEGORY,  default=0, verbose_name='对照类型')
 
     class Meta:
-        verbose_name = 'BA-R-货品与工厂对照表'
+        verbose_name = 'BA-R-全部货品与工厂对照表'
         verbose_name_plural = verbose_name
         db_table = 'base_rel_goods2manufactory'
 

@@ -313,11 +313,11 @@ class WorkOrderAppRevAdmin(object):
     search_fields = ['express_id']
     form_layout = [
         Fieldset('必填信息',
-                 'express_id', 'information', 'category',),
+                 'express_id', 'information', 'category', 'company'),
         Fieldset(None,
                  'submit_time', 'creator', 'services_interval', 'handler', 'handle_time','servicer',
                  'express_interval', 'feedback', 'return_express_id', 'order_status', 'wo_category',
-                 'is_delete', 'is_losing', 'is_return', 'memo', 'company', 'process_tag', **{"style": "display:None"}),
+                 'is_delete', 'is_losing', 'is_return', 'memo', 'process_tag', **{"style": "display:None"}),
     ]
     readonly_fields = ['is_delete', 'is_losing', 'is_return', 'submit_time', 'creator', 'services_interval', 'handler',
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
@@ -689,8 +689,8 @@ class WorkOrderHandleAdmin(object):
 
 # 申通工单审核
 class WorkOrderHandleStoAdmin(object):
-    list_display = ['company', 'process_tag', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'category', 'create_time', 'servicer', 'submit_time']
-    list_filter = ['category', 'submit_time', 'wo_category', 'is_losing', 'process_tag']
+    list_display = ['company', 'category', 'process_tag', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'wo_category', 'create_time', 'servicer', 'submit_time']
+    list_filter = ['process_tag','category', 'submit_time', 'wo_category', 'is_losing']
     search_fields = ['express_id']
     list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id', 'process_tag']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'submit_time', 'creator',
