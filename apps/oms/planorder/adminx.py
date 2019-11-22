@@ -166,6 +166,8 @@ class SubmitActionPO(BaseActionView):
                     manu_order = ManuOrderInfo.objects.filter(planorder_id=obj.planorder_id, order_status__in=[1, 2, 3, 4])
                     if manu_order.exists():
                         self.message_user("此订单%s已经存在工厂订单，请不要重复递交" % obj.planorder_id, "error")
+                        obj.order_status = 3
+                        obj.save()
                         continue
                     else:
 
@@ -175,6 +177,8 @@ class SubmitActionPO(BaseActionView):
                         estimated_time = obj.estimated_time
                         pre_year_num = int(datetime.datetime.strftime(estimated_time, "%Y")[-2:]) + 17
                         pre_week_num = int(datetime.datetime.strftime(estimated_time, "%U")) + 1
+                        if len(pre_week_num) == 1:
+                            pre_week_num = "0" + str(pre_week_num)
                         goods_number = obj.goods_name.goods_number
                         category = obj.goods_name.category
 
@@ -206,6 +210,8 @@ class SubmitActionPO(BaseActionView):
 
                         transition_num = 100000 + int(obj.quantity)
                         manufactory_order.end_sn = batch_num + str(transition_num)[-5:]
+
+                        manufactory_order.creator = self.request.user.username
 
                         try:
                             manufactory_order.save()
@@ -311,7 +317,7 @@ class PlanOrderPenddingInfoAdmin(object):
 class PlanOrderSubmitInfoAdmin(object):
     list_display = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
     list_filter = ["goods_name", "category"]
-    search_fields = ["planorder_id","goods_name"]
+    search_fields = ["planorder_id","goods_name__goods_name"]
     actions = [SubmitActionPO, RejectSelectedAction]
 
     def queryset(self):

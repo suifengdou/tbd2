@@ -141,7 +141,7 @@ class RejectSelectedQCAction(BaseActionView):
                     obj.save()
                     self.message_user("%s 取消成功，原始质检单驳回到待递交界面" % obj.qc_order_id, "success")
                 elif obj.order_status == 2:
-                    self.message_user("%s 已递交完成，请去验货明细表中驳回。" % obj.qc_order_id, "success")
+                    self.message_user("%s 已递交完成，请去入库明细表中驳回。" % obj.qc_order_id, "success")
                     n -= 1
                 else:
                     self.message_user("%s 内部错误，请联系管理员。" % obj.qc_order_id, "success")
@@ -259,6 +259,10 @@ class SubmitAction(BaseActionView):
                     try:
                         if QCInfo.objects.filter(qc_order_id=obj.qc_order_id).exists():
                             self.message_user("单号ID：%s，已经递交过质检单，此次未生成质检单" % obj.qc_order_id, "error")
+                            n -= 1
+                            obj.order_status = 2
+                            obj.save()
+                            continue
                         else:
                             qc_order.save()
                             queryset.filter(id=obj.id).update(order_status=2)
@@ -300,7 +304,12 @@ class SubmitSockInAction(BaseActionView):
                     if accumulation > obj.batch_num.quantity:
                         self.message_user("此原始质检单号ID：%s，验货数量超过了订单数量，请修正" % obj.qc_order_id, "error")
                         continue
-
+                    if StockInInfo.objects.filter(source_order_id=obj.qc_order_id, order_status__in=[1, 2]).exists():
+                        self.message_user("单号ID：%s，已经生成过入库单，此次未生成入库单" % obj.qc_order_id, "error")
+                        n -= 1
+                        obj.order_status = 2
+                        obj.save()
+                        continue
                     stockin_order = StockInInfo()
                     warehouse_qs = ManufactoryToWarehouse.objects.filter(manufactory=obj.batch_num.manufactory)
                     if warehouse_qs:
@@ -325,13 +334,18 @@ class SubmitSockInAction(BaseActionView):
                     stockin_order.source_order_id = obj.qc_order_id
 
                     try:
-                        if StockInInfo.objects.filter(source_order_id=obj.qc_order_id).exists():
-                            self.message_user("单号ID：%s，已经生成过入库单，此次未生成入库单" % obj.qc_order_id, "error")
-                        elif obj.result == 1:
+                        if obj.result == 1:
                             self.message_user("%s，验货失败质检单，不生成入库单" % obj.qc_order_id, "success")
+                            n -= 1
+                            obj.order_status = 2
+                            obj.save()
+                            continue
                         else:
                             stockin_order.save()
                             self.message_user("%s，生成入库单号：%s" % (obj.qc_order_id, stockin_order.stockin_id), "success")
+                            obj.order_status = 2
+                            obj.save()
+                            continue
                     except Exception as e:
                         self.message_user("此原始质检单号ID：%s，出现错误， ：%s" % (obj.id, e), "error")
                         continue

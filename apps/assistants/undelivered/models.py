@@ -14,13 +14,21 @@ from db.base_model import BaseModel
 class OriorderInfo(BaseModel):
     VERIFY_FIELD = ['order_id', 'nickname', 'payment_amount', 'order_status', 'payment_time', 'goods_title', 'memorandum', 'refund_amount']
     STATUS = (
-        (0, '等待处理'),
-        (1, '无需处理'),
-        (2, '特别跟进'),
-        (3, '暂不处理'),
-        (4, '半退未发'),
-        (5, '未发订金'),
+        (0, '订单取消'),
+        (1, '等待处理'),
+        (2, '处理完成'),
+        (3, '特殊订单'),
     )
+
+    ORDER_TAG = (
+        (0, '未标记'),
+        (1, '订金订单'),
+        (2, '时效外'),
+        (3, '时效内'),
+        (4, '暂不发货'),
+        (5, '有退款'),
+    )
+
     order_id = models.CharField(max_length=30, verbose_name='订单编号')
     nickname = models.CharField(max_length=60, verbose_name='买家会员名')
     alipay_id = models.CharField(max_length=50, verbose_name='买家支付宝账号')
@@ -51,10 +59,11 @@ class OriorderInfo(BaseModel):
     shop_name = models.CharField(max_length=30, verbose_name='店铺名称')
     refund_amount = models.FloatField(verbose_name='退款金额')
     status = models.IntegerField(choices=STATUS, default=0, verbose_name='单据处理状态')
+    status_tag = models.SmallIntegerField(choices=ORDER_TAG, default=0, verbose_name='订单标记')
 
 
     class Meta:
-        verbose_name = "ASS-订单查询表"
+        verbose_name = "ASS-后台-订单查询表"
         verbose_name_plural = verbose_name
         db_table = 'ass_und_undelivered'
 
@@ -72,7 +81,7 @@ class OriorderInfo(BaseModel):
 
 class PendingOrderInfo(OriorderInfo):
     class Meta:
-        verbose_name = 'ASS-待处理订单'
+        verbose_name = 'ASS-后台-待处理订单'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -80,16 +89,9 @@ class PendingOrderInfo(OriorderInfo):
         return self.goods_title
 
 
-class SpecialOrderInfo(OriorderInfo):
-    class Meta:
-        verbose_name = 'ASS-特别跟进等订单'
-        verbose_name_plural = verbose_name
-        proxy = True
-
-
 class RefundOrderInfo(OriorderInfo):
     class Meta:
-        verbose_name = 'ASS-部分退款订单'
+        verbose_name = 'ASS-后台-特殊订单'
         verbose_name_plural = verbose_name
         proxy = True
 

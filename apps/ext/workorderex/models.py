@@ -20,9 +20,10 @@ class WorkOrder(BaseModel):
         (1, '快递未递'),
         (2, '逆向未理'),
         (3, '正向未递'),
-        (4, '快递未理'),
+        (4, '快递在理'),
         (5, '复核未理'),
-        (6, '工单完结'),
+        (6, '终审未理'),
+        (7, '工单完结'),
     )
     CATEGORY = (
         (0, '截单退回'),
@@ -56,6 +57,11 @@ class WorkOrder(BaseModel):
         (7, '其他'),
 
     )
+    HANDLERS = (
+        (0, '皮卡丘'),
+        (1, '伊布'),
+        (3, '波比克'),
+    )
 
     express_id = models.CharField(unique=True, max_length=100, verbose_name='源单号')
     information = models.TextField(max_length=600, verbose_name='初始问题信息')
@@ -78,6 +84,7 @@ class WorkOrder(BaseModel):
     wo_category = models.SmallIntegerField(choices=WO_CATEGORY, default=0, verbose_name='工单类型')
     company = models.ForeignKey(LogisticsInfo, on_delete=models.CASCADE, verbose_name='快递公司')
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
+    mid_handler = models.SmallIntegerField(choices=HANDLERS, default=0, verbose_name='跟单小伙伴')
 
     class Meta:
         verbose_name = 'EXT-快递工单-查询'

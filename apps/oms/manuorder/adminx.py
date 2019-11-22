@@ -20,11 +20,12 @@ from xadmin.util import model_ngettext
 
 
 from .models import ManuOrderInfo, ManuOrderPenddingInfo, ManuOrderProcessingInfo
-from apps.oms.qcorder.models import QCSubmitOriInfo
+from apps.oms.qcorder.models import QCSubmitOriInfo, QCOriInfo
 from apps.oms.cusrequisition.models import CusRequisitionInfo
 from apps.oms.planorder.models import PlanOrderInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
+
 
 # 驳回审核
 class RejectSelectedAction(BaseActionView):
@@ -55,6 +56,16 @@ class RejectSelectedAction(BaseActionView):
                         PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id).update(order_status=2)
                         obj.save()
                         self.message_user("%s 工厂订单取消成功，已驳回到计划单待递交界面。" % obj.planorder_id, "success")
+                elif obj.order_status == 2:
+                    qc_tag = QCOriInfo.objects.filter(batch_num=obj)
+                    if qc_tag:
+                        self.message_user("%s 已经开始生产，不可以驳回。" % obj.planorder_id, 'error')
+                        n -= 1
+                    else:
+                        obj.order_status -= 1
+                        PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id).update(order_status=2)
+                        obj.save()
+                        self.message_user("%s 工厂订单已驳回到待递交界面。" % obj.planorder_id, "success")
                 else:
                     self.message_user("%s 订单已经开始生产，无法驳回。" % obj.planorder_id, "success")
                     n -= 1
@@ -150,12 +161,15 @@ class CheckAction(BaseActionView):
 class QCOriInfoInline(object):
 
     model = QCSubmitOriInfo
-    exclude = ["order_status", "creator", "qc_order_id"]
+    # exclude = ["order_status", "creator", "qc_order_id"]
+    exclude = ["is_delete", 'creator', 'qc_order_id']
     extra = 0
+    style = 'table'
+    # list_display = ["order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw"]
 
-    def queryset(self):
-        queryset = super(QCOriInfoInline, self).queryset().filter(order_status=1)
-        return queryset
+    # def queryset(self):
+    #     queryset = super(QCOriInfoInline, self).queryset().filter(order_status=1)
+    #     return queryset
 
 
 class ManuOrderInfoAdmin(object):
@@ -192,6 +206,7 @@ class ManuOrderProcessingInfoAdmin(object):
     search_fields = ["batch_num", "planorder_id"]
     readonly_fields = ["batch_num","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum","intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
     inlines = [QCOriInfoInline, ]
+    actions = [RejectSelectedAction, ]
 
     def queryset(self):
         queryset = super(ManuOrderProcessingInfoAdmin, self).queryset()

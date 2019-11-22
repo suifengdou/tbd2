@@ -47,7 +47,7 @@ class ManuOrderInfo(BaseModel):
         return self.batch_num
 
     def completednum(self):
-        completed_num = StockInInfo.objects.filter(batch_num=self.batch_num, order_status=3).aggregate(Sum("quantity"))["quantity__sum"]
+        completed_num = StockInInfo.objects.filter(batch_num=self.batch_num, order_status=2).aggregate(Sum("quantity"))["quantity__sum"]
         if completed_num:
             if self.order_status == 2:
                 self.order_status = 3
@@ -76,7 +76,7 @@ class ManuOrderInfo(BaseModel):
     failurenum.short_description = '验货失败'
 
     def penddingnum(self):
-        pending_num = int(self.quantity) - int(self.completednum()) - int(self.processingnum()) - int(self.intransitnum())
+        pending_num = int(self.quantity) - int(self.processingnum()) - int(self.intransitnum())
         return pending_num
     penddingnum.short_description = '待生产'
 

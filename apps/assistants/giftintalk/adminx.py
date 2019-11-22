@@ -46,15 +46,7 @@ class RejectSelectedAction(BaseActionView):
     def delete_models(self, queryset):
         n = queryset.count()
         if n:
-            for obj in queryset:
-                if obj.order_status == 1:
-                    obj.order_status -= 1
-                    obj.save()
-                    self.message_user("%s 取消成功，仅仅是单纯的取消掉这个订单，未来不允许递交同单号的相同订单货品" % obj.order_id, "success")
-
-                else:
-                    self.message_user("%s 状态不对，不可以取消" % obj.order_id, "error")
-                    n -= 1
+            queryset.update(order_status=0)
             self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None

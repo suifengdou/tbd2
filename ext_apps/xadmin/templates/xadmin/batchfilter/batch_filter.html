@@ -1,0 +1,35 @@
+{% load i18n %}
+<div class="btn-group export">
+  <a class="dropdown-toggle btn btn-default btn-sm" data-toggle="dropdown" href="#">
+    <i class="icon-share"></i> 批量搜索 <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+      <li><a data-toggle="modal" data-target="#batch-filter"><i class="icon-circle-arrow-down"></i> 输入批量单号</a></li>
+  </ul>
+
+    <div id="batch-filter" class="modal fade">
+      <div class="modal-dialog">
+        <div class="modal-content">
+
+          <form method="post" action="">
+              {% csrf_token %}
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">填入单号</h4>
+          </div>
+          <div class="modal-body">
+              <input type="text" name="delivery_ids" style="width:500px; height:50px" id="submit_upload">
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Close" %}</button>
+            <button class="btn btn-success" type="submit" id="submit_upload_b"><i class="icon-share"></i> 查找</button>
+          </div>
+
+          </form>
+
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dalog -->
+    </div><!-- /.modal -->
+
+</div>

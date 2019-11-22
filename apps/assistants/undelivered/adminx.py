@@ -4,22 +4,35 @@
 # @Site    :
 # @File    : adminx.py.py
 # @Software: PyCharm
-
-
+import math, re
+import datetime
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+from django.db import router
+from django.utils.encoding import force_text
+from django.template.response import TemplateResponse
+
+from django.contrib.admin.utils import get_deleted_objects
+
+from django.core.files.uploadedfile import InMemoryUploadedFile
+
 import pandas as pd
+
 import xadmin
 from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
+from xadmin.layout import Fieldset
 
 
-from .models import OriorderInfo, PendingOrderInfo, SpecialOrderInfo, RefundOrderInfo
+from .models import OriorderInfo, PendingOrderInfo, RefundOrderInfo
+
+ACTION_CHECKBOX_NAME = '_selected_action'
 
 
-class ModifyAction(BaseActionView):
-    action_name = "update_selected"
-    description = '审核对应项目为暂不处理'
+class SubmitAction(BaseActionView):
+    action_name = "submit_selected"
+    description = '审核对应项目'
 
     delete_confirmation_template = None
     delete_selected_confirmation_template = None
@@ -39,17 +52,158 @@ class ModifyAction(BaseActionView):
         if n:
             if self.modify_models_batch:
                 self.log('change',
-                         '批量修改了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=3)
+                         '批量审核 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status=2)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    obj.update(status=3)
+                    obj.update(status=2)
             self.message_user("成功审核 %(count)d %(items)s." % {
                 "count": n, "items": model_ngettext(self.opts, n)
             }, 'success')
         # Return None to display the change list page again.
         return None
+
+
+class ModifySpecialAction(BaseActionView):
+    action_name = "modifystatus_selected"
+    description = '批量转入特殊状态'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    modify_models_batch = True
+
+    model_perm = 'change'
+    icon = 'fa fa-flag'
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has change permission for the actual model
+        if not self.has_change_permission():
+            raise PermissionDenied
+
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量转入 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status=3)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+                    obj.update(status=3)
+            self.message_user("成功转入 %(count)d %(items)s." % {
+                "count": n, "items": model_ngettext(self.opts, n)
+            }, 'success')
+        # Return None to display the change list page again.
+        return None
+
+
+class TagAction(BaseActionView):
+    action_name = "tag_selected"
+    description = '批量标记为暂不发货'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    modify_models_batch = True
+
+    model_perm = 'change'
+    icon = 'fa fa-flag'
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has change permission for the actual model
+        if not self.has_change_permission():
+            raise PermissionDenied
+
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status_tag=4)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+                    obj.update(status=4)
+            self.message_user("成功审核 %(count)d %(items)s." % {
+                "count": n, "items": model_ngettext(self.opts, n)
+            }, 'success')
+        # Return None to display the change list page again.
+        return None
+
+
+class DelSelectedAction(BaseActionView):
+    action_name = "undelivered_selected"
+    description = '删除选中的订单'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    delete_models_batch = False
+
+    model_perm = 'change'
+    icon = 'fa fa-times'
+
+    @filter_hook
+    def delete_models(self, queryset):
+        n = queryset.count()
+        if n:
+            queryset.delete()
+            self.message_user("成功删除 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has delete permission for the actual model
+        if not self.has_delete_permission():
+            raise PermissionDenied
+
+        using = router.db_for_write(self.model)
+
+        # Populate deletable_objects, a data structure of all related objects that
+        # will also be deleted.
+        deletable_objects, model_count, perms_needed, protected = get_deleted_objects(
+            queryset, self.opts, self.user, self.admin_site, using)
+
+        # The user has already confirmed the deletion.
+        # Do the deletion and return a None to display the change list view again.
+        if self.request.POST.get('post'):
+            if perms_needed:
+                raise PermissionDenied
+            self.delete_models(queryset)
+            # Return None to display the change list page again.
+            return None
+
+        if len(queryset) == 1:
+            objects_name = force_text(self.opts.verbose_name)
+        else:
+            objects_name = force_text(self.opts.verbose_name_plural)
+
+        if perms_needed or protected:
+            title = "Cannot reject %(name)s" % {"name": objects_name}
+        else:
+            title = "Are you sure?"
+
+        context = self.get_context()
+        context.update({
+            "title": title,
+            "objects_name": objects_name,
+            "deletable_objects": [deletable_objects],
+            'queryset': queryset,
+            "perms_lacking": perms_needed,
+            "protected": protected,
+            "opts": self.opts,
+            "app_label": self.app_label,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+        })
+
+        # Display the confirmation page
+        return TemplateResponse(self.request, self.delete_selected_confirmation_template or
+                                self.get_template_list('views/model_undelivered_selected_confirm.html'), context)
 
 
 class OriorderInfoAdmin(object):
@@ -96,16 +250,16 @@ class PendingOrderInfoAdmin(object):
         '退款金额': 'refund_amount',
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
-    list_display = ['goods_title', 'status', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
+    list_display = ['goods_title', 'status', 'status_tag', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
                     'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
                     'creator']
-    list_filter = ['payment_time', 'shop_name', 'goods_title', 'payment_amount', 'refund_amount']
+    list_filter = ['status_tag', 'payment_time', 'shop_name', 'goods_title', 'payment_amount', 'refund_amount']
     search_fields = ["order_id", "nickname"]
     # model_icon = 'fa fa-refresh'
     list_editable = ['status', 'memorandum']
     ordering = ['payment_time']
     exclude = ['creator']
-    actions = [ModifyAction, ]
+    actions = [SubmitAction, ModifySpecialAction, DelSelectedAction, TagAction, ]
     import_data = True
 
     def post(self, request, *args, **kwargs):
@@ -207,22 +361,27 @@ class PendingOrderInfoAdmin(object):
 
         # 开始导入数据
         for row in resource:
+            reservation_keywords = ['定金', '预', '订金', '券']
             # ERP导出文档添加了等于号，毙掉等于号。
             order = OriorderInfo()  # 创建表格每一行为一个对象
             # 清除订单号的特殊字符
+            payment_time = row['payment_time']
+            if len(payment_time) == 0:
+                report_dic['discard'] += 1
+                continue
             row['order_id'] = str(row['order_id']).replace("=", "").replace('"', "")
             row['alipay_orer_id'] = str(row['alipay_order_id']).replace("=", "").replace('"', "")
             row['mobile'] = str(row['mobile']).replace("'", "")
-            reservation_keywords = ['定金', '预', '订金', '券']
+
             order_id = row['order_id']
 
             # 如果订单号查询，已经存在，丢弃订单，计数为重复订单
             target_order = OriorderInfo.objects.all().filter(order_id=order_id)
             if target_order.exists():
-                if row['order_status'] == '买家已付款，等待卖家发货' and target_order[0].status not in [1, 2, 4, 5]:
-                    target_order[0].status = 0
+                if row['order_status'] == '买家已付款，等待卖家发货' and target_order[0].status != 0:
+                    target_order[0].status = 1
                     if row['refund_amount'] > 0:
-                        target_order[0].status = 4
+                        target_order[0].status_tag = 5
                     try:
                         target_order[0].save()
                         report_dic["successful"] += 1
@@ -232,6 +391,15 @@ class PendingOrderInfoAdmin(object):
                         report_dic["false"] += 1
                 report_dic["repeated"] += 1
                 continue
+            # 计算订单是否超时，标记超时订单和未超时订单
+            current_time = datetime.datetime.now()
+            payment_time = datetime.datetime.strptime(payment_time, "%Y-%m-%d %H:%M:%S")
+            d_val = (current_time - payment_time).days
+            if d_val > 1:
+                order.status_tag = 2
+            else:
+                order.status_tag = 3
+
             for k, v in row.items():
                 # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
                 if hasattr(order, k):
@@ -240,15 +408,16 @@ class PendingOrderInfoAdmin(object):
                     else:
                         setattr(order, k, v)  # 更新对象属性为字典对应键值
             # 对订单进行分类判断
-            order.status = 0
+
             if order.total_amount < 10.1:
-                order.status = 5
+                order.status_tag = 1
             if any(keyword in order.goods_title for keyword in reservation_keywords):
-                order.status = 5
+                order.status_tag = 1
             if order.refund_amount > 0:
-                order.status = 4
+                order.status_tag = 5
 
             try:
+                order.status = 1
                 order.creator = creator
                 order.save()
                 report_dic["successful"] += 1
@@ -259,25 +428,7 @@ class PendingOrderInfoAdmin(object):
         return report_dic
 
     def queryset(self):
-        qs = OriorderInfo.objects.all().filter(status=0)
-        return qs
-
-    def has_add_permission(self):
-        # 禁用添加按钮
-        return False
-
-
-class SpecialOrderInfoAdmin(object):
-    list_display = ['goods_title', 'status', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
-                    'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
-                    'creator']
-    list_filter = ['payment_time', 'shop_name', 'status']
-    list_editable = ['status', 'memorandum']
-    ordering = ['payment_time']
-    exclude = ['creator']
-
-    def queryset(self):
-        qs = OriorderInfo.objects.all().filter(status=2)
+        qs = OriorderInfo.objects.all().filter(status=1)
         return qs
 
     def has_add_permission(self):
@@ -295,7 +446,7 @@ class RefundOrderInfoAdmin(object):
     exclude = ['creator']
 
     def queryset(self):
-        qs = OriorderInfo.objects.all().filter(status=4)
+        qs = OriorderInfo.objects.all().filter(status=3)
         return qs
 
     def has_add_permission(self):
@@ -304,6 +455,5 @@ class RefundOrderInfoAdmin(object):
 
 
 xadmin.site.register(PendingOrderInfo, PendingOrderInfoAdmin)
-xadmin.site.register(SpecialOrderInfo, SpecialOrderInfoAdmin)
 xadmin.site.register(RefundOrderInfo, RefundOrderInfoAdmin)
 xadmin.site.register(OriorderInfo, OriorderInfoAdmin)

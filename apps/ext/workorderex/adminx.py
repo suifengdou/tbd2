@@ -54,7 +54,7 @@ class RejectSelectedAction(BaseActionView):
                     obj.order_status -= 3
                     obj.save()
                     self.message_user("%s 取消成功" % obj.express_id, "success")
-                elif obj.order_status in [1, 2, 4, 5]:
+                elif obj.order_status in [1, 2, 4, 5, 6]:
                     if obj.wo_category == 1 and obj.order_status == 4:
                         obj.order_status -= 2
                         obj.save()
@@ -125,7 +125,7 @@ class SubmitReverseAction(BaseActionView):
     action_name = "submit_r_wo"
     description = "提交选中的工单"
     model_perm = 'change'
-    icon = "fa fa-flag"
+    icon = "fa fa-check-square-o"
 
     modify_models_batch = False
 
@@ -157,7 +157,7 @@ class SubmitAction(BaseActionView):
     action_name = "submit_wo"
     description = "提交选中的工单"
     model_perm = 'change'
-    icon = "fa fa-flag"
+    icon = "fa fa-check-square-o"
 
     modify_models_batch = False
 
@@ -190,7 +190,7 @@ class FeedbackReverseAction(BaseActionView):
     action_name = "submit_feedback"
     description = "提交选中的工单"
     model_perm = 'change'
-    icon = "fa fa-flag"
+    icon = "fa fa-check-square-o"
 
     modify_models_batch = False
 
@@ -234,7 +234,7 @@ class CheckExpressAction(BaseActionView):
     action_name = "submit_exp_check"
     description = "提交选中的工单"
     model_perm = 'change'
-    icon = "fa fa-flag"
+    icon = "fa fa-check-square-o"
 
     modify_models_batch = False
 
@@ -273,14 +273,163 @@ class CheckExpressAction(BaseActionView):
         return None
 
 
+# 工单跟单分流设置
+class SetHandlerYBAction(BaseActionView):
+    action_name = "set_handlerYB"
+    description = "批量设置成伊布跟单"
+    model_perm = 'change'
+    icon = "fa fa-reply-all"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(mid_handler=1)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 工单跟单分流设置
+class SetHandlerPKAction(BaseActionView):
+    action_name = "set_handlerPK"
+    description = "批量设置成皮卡丘跟单"
+    model_perm = 'change'
+    icon = "fa fa-magic"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(mid_handler=0)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 工单标签快捷设置
+class SetTagCutbackAction(BaseActionView):
+    action_name = "set_tag_cutback"
+    description = "批量设置成待截停标签"
+    model_perm = 'change'
+    icon = "fa fa-pencil-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(process_tag=1)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 批量设置退回单号为源单号
+class SetReturnAction(BaseActionView):
+
+    action_name = "set_return"
+    description = '设置返回单号为原单号'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    delete_models_batch = False
+
+    model_perm = 'change'
+    icon = 'fa fa-star-o'
+
+    @filter_hook
+    def set_return_models(self, queryset):
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                if obj.return_express_id:
+                    obj.is_return = 1
+                    obj.save()
+                else:
+                    obj.return_express_id = obj.express_id
+                    obj.is_return = 1
+                    obj.save()
+            self.message_user("设置了返回单号，可以审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has delete permission for the actual model
+        if not self.has_delete_permission():
+            raise PermissionDenied
+
+        using = router.db_for_write(self.model)
+
+        # Populate deletable_objects, a data structure of all related objects that
+        # will also be deleted.
+        deletable_objects, model_count, perms_needed, protected = get_deleted_objects(
+            queryset, self.opts, self.user, self.admin_site, using)
+
+        # The user has already confirmed the deletion.
+        # Do the deletion and return a None to display the change list view again.
+        if self.request.POST.get('post'):
+            if perms_needed:
+                raise PermissionDenied
+            self.set_return_models(queryset)
+            # Return None to display the change list page again.
+            return None
+
+        if len(queryset) == 1:
+            objects_name = force_text(self.opts.verbose_name)
+        else:
+            objects_name = force_text(self.opts.verbose_name_plural)
+
+        if perms_needed or protected:
+            title = "Cannot reject %(name)s" % {"name": objects_name}
+        else:
+            title = "Are you sure?"
+
+        context = self.get_context()
+        context.update({
+            "title": title,
+            "objects_name": objects_name,
+            "deletable_objects": [deletable_objects],
+            'queryset': queryset,
+            "perms_lacking": perms_needed,
+            "protected": protected,
+            "opts": self.opts,
+            "app_label": self.app_label,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+        })
+
+        # Display the confirmation page
+        return TemplateResponse(self.request, self.delete_selected_confirmation_template or
+                                self.get_template_list('views/model_setreturn_selected_confirm.html'), context)
+
+
 # 复核工单通过
 class PassedAction(BaseActionView):
     action_name = "submit_pass"
     description = "提交选中的工单"
     model_perm = 'change'
-    icon = "fa fa-flag"
+    icon = "fa fa-check-circle"
 
-    modify_models_batch = False
+    modify_models_batch = True
 
     @filter_hook
     def do_action(self, queryset):
@@ -291,7 +440,8 @@ class PassedAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=6)
+                queryset.filter(wo_category=0).update(order_status=6)
+                queryset.filter(wo_category=1).update(order_status=7)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
@@ -305,6 +455,38 @@ class PassedAction(BaseActionView):
 
         return None
 
+# 客服工单提交
+class CSSubmitAction(BaseActionView):
+        action_name = "submit_wo"
+        description = "提交选中的工单"
+        model_perm = 'change'
+        icon = "fa fa-check-square-o"
+
+        modify_models_batch = True
+
+        @filter_hook
+        def do_action(self, queryset):
+            if not self.has_change_permission():
+                raise PermissionDenied
+            n = queryset.count()
+            if n:
+                if self.modify_models_batch:
+                    self.log('change',
+                             '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                    queryset.update(order_status=7)
+                else:
+                    for obj in queryset:
+                        self.log('change', '', obj)
+                        obj.submit_time = datetime.datetime.now()
+                        obj.order_status = 7
+                        obj.save()
+                        self.message_user("%s 审核完毕，等待快递反馈" % obj.express_id, "info")
+
+                self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+
+            return None
+
 
 # 逆向工单创建
 class WorkOrderAppRevAdmin(object):
@@ -317,7 +499,7 @@ class WorkOrderAppRevAdmin(object):
         Fieldset(None,
                  'submit_time', 'creator', 'services_interval', 'handler', 'handle_time','servicer',
                  'express_interval', 'feedback', 'return_express_id', 'order_status', 'wo_category',
-                 'is_delete', 'is_losing', 'is_return', 'memo', 'process_tag', **{"style": "display:None"}),
+                 'is_delete', 'is_losing', 'is_return', 'memo', 'process_tag', 'mid_handler', **{"style": "display:None"}),
     ]
     readonly_fields = ['is_delete', 'is_losing', 'is_return', 'submit_time', 'creator', 'services_interval', 'handler',
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
@@ -495,7 +677,7 @@ class WorkOrderAppAdmin(object):
         Fieldset(None,
                  'submit_time', 'creator', 'services_interval', 'handler', 'handle_time', 'servicer',
                  'express_interval', 'feedback', 'return_express_id', 'order_status', 'wo_category',
-                 'is_delete', 'is_losing', 'is_return', 'memo', 'process_tag', **{"style": "display:None"}),
+                 'is_delete', 'is_losing', 'is_return', 'memo', 'process_tag', 'mid_handler', **{"style": "display:None"}),
     ]
     readonly_fields = ['is_delete', 'is_losing', 'is_return', 'submit_time', 'creator', 'services_interval', 'handler',
                        'handle_time', 'servicer', 'express_interval', 'feedback', 'return_express_id', 'order_status',
@@ -608,6 +790,7 @@ class WorkOrderAppAdmin(object):
             row["category"] = category_dic.get(str(row["category"]), None)
             if LogisticsInfo.objects.filter(company_name=row["company"]).exists():
                 row["company"] = LogisticsInfo.objects.filter(company_name=row["company"])[0]
+                service_order.company_id = row["company"].id
             else:
                 report_dic["discard"] += 1
                 report_dic["error"].append("%s 快递公司名称错误" % express_id)
@@ -687,21 +870,42 @@ class WorkOrderHandleAdmin(object):
         return False
 
 
-# 申通工单审核
+# 快递工单审核
 class WorkOrderHandleStoAdmin(object):
-    list_display = ['company', 'category', 'process_tag', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'wo_category', 'create_time', 'servicer', 'submit_time']
-    list_filter = ['process_tag','category', 'submit_time', 'wo_category', 'is_losing']
+    list_display = ['company', 'category', 'process_tag', 'mid_handler', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'wo_category', 'create_time', 'servicer', 'submit_time']
+    list_filter = ['mid_handler', 'process_tag','category', 'submit_time', 'wo_category', 'is_losing']
     search_fields = ['express_id']
     list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id', 'process_tag']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'submit_time', 'creator',
                        'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval', 'order_status',
                        'wo_category', 'company', 'memo']
     ordering = ['-submit_time']
-    actions = [CheckExpressAction, RejectSelectedAction]
+    actions = [SetHandlerYBAction, SetHandlerPKAction, CheckExpressAction, RejectSelectedAction, SetReturnAction, SetTagCutbackAction]
+    batch_data = True
+    delivery_ids = []
+
+    def post(self, request, *args, **kwargs):
+        delivery_ids = request.POST.get('delivery_ids', None)
+        if delivery_ids is not None:
+            if " " in delivery_ids:
+                delivery_ids = delivery_ids.split(" ")
+                for i in delivery_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(delivery_ids), 'error')
+                        break
+                    else:
+                        self.delivery_ids = delivery_ids
+                        self.queryset()
+        return super(WorkOrderHandleStoAdmin, self).post(request, *args, **kwargs)
 
     def queryset(self):
         queryset = super(WorkOrderHandleStoAdmin, self).queryset()
-        queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
+
+        if self.delivery_ids:
+            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company,
+                                       express_id__in=self.delivery_ids)
+        else:
+            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
         return queryset
 
     def has_add_permission(self):
@@ -737,12 +941,16 @@ class WorkOrderMineAdmin(object):
     search_fields = ['express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
-                       'feedback', 'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
+                       'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
+    list_editable = ['feedback']
+    actions = [CSSubmitAction, RejectSelectedAction ]
+
+
 
     def queryset(self):
         queryset = super(WorkOrderMineAdmin, self).queryset()
         myname = self.request.user.username
-        queryset = queryset.filter(Q(is_delete=0) & (Q(creator=myname) | Q(servicer=myname) | Q(handler=myname)))
+        queryset = queryset.filter(is_delete=0, creator=myname, order_status=6)
         return queryset
 
     def has_add_permission(self):
@@ -752,12 +960,13 @@ class WorkOrderMineAdmin(object):
 
 class WorkOrderAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
-                    'express_id', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
-    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category', 'order_status']
-    search_fields = ['express_id']
+                    'express_id', 'information', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
+    list_filter = ['creator', 'submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category', 'order_status', 'company', 'servicer', 'handler']
+    search_fields = ['express_id', 'return_express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'feedback', 'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
+
 
     def has_add_permission(self):
         # 禁用添加按钮
