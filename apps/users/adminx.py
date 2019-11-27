@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 
 class GlobalSettings(object):
     site_title = 'UT后台管理系统'
-    site_footer = 'UltraTool V0.5.0.9'
+    site_footer = 'UltraTool V0.5.0.10'
     menu_style = 'accordion'
 
 xadmin.site.register(views.CommAdminView, GlobalSettings)

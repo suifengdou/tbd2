@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'apps.base.goods.apps.GoodsConfig',
     'apps.base.company.apps.CompanyConfig',
     'apps.base.shop.apps.ShopConfig',
-    'apps.base.zoneu.apps.ZoneuConfig',
+    'apps.base.changelog.apps.ChangelogConfig',
     'apps.utils.geography.apps.GeographyConfig',
     'apps.wms.stock.apps.StockConfig',
     'apps.wms.stockin.apps.StockinConfig',

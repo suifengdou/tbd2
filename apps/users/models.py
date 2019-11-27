@@ -16,7 +16,12 @@ class UserProfile(AbstractUser, BaseModel):
         (0, '非管理'),
         (1, '管理'),
     )
+    PLATFORM = (
+        (0, '京东'),
+        (1, '淘系'),
+    )
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
+    platform = models.SmallIntegerField(choices=PLATFORM, null=True, blank=True, verbose_name='平台')
     company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属公司')
 
     class Meta:

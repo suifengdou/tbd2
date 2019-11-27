@@ -112,15 +112,12 @@ class SubmitGiftAction(BaseActionView):
 
     @filter_hook
     def do_action(self, queryset):
+        n = queryset.count()
         if not self.has_change_permission():
             raise PermissionDenied
-        n = queryset.count()
-        if n:
-            if self.modify_models_batch:
-                self.log('change',
-                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=2)
-            else:
+        if self.request.user.username in ['王贺宽', '张国帅']:
+            PLATFORM = {0: '京东', 1: '淘系'}
+            if n:
                 for obj in queryset:
                     goods_group = self.goods_split(obj.goods)
                     for goods_info in goods_group:
@@ -140,16 +137,19 @@ class SubmitGiftAction(BaseActionView):
                                 obj.save()
                                 continue
                         order_id = str(obj.order_id).replace("订单号", "").replace(" ", "").replace("：", "")
-                        if re.match("^[0-9]+$", order_id):
-                            gift_order.order_id = order_id
-                        else:
-                            self.message_user("%s订单号输入错误，请修正！" % obj.order_id, "error")
+                        gift_order.order_id = order_id
+
+                        gift_order.nickname = str(obj.nickname).replace("客户ID", "").replace(" ", "").replace("：", "").replace("顾客ID", "")
+                        if len(gift_order.nickname) == 0:
+                            self.message_user("%s客户网名错误" % obj.order_id, "error")
                             n -= 1
-                            obj.mistakes = 1
+                            obj.mistakes = 5
                             obj.save()
                             continue
+
                         # 用订单号和货品确认递交是否是唯一
-                        if GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id, order_id=gift_order.order_id).exists():
+                        if GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id,
+                                                        nickname=gift_order.nickname).exists():
                             self.message_user("%s重复提交，请查询无误后取消！" % obj.order_id, "error")
                             n -= 1
                             obj.mistakes = 2
@@ -174,80 +174,98 @@ class SubmitGiftAction(BaseActionView):
                             obj.mistakes = 3
                             obj.save()
                             continue
+                        special_city = ['仙桃市', '天门市', '神农架林区', '潜江市', '济源市', '五家渠市', '图木舒克市', '铁门关市', '石河子市', '阿拉尔市',
+                                        '嘉峪关市', '五指山市', '文昌市', '万宁市', '屯昌县', '三亚市', '三沙市', '琼中黎族苗族自治县', '琼海市',
+                                        '陵水黎族自治县', '临高县', '乐东黎族自治县', '东方市', '定安县', '儋州市', '澄迈县', '昌江黎族自治县', '保亭黎族苗族自治县',
+                                        '白沙黎族自治县', '中山市', '东莞市']
+                        # 京东地址处理逻辑
+                        if obj.platform == 0:
+                            _province_key = gift_order.address[:2]
+                            if _province_key in ['内蒙', '黑龙']:
+                                _province_key = gift_order.address[:3]
 
-                        _province_key = gift_order.address[:2]
-                        if _province_key in ['内蒙', '黑龙']:
-                            _province_key = gift_order.address[:3]
-
-                        if _province_key in ['北京', '天津', '上海', '重庆']:
-                            _city_key = _province_key + "市"
-                        elif "州" in gift_order.address:
-                            _city_key = gift_order.address[len(_province_key):len(_province_key) + 2]
-                        else:
-                            _city_key = gift_order.address[len(_province_key):len(_province_key)+3]
-
-                        _rt_city = CityInfo.objects.filter(city__contains=_city_key)
-                        if _rt_city.exists():
-                            gift_order.province = _rt_city[0].province.province
-                            gift_order.city = _rt_city[0].city
-                            special_city = ['仙桃市', '天门市', '神农架林区', '潜江市', '济源市', '五家渠市', '图木舒克市', '铁门关市', '石河子市', '阿拉尔市',
-                                            '嘉峪关市', '五指山市', '文昌市', '万宁市', '屯昌县', '三亚市', '三沙市', '琼中黎族苗族自治县', '琼海市',
-                                            '陵水黎族自治县', '临高县', '乐东黎族自治县', '东方市', '定安县', '儋州市', '澄迈县', '昌江黎族自治县', '保亭黎族苗族自治县',
-                                            '白沙黎族自治县', '中山市', '东莞市']
                             if _province_key in ['北京', '天津', '上海', '重庆']:
-                                _district_key = gift_order.address[len(_province_key):len(_province_key) + 2]
-                                _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
-                                                                            district__contains=_district_key)
-                                if _rt_districts.exists():
-                                    gift_order.district = _rt_districts[0].district
-                                else:
-                                    gift_order.district = '其他区'
+                                _city_key = _province_key + "市"
+                            elif "州" in gift_order.address:
+                                _city_key = gift_order.address[len(_province_key):len(_province_key) + 2]
+                            else:
+                                _city_key = gift_order.address[len(_province_key):len(_province_key) + 3]
 
-                            elif "州" in gift_order.city:
-                                tag_position = gift_order.address.index("州", 3)
-                                _district_key = gift_order.address[tag_position+1:tag_position+2]
-                                _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
-                                                                            district__contains=_district_key)
-                                if _rt_districts.exists():
-                                    gift_order.district = _rt_districts[0].district
-                                else:
-                                    tag_position = gift_order.address.index("市", 4)
-                                    _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                            _rt_city = CityInfo.objects.filter(city__contains=_city_key)
+                            if _rt_city.exists():
+                                gift_order.province = _rt_city[0].province.province
+                                gift_order.city = _rt_city[0].city
+
+                                if _province_key in ['北京', '天津', '上海', '重庆']:
+                                    _district_key = gift_order.address[len(_province_key):len(_province_key) + 2]
                                     _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
                                                                                 district__contains=_district_key)
                                     if _rt_districts.exists():
                                         gift_order.district = _rt_districts[0].district
                                     else:
                                         gift_order.district = '其他区'
-                            elif gift_order.city not in special_city:
-                                _district_key = gift_order.address[
-                                                len(_province_key) + len(_rt_city[0].city):len(_province_key) + len(
-                                                    _rt_city[0].city) + 2]
-                                _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0], district__contains=_district_key)
 
-                                if _rt_districts.exists():
-                                    gift_order.district = _rt_districts[0].district
+                                elif "州" in gift_order.city:
+                                    tag_position = gift_order.address.index("州", 3)
+                                    _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                                    _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                district__contains=_district_key)
+                                    if _rt_districts.exists():
+                                        gift_order.district = _rt_districts[0].district
+                                    else:
+                                        tag_position = gift_order.address.index("市", 4)
+                                        _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                                        _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                    district__contains=_district_key)
+                                        if _rt_districts.exists():
+                                            gift_order.district = _rt_districts[0].district
+                                        else:
+                                            gift_order.district = '其他区'
+                                elif gift_order.city not in special_city:
+                                    _district_key = gift_order.address[
+                                                    len(_province_key) + len(_rt_city[0].city):len(_province_key) + len(
+                                                        _rt_city[0].city) + 2]
+                                    _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                district__contains=_district_key)
+
+                                    if _rt_districts.exists():
+                                        gift_order.district = _rt_districts[0].district
+                                    else:
+                                        gift_order.district = '其他区'
+                            else:
+                                self.message_user("%s地址中二级城市出错，请修正后提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 4
+                                obj.save()
+                                continue
+                        # 淘宝地址处理逻辑
+                        elif obj.platform == 1:
+                            keywords = gift_order.address.split('，')
+                            if len(keywords) > 2:
+                                _city_key = keywords[1]
+                                _rt_city = CityInfo.objects.filter(city__contains=_city_key)
+                                if _rt_city.exists():
+                                    gift_order.province = _rt_city[0].province.province
+                                    gift_order.city = _rt_city[0].city
+                                    if _city_key not in special_city:
+                                        _district_key = keywords[2][:2]
+                                        _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0], district__contains=_district_key)
+                                        if _rt_districts.exists():
+                                            gift_order.district = _rt_districts[0].district
+                                        else:
+                                            gift_order.district = '其他区'
                                 else:
-                                    gift_order.district = '其他区'
-                        else:
-                            self.message_user("%s地址中二级城市出错，请修正后提交" % obj.order_id, "error")
-                            n -= 1
-                            obj.mistakes = 4
-                            obj.save()
-                            continue
-                        gift_order.nickname = str(obj.nickname).replace("客户ID", "").replace(" ", "").replace("：","").replace("顾客ID", "")
-                        if len(gift_order.nickname) == 0:
-                            self.message_user("%s客户网名错误" % obj.order_id, "error")
-                            n -= 1
-                            obj.mistakes = 5
-                            obj.save()
-                            continue
+                                    self.message_user("%s地址不是淘宝默认地址，请修正成淘宝默认格式后提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 4
+                                    obj.save()
+                                    continue
 
-                        gift_order.shop = '小狗京东自营'
-
-                        gift_order.buyer_remark = "京东自营%s客服%s赠送客户%s赠品%sx%s" % (str(obj.update_time)[:11], obj.servicer, gift_order.nickname, gift_order.goods_name, gift_order.quantity)
+                        gift_order.shop = obj.platform
+                        gift_order.buyer_remark = "%s %s客服%s赠送客户%s赠品%sx%s" % (PLATFORM[obj.platform], str(obj.update_time)[:11], obj.servicer, gift_order.nickname, gift_order.goods_name,gift_order.quantity)
                         gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
                         gift_order.submit_user = self.request.user.username
+                        gift_order.creator = self.request.user.username
                         try:
                             gift_order.save()
                         except Exception as e:
@@ -261,8 +279,11 @@ class SubmitGiftAction(BaseActionView):
                         obj.order_status = 2
                         obj.save()
 
-            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
-                              'success')
+                self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        else:
+            self.message_user("%s 没有递交订单的权限，只有特定的账号才能操作递交订单。" % self.request.user.username, "error")
+            return None
 
         return None
 
@@ -314,7 +335,7 @@ class SubmitAction(BaseActionView):
                         repeat_tag = True
                         for i in goods_list:
                             if goods_list.count(i) > 1:
-                                self.message_user("%s不要重复递交，不要重复递交！点一次等着就好！！！" % obj.order_id, "error")
+                                self.message_user("%s不要重复递交，不要重复递交！点一次等着就好！！！" % obj.nickname, "error")
                                 obj.order_status = 2
                                 obj.save()
                                 repeat_tag = False
@@ -341,6 +362,7 @@ class SubmitAction(BaseActionView):
                         import_order.order_id = obj.order_id
                         import_order.buyer_remark = obj.buyer_remark
                         import_order.cs_memoranda = obj.cs_memoranda
+                        import_order.creator = self.request.user.username
                         try:
                             import_order.save()
                         except Exception as e:
@@ -390,12 +412,12 @@ class SubmitImportAction(BaseActionView):
 
 # 对话信息导入和处理
 class GiftInTalkPenddingAdmin(object):
-    list_display = ['order_status', 'mistakes', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
-    list_filter = ['mistakes']
+    list_display = ['platform', 'order_status', 'mistakes', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information', 'creator']
+    list_filter = ['mistakes', 'create_time', 'creator']
     list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
-    search_fields = ['order_id', 'nickname']
+    search_fields = ['nickname', 'order_id']
 
-    ALLOWED_EXTENSIONS = ['log',]
+    ALLOWED_EXTENSIONS = ['log', 'text']
     actions = [SubmitGiftAction, RejectSelectedAction]
     import_data = True
 
@@ -403,39 +425,64 @@ class GiftInTalkPenddingAdmin(object):
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         _rt_talk_title = ['servicer', 'goods', 'nickname', 'order_id', 'cs_information']
         file = request.FILES.get('file', None)
-        if file:
-            file.open()
-            while True:
-                s = file.readline()
-                if s:
-                    s = s.decode("utf-8")
-                    if "·客服" in s:
-                        _rt_talk_data = re.findall(r"{(.*?)}", s)
-                        if len(_rt_talk_data) == 5:
-                            _rt_talk = GiftInTalkInfo()
-                            _rt_talk_dic = dict(zip(_rt_talk_title, _rt_talk_data))
-                            for k, v in _rt_talk_dic.items():
-                                if hasattr(_rt_talk, k):
-                                    setattr(_rt_talk, k, v)
-                            try:
-                                _rt_talk.save()
-                                result["successful"] += 1
-                            except Exception as e:
-                                result["false"] += 1
-                                result["error"].append(e)
-                        else:
-                            result['false'] += 1
-                            result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data)
-                    else:
-                        result["discard"] += 1
-                else:
-                    break
+        if request.user.platform:
+            if file:
+                file.open()
+                while True:
+                    s = file.readline()
+                    if s:
+                        if request.user.platform == 0:
+                            s = s.decode("utf-8")
+                        elif request.user.platform == 1:
+                            s = s.decode("GBK")
 
-            self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
-            if result['false'] > 0 or result['error']:
-                self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
-            if result['discard'] > 0:
-                self.message_user('丢弃无效对话数据%s条' % int(result['discard']), 'error')
+                        if "·客服" in s:
+                            _rt_talk_data = re.findall(r"{(.*?)}", s)
+                            _rt_talk = GiftInTalkInfo()
+                            _rt_talk.creator = request.user.username
+                            if len(_rt_talk_data) == 5:
+                                _rt_talk.platform = 0
+                                _rt_talk_dic = dict(zip(_rt_talk_title, _rt_talk_data))
+                                for k, v in _rt_talk_dic.items():
+                                    if hasattr(_rt_talk, k):
+                                        setattr(_rt_talk, k, v)
+                                try:
+                                    _rt_talk.save()
+                                    result["successful"] += 1
+                                except Exception as e:
+                                    result["false"] += 1
+                                    result["error"].append(e)
+                            elif len(_rt_talk_data) == 3:
+                                _rt_talk.platform = 1
+                                _rt_talk.servicer = _rt_talk_data[0]
+                                _rt_talk.goods = _rt_talk_data[1]
+                                cs_informations = _rt_talk_data[2].split('\r')
+                                if len(cs_informations) == 6:
+                                    _rt_talk.nickname = cs_informations[0].replace('收货信息买家ID\u3000：', '客户ID')
+                                    consignee = cs_informations[1].replace('收货人\u3000：', '收货信息')
+                                    address = cs_informations[2].replace('收货地址：', '')
+                                    mobile = cs_informations[4].replace('电\u3000\u3000话：', '')
+                                    information = [consignee, mobile, address]
+                                    _rt_talk.cs_information = ' '.join(information)
+                                    try:
+                                        _rt_talk.save()
+                                        result["successful"] += 1
+                                    except Exception as e:
+                                        result["false"] += 1
+                                        result["error"].append(e)
+                            else:
+                                result['false'] += 1
+                                result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data)
+                        else:
+                            result["discard"] += 1
+                    else:
+                        break
+
+                self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
+                if result['false'] > 0 or result['error']:
+                    self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
+                if result['discard'] > 0:
+                    self.message_user('丢弃无效对话数据%s条' % int(result['discard']), 'error')
         return super(GiftInTalkPenddingAdmin, self).post(request, *args, **kwargs)
 
     def save_models(self):
@@ -447,15 +494,15 @@ class GiftInTalkPenddingAdmin(object):
 
     def queryset(self):
         queryset = super(GiftInTalkPenddingAdmin, self).queryset()
-        queryset = queryset.filter(order_status=1, is_delete=0)
+        queryset = queryset.filter(order_status=1, is_delete=0, platform=self.request.user.platform)
         return queryset
 
 
 # 对话信息查询
 class GiftInTalkAdmin(object):
-    list_display = ['servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
-    list_filter = ['creator', 'update_time', 'order_status']
-    search_fields = ['order_id']
+    list_display = ['platform', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
+    list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status']
+    search_fields = ['nickname', 'order_id']
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -467,7 +514,7 @@ class GiftOrderPenddingAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['district']
+    list_filter = ['creator', 'update_time', 'shop', 'quantity', 'district']
     search_fields = ['nickname', 'mobile', 'order_id']
     actions = [SubmitAction, RejectSelectedAction]
 
@@ -499,6 +546,7 @@ class GiftImportPenddingAdmin(object):
     list_display = ['erp_order_id', 'shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
+    list_filter = ['creator', 'create_time', 'shop']
     search_fields = ['nickname', 'mobile', 'order_id']
     actions = [SubmitImportAction, RejectSelectedAction]
 

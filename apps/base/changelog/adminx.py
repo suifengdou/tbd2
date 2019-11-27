@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2019/7/5 8:59
+# @Time    : 2019/11/27 19:16
 # @Author  : Hann
-# @Site    : 
-# @File    : adminx.py.py
+# @Site    :
+# @File    : adminx.py
 # @Software: PyCharm
 
 from django.utils.safestring import mark_safe
@@ -10,10 +10,10 @@ from django.template.response import TemplateResponse
 import xadmin
 from xadmin.layout import Fieldset
 
-from .models import EditionStatement
+from .models import ChangeLogInfo
 
 
-class EditionStatementAdmin(object):
+class ChangeLogInfoAdmin(object):
     list_display = ['version_number', 'description']
 
     form_layout = [
@@ -29,7 +29,6 @@ class EditionStatementAdmin(object):
         obj.description = obj.description.replace('\r\n', '<br>')
         obj.creator = request.user.username
         obj.save()
-
         super().save_models()
 
     def results(self):
@@ -40,4 +39,4 @@ class EditionStatementAdmin(object):
         return results
 
 
-xadmin.site.register(EditionStatement, EditionStatementAdmin)
+xadmin.site.register(ChangeLogInfo, ChangeLogInfoAdmin)

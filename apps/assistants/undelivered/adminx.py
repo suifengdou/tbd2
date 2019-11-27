@@ -441,9 +441,11 @@ class RefundOrderInfoAdmin(object):
                     'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
                     'creator']
     list_filter = ['create_time', 'payment_time', 'shop_name', 'status']
+    search_fields = ['order_id',  'nickname']
     list_editable = ['status', 'memorandum']
     ordering = ['payment_time']
     exclude = ['creator']
+    actions = [SubmitAction]
 
     def queryset(self):
         qs = OriorderInfo.objects.all().filter(status=3)

@@ -491,7 +491,7 @@ class CSSubmitAction(BaseActionView):
 # 逆向工单创建
 class WorkOrderAppRevAdmin(object):
     list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'creator', 'update_time']
-    list_filter = ['creator']
+    list_filter = ['creator', 'company', 'category']
     search_fields = ['express_id']
     form_layout = [
         Fieldset('必填信息',
@@ -668,8 +668,8 @@ class WorkOrderAppRevAdmin(object):
 
 # 正向工单创建
 class WorkOrderAppAdmin(object):
-    list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'servicer', 'update_time']
-    list_filter = ['servicer']
+    list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'servicer', 'creator', 'update_time']
+    list_filter = ['servicer', 'creator', 'company', 'category']
     search_fields = ['express_id']
     form_layout = [
         Fieldset('必填信息',
@@ -896,6 +896,7 @@ class WorkOrderHandleStoAdmin(object):
                     else:
                         self.delivery_ids = delivery_ids
                         self.queryset()
+
         return super(WorkOrderHandleStoAdmin, self).post(request, *args, **kwargs)
 
     def queryset(self):
@@ -907,6 +908,7 @@ class WorkOrderHandleStoAdmin(object):
         else:
             queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
         return queryset
+
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -960,13 +962,12 @@ class WorkOrderMineAdmin(object):
 
 class WorkOrderAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
-                    'express_id', 'information', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
+                    'express_id', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
     list_filter = ['creator', 'submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category', 'order_status', 'company', 'servicer', 'handler']
     search_fields = ['express_id', 'return_express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'feedback', 'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
-
 
     def has_add_permission(self):
         # 禁用添加按钮
