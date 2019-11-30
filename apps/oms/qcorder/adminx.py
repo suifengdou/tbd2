@@ -139,13 +139,16 @@ class RejectSelectedQCAction(BaseActionView):
                     obj.qc_order_id = "DD" + str(datetime.datetime.now()).replace("-", "").replace(" ", "").replace(":", "").replace(".", "")[:14]
                     obj.order_status -= 1
                     obj.save()
+                    self.log('change', '取消了质检单', obj)
                     self.message_user("%s 取消成功，原始质检单驳回到待递交界面" % obj.qc_order_id, "success")
                 elif obj.order_status == 2:
-                    self.message_user("%s 已递交完成，请去入库明细表中驳回。" % obj.qc_order_id, "success")
+                    self.message_user("%s 已递交完成，请去入库明细表中驳回。" % obj.qc_order_id, "error")
+                    self.log('change', '取消质检单，但是失败了——_——', obj)
                     n -= 1
                 else:
-                    self.message_user("%s 内部错误，请联系管理员。" % obj.qc_order_id, "success")
+                    self.message_user("%s 内部错误，请联系管理员。" % obj.qc_order_id, "error")
                     n -= 1
+                    self.log('change', '遇到一个内部错误，虽然操作失败了——_——，但是你发现了问题', obj)
             self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None

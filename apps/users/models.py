@@ -17,11 +17,14 @@ class UserProfile(AbstractUser, BaseModel):
         (1, '管理'),
     )
     PLATFORM = (
-        (0, '京东'),
+        (0, '无'),
         (1, '淘系'),
+        (2, '京东'),
+        (3, '官方商城'),
+        (4, '售后'),
     )
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
-    platform = models.SmallIntegerField(choices=PLATFORM, null=True, blank=True, verbose_name='平台')
+    platform = models.SmallIntegerField(choices=PLATFORM, default=0, verbose_name='平台')
     company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属公司')
 
     class Meta:

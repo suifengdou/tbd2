@@ -28,8 +28,11 @@ class GiftInTalkInfo(BaseModel):
 
     )
     PLATFORM = (
-        (0, '京东'),
+        (0, '无'),
         (1, '淘系'),
+        (2, '京东'),
+        (3, '官方商城'),
+        (4, '售后'),
     )
 
     cs_information = models.CharField(max_length=300, verbose_name='收件信息')
@@ -66,8 +69,9 @@ class GiftOrderInfo(BaseModel):
         (2, '已完成'),
     )
     SHOP = (
-        (0, '小狗京东自营'),
+        (0, '无'),
         (1, '小狗电器旗舰店'),
+        (2, '小狗京东自营'),
     )
 
     shop = models.SmallIntegerField(choices=SHOP, verbose_name='店铺名称')
@@ -123,8 +127,9 @@ class GiftImportInfo(BaseModel):
         (2, '已完成'),
     )
     SHOP = (
-        (0, '小狗京东自营'),
+        (0, '无'),
         (1, '小狗电器旗舰店'),
+        (2, '小狗京东自营'),
     )
 
     shop = models.SmallIntegerField(choices=SHOP, verbose_name='店铺名称')

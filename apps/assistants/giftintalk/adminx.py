@@ -116,7 +116,7 @@ class SubmitGiftAction(BaseActionView):
         if not self.has_change_permission():
             raise PermissionDenied
         if self.request.user.username in ['王贺宽', '张国帅']:
-            PLATFORM = {0: '京东', 1: '淘系'}
+            PLATFORM = {2: '京东', 1: '淘系'}
             if n:
                 for obj in queryset:
                     goods_group = self.goods_split(obj.goods)
@@ -179,7 +179,7 @@ class SubmitGiftAction(BaseActionView):
                                         '陵水黎族自治县', '临高县', '乐东黎族自治县', '东方市', '定安县', '儋州市', '澄迈县', '昌江黎族自治县', '保亭黎族苗族自治县',
                                         '白沙黎族自治县', '中山市', '东莞市']
                         # 京东地址处理逻辑
-                        if obj.platform == 0:
+                        if obj.platform == 2:
                             _province_key = gift_order.address[:2]
                             if _province_key in ['内蒙', '黑龙']:
                                 _province_key = gift_order.address[:3]
@@ -417,7 +417,7 @@ class GiftInTalkPenddingAdmin(object):
     list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
     search_fields = ['nickname', 'order_id']
 
-    ALLOWED_EXTENSIONS = ['log', 'text']
+    ALLOWED_EXTENSIONS = ['log', 'txt']
     actions = [SubmitGiftAction, RejectSelectedAction]
     import_data = True
 
@@ -431,7 +431,7 @@ class GiftInTalkPenddingAdmin(object):
                 while True:
                     s = file.readline()
                     if s:
-                        if request.user.platform == 0:
+                        if request.user.platform == 2:
                             s = s.decode("utf-8")
                         elif request.user.platform == 1:
                             s = s.decode("GBK")
@@ -441,7 +441,7 @@ class GiftInTalkPenddingAdmin(object):
                             _rt_talk = GiftInTalkInfo()
                             _rt_talk.creator = request.user.username
                             if len(_rt_talk_data) == 5:
-                                _rt_talk.platform = 0
+                                _rt_talk.platform = 2
                                 _rt_talk_dic = dict(zip(_rt_talk_title, _rt_talk_data))
                                 for k, v in _rt_talk_dic.items():
                                     if hasattr(_rt_talk, k):
@@ -457,7 +457,7 @@ class GiftInTalkPenddingAdmin(object):
                                 _rt_talk.servicer = _rt_talk_data[0]
                                 _rt_talk.goods = _rt_talk_data[1]
                                 cs_informations = _rt_talk_data[2].split('\r')
-                                if len(cs_informations) == 6:
+                                if len(cs_informations) in [5, 6]:
                                     _rt_talk.nickname = cs_informations[0].replace('收货信息买家ID\u3000：', '客户ID')
                                     consignee = cs_informations[1].replace('收货人\u3000：', '收货信息')
                                     address = cs_informations[2].replace('收货地址：', '')
@@ -470,6 +470,9 @@ class GiftInTalkPenddingAdmin(object):
                                     except Exception as e:
                                         result["false"] += 1
                                         result["error"].append(e)
+                                else:
+                                    result['false'] += 1
+                                    result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data)
                             else:
                                 result['false'] += 1
                                 result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data)
