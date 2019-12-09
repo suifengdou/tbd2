@@ -41,7 +41,7 @@ class QCOriInfo(BaseModel):
     )
 
     batch_num = models.ForeignKey(ManuOrderInfo, on_delete=models.CASCADE, verbose_name='批次号码')
-    order_status = models.SmallIntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+
     quantity = models.IntegerField(verbose_name='验货数量')
     result = models.SmallIntegerField(choices=RESULT, default=0, verbose_name='验货结果')
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='验货类型')
@@ -52,8 +52,10 @@ class QCOriInfo(BaseModel):
     c_flaw = models.IntegerField(verbose_name='C类缺陷')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
     qc_order_id = models.CharField(null=True, max_length=30, verbose_name='质检单号')
-    error_info = models.SmallIntegerField(choices=ERROR_LIST, default=0, verbose_name='错误原因')
     qc_time = models.DateTimeField(default=timezone.now, verbose_name='质检时间')
+
+    error_tag = models.SmallIntegerField(choices=ERROR_LIST, default=0, verbose_name='错误原因')
+    order_status = models.SmallIntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
 
     class Meta:
         verbose_name = 'OMS-QC-原始质检单明细表'
@@ -89,12 +91,17 @@ class QCInfo(BaseModel):
         (1, '复检'),
         (2, '召回'),
     )
+    ERROR_LIST = (
+        (0, '正常'),
+        (1, '仓库错误'),
+        (2, '其他错误'),
+    )
 
     batch_num = models.ForeignKey(ManuOrderInfo, on_delete=models.CASCADE, verbose_name='批次号码')
     warehouse = models.ForeignKey(WarehouseInfo, on_delete=models.CASCADE, verbose_name='仓库名称')
     qc_order_id = models.CharField(unique=True, max_length=30, verbose_name='质检单号')
     goods_name = models.CharField(max_length=60, verbose_name='货品名称')
-    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+
     manufactory = models.CharField(max_length=60, verbose_name='工厂名称')
     goods_id = models.CharField(max_length=30, verbose_name='货品编码')
 
@@ -111,6 +118,11 @@ class QCInfo(BaseModel):
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
     qc_time = models.DateTimeField(verbose_name='验货时间')
 
+    sn_start = models.CharField(max_length=60, verbose_name='产品序列号首号')
+    sn_end = models.CharField(max_length=60, verbose_name='产品序列号尾号')
+
+    order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
+    error_tag = models.SmallIntegerField(choices=ERROR_LIST, default=0, verbose_name='错误原因')
 
     class Meta:
         verbose_name = 'OMS-QC-质检单明细表'
@@ -124,3 +136,4 @@ class QCSubmitInfo(QCInfo):
         verbose_name = 'OMS-QC-未递交质检单明细表'
         verbose_name_plural = verbose_name
         proxy = True
+

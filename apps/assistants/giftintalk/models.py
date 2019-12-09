@@ -19,8 +19,8 @@ class GiftInTalkInfo(BaseModel):
     )
     MISTAKE_LIST = (
         (0, '货品名称错误'),
-        (1, '订单号错误'),
-        (2, '订单重复'),
+        (1, '14天内重复订单'),
+        (2, '14天外重复订单'),
         (3, '收货人，电话，地址不全'),
         (4, '地址中，二级市出错，请使用京东系统信息'),
         (5, '网名错误'),
@@ -34,16 +34,22 @@ class GiftInTalkInfo(BaseModel):
         (3, '官方商城'),
         (4, '售后'),
     )
+    ORDER_CATEGORY = (
+        (1, '质量问题'),
+        (2, '开箱即损'),
+        (3, '礼品赠品'),
+    )
 
     cs_information = models.CharField(max_length=300, verbose_name='收件信息')
     goods = models.CharField(max_length=50, verbose_name='赠品信息')
     servicer = models.CharField(max_length=50, verbose_name='客服')
-    nickname = models.CharField(max_length=50, verbose_name='用户网名')
+    nickname = models.CharField(max_length=50, verbose_name='用户网名', db_index=True)
     order_id = models.CharField(max_length=50, null=True, blank=True, verbose_name='订单号')
     mistakes = models.IntegerField(choices=MISTAKE_LIST, null=True, blank=True, verbose_name='错误信息')
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='赠品单状态')
     platform = models.SmallIntegerField(choices=PLATFORM, default=0, verbose_name='平台')
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='操作人')
+    order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
 
     class Meta:
         verbose_name = 'ASS-GT-赠品订单提取查询'
@@ -62,6 +68,14 @@ class GiftInTalkPendding(GiftInTalkInfo):
         proxy = True
 
 
+class GiftInTalkRepeat(GiftInTalkInfo):
+
+    class Meta:
+        verbose_name = 'ASS-GT-赠品订单提取重复订单罗列'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
 class GiftOrderInfo(BaseModel):
     ORDERSTATUS = (
         (0, '已取消'),
@@ -72,6 +86,11 @@ class GiftOrderInfo(BaseModel):
         (0, '无'),
         (1, '小狗电器旗舰店'),
         (2, '小狗京东自营'),
+    )
+    ORDER_CATEGORY = (
+        (1, '质量问题'),
+        (2, '开箱即损'),
+        (3, '礼品赠品'),
     )
 
     shop = models.SmallIntegerField(choices=SHOP, verbose_name='店铺名称')
@@ -102,6 +121,7 @@ class GiftOrderInfo(BaseModel):
     order_id = models.CharField(null=True, blank=True, max_length=50, verbose_name='订单号')
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='赠品单状态')
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='处理人')
+    order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
 
     class Meta:
         verbose_name = 'ASS-GT-赠品预订单查询'

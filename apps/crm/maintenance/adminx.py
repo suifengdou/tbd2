@@ -532,7 +532,7 @@ class MaintenanceCalcInfoAdmin(object):
 
 class MaintenanceJudgeInfoAdmin(object):
     list_display = ['finish_date', 'repeat_tag', 'maintenance_order_id', 'machine_sn', 'appraisal',
-                    'fault_type', 'completer', 'maintenance_type', 'shop']
+                    'fault_type', 'completer', 'maintenance_type', 'shop', 'goods_type']
 
     search_fields = ['maintenance_order_id', 'sender_mobile', 'machine_sn']
     list_filter = ['warehouse', 'fault_type', 'appraisal', 'finish_time']

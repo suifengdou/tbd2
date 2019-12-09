@@ -455,6 +455,7 @@ class PassedAction(BaseActionView):
 
         return None
 
+
 # 客服工单提交
 class CSSubmitAction(BaseActionView):
         action_name = "submit_wo"
@@ -492,6 +493,7 @@ class CSSubmitAction(BaseActionView):
 class WorkOrderAppRevAdmin(object):
     list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'creator', 'update_time']
     list_filter = ['creator', 'company', 'category']
+    list_editable = ['feedback', 'information']
     search_fields = ['express_id']
     form_layout = [
         Fieldset('必填信息',
@@ -671,6 +673,7 @@ class WorkOrderAppAdmin(object):
     list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'servicer', 'creator', 'update_time']
     list_filter = ['servicer', 'creator', 'company', 'category']
     search_fields = ['express_id']
+    list_editable = ['feedback', 'information']
     form_layout = [
         Fieldset('必填信息',
                  'express_id', 'information', 'category', 'company'),
@@ -885,7 +888,7 @@ class WorkOrderHandleStoAdmin(object):
     delivery_ids = []
 
     def post(self, request, *args, **kwargs):
-        delivery_ids = request.POST.get('delivery_ids', None)
+        delivery_ids = request.POST.get('ids', None)
         if delivery_ids is not None:
             if " " in delivery_ids:
                 delivery_ids = delivery_ids.split(" ")

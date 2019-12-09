@@ -13,6 +13,7 @@ from django.db.models import Q, Sum, Count, Avg
 from django.utils.six import moves
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 import pandas as pd
+import numpy as np
 
 from apps.crm.maintenance.models import MaintenanceInfo, MaintenanceHandlingInfo, MaintenanceSummary
 from .forms import UploadFileForm
@@ -415,7 +416,9 @@ class MaintenanceOverview(LoginRequiredMixin, View):
             else:
                 rt_summary_ratio_repeat_f.append(float('%.2f' % (date_data.repeat_found / date_data.order_count * 100)))
                 rt_summary_ratio_repeat_t.append(float('%.2f' % (date_data.repeat_today / date_data.order_count * 100)))
-
+        # 计算周期内的平均值
+        average_summary = int(np.mean(rt_summary_quantity))
+        rt_summary_average = [average_summary] * len(rt_summary_quantity)
         # 把维修数量做到汇总字典中
         m_total["rt_summary_date"] = rt_summary_date
         m_total["rt_summary_quantity"] = rt_summary_quantity
@@ -423,6 +426,7 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         m_total["rt_summary_repeat_today"] = rt_summary_repeat_today
         m_total["rt_summary_ratio_repeat_f"] = rt_summary_ratio_repeat_f
         m_total["rt_summary_ratio_repeat_t"] = rt_summary_ratio_repeat_t
+        m_total["rt_summary_average"] = rt_summary_average
 
         # 维修型号下钻图
         total_num = maintenance_quantity.count()
@@ -590,14 +594,15 @@ class MaintenanceOverview(LoginRequiredMixin, View):
         for repairer_name in repairers_name:
             repairer_repeat_name_num.append(repairer_repeat_dic.get(repairer_name, 0))
 
+        repairer_repeat_ratio = map(lambda a, b: 0 if a == 0 else a/b*100, repairer_repeat_name_num, repairer_work_num)
+        repairer_repeat_ratio = list(repairer_repeat_ratio)
         m_total["repairer_repeat_total"] = repairer_repeat_total
         m_total["repairer_repeat_goods_total"] = repairer_repeat_goods_total
 
         m_total["repairers_name"] = repairers_name
         m_total["repairer_work_num"] = repairer_work_num
         m_total["repairer_repeat_name_num"] = repairer_repeat_name_num
-
-
+        m_total["repairer_repeat_ratio"] = repairer_repeat_ratio
 
         return render(request, "crm/maintenance/overview.html", {
             "m_total": m_total,

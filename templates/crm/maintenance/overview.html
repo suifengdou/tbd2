@@ -433,6 +433,12 @@
                         color: Highcharts.getOptions().colors[7]
                     }
                 },
+                labels: {
+                    format: '{value} 台',
+                    style: {
+                        color: Highcharts.getOptions().colors[8]
+                    }
+                },
                 opposite: true
             }],
             plotOptions: {
@@ -473,6 +479,15 @@
                 yAxis: 1,
                 color: Highcharts.getOptions().colors[5],
                 data: {{ m_total.rt_summary_repeat_today | safe }},
+                tooltip: {
+                    valueSuffix: ' 台'
+                }
+            }, {
+                name: '期间内平均维修量',
+                type: 'spline',
+                yAxis: 1,
+                color: Highcharts.getOptions().colors[8],
+                data: {{ m_total.rt_summary_average | safe }},
                 tooltip: {
                     valueSuffix: ' 台'
                 }
@@ -698,6 +713,7 @@
         });
 
         // 期间维修数量和对应的二次维修量
+
         var chart = Highcharts.chart('repairer_num', {
             credits: {
                         enabled: false
@@ -784,8 +800,18 @@
                 tooltip: {
                     valueSuffix: ' 台'
                 }
+            },{
+                name: '期间内二次维修率',
+                type: 'spline',
+                yAxis: 1,
+                color: Highcharts.getOptions().colors[5],
+                data: {{ m_total.repairer_repeat_ratio | safe }},
+                tooltip: {
+                    valueSuffix: ' %'
+                }
             }]
         });
+
 
         // 二次维修维修员下钻型号图
         Highcharts.chart('m_repairer_repeat_total', {

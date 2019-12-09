@@ -261,6 +261,8 @@ class PendingOrderInfoAdmin(object):
     exclude = ['creator']
     actions = [SubmitAction, ModifySpecialAction, DelSelectedAction, TagAction, ]
     import_data = True
+    batch_data = True
+    order_ids = []
 
     def post(self, request, *args, **kwargs):
         creator = request.user.username
@@ -272,6 +274,17 @@ class PendingOrderInfoAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (result['false'],result['error']), 'warning')
             if result['repeated'] > 0:
                 self.message_user('包含更新重复数据%s条' % result['repeated'], 'error')
+        order_ids = request.POST.get('ids', None)
+        if order_ids:
+            if " " in order_ids:
+                order_ids = order_ids.split(" ")
+                for i in order_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(order_ids), 'error')
+                        break
+                    else:
+                        self.order_ids = order_ids
+                        self.queryset()
         return super(PendingOrderInfoAdmin, self).post(request, args, kwargs)
 
     def handle_upload_file(self, _file, creator):
@@ -428,8 +441,12 @@ class PendingOrderInfoAdmin(object):
         return report_dic
 
     def queryset(self):
-        qs = OriorderInfo.objects.all().filter(status=1)
-        return qs
+        queryset = super(PendingOrderInfoAdmin, self).queryset()
+        if self.order_ids:
+            queryset = queryset.filter(status=1, order_id__in=self.order_ids)
+        else:
+            queryset = queryset.filter(status=1)
+        return queryset
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -446,10 +463,30 @@ class RefundOrderInfoAdmin(object):
     ordering = ['payment_time']
     exclude = ['creator']
     actions = [SubmitAction]
+    batch_data = True
+    order_ids = []
+
+    def post(self, request, *args, **kwargs):
+        order_ids = request.POST.get('ids', None)
+        if order_ids:
+            if " " in order_ids:
+                order_ids = order_ids.split(" ")
+                for i in order_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(order_ids), 'error')
+                        break
+                    else:
+                        self.order_ids = order_ids
+                        self.queryset()
+        return super(RefundOrderInfoAdmin, self).post(request, *args, **kwargs)
 
     def queryset(self):
-        qs = OriorderInfo.objects.all().filter(status=3)
-        return qs
+        queryset = super(RefundOrderInfoAdmin, self).queryset()
+        if self.order_ids:
+            queryset = queryset.filter(status=3, order_id__in=self.order_ids)
+        else:
+            queryset = queryset.filter(status=3)
+        return queryset
 
     def has_add_permission(self):
         # 禁用添加按钮

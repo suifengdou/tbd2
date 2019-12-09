@@ -22,7 +22,7 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
-from .models import GiftInTalkPendding, GiftInTalkInfo, GiftOrderPendding, GiftOrderInfo, GiftImportInfo, GiftImportPendding
+from .models import GiftInTalkPendding, GiftInTalkInfo, GiftOrderPendding, GiftOrderInfo, GiftImportInfo, GiftImportPendding, GiftInTalkRepeat
 from apps.base.goods.models import GoodsInfo
 from apps.utils.geography.models import CityInfo, DistrictInfo
 
@@ -148,13 +148,20 @@ class SubmitGiftAction(BaseActionView):
                             continue
 
                         # 用订单号和货品确认递交是否是唯一
-                        if GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id,
-                                                        nickname=gift_order.nickname).exists():
-                            self.message_user("%s重复提交，请查询无误后取消！" % obj.order_id, "error")
-                            n -= 1
-                            obj.mistakes = 2
-                            obj.save()
-                            continue
+                        _gift_checked = GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id, nickname=gift_order.nickname)
+                        if _gift_checked.exists():
+                            delta_date = (obj.create_time - _gift_checked[0].create_time).days
+                            if int(delta_date) > 14:
+                                n -= 1
+                                obj.mistakes = 2
+                                obj.save()
+                                continue
+                            else:
+                                n -= 1
+                                obj.mistakes = 1
+                                obj.save()
+                                continue
+
                         cs_info = str(obj.cs_information).replace("收货信息", "").replace("：", "").split(" ")
                         if len(cs_info) == 3:
                             gift_order.receiver = cs_info[0]
@@ -260,7 +267,7 @@ class SubmitGiftAction(BaseActionView):
                                     obj.mistakes = 4
                                     obj.save()
                                     continue
-
+                        gift_order.order_category = obj.order_category
                         gift_order.shop = obj.platform
                         gift_order.buyer_remark = "%s %s客服%s赠送客户%s赠品%sx%s" % (PLATFORM[obj.platform], str(obj.update_time)[:11], obj.servicer, gift_order.nickname, gift_order.goods_name,gift_order.quantity)
                         gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
@@ -412,8 +419,8 @@ class SubmitImportAction(BaseActionView):
 
 # 对话信息导入和处理
 class GiftInTalkPenddingAdmin(object):
-    list_display = ['platform', 'order_status', 'mistakes', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information', 'creator']
-    list_filter = ['mistakes', 'create_time', 'creator']
+    list_display = ['platform',  'order_status', 'mistakes', 'cs_information', 'goods', 'nickname', 'order_category', 'order_id', 'servicer', 'creator']
+    list_filter = ['mistakes', 'create_time', 'creator', 'order_category']
     list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
     search_fields = ['nickname', 'order_id']
 
@@ -424,6 +431,7 @@ class GiftInTalkPenddingAdmin(object):
     def post(self, request, *args, **kwargs):
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         _rt_talk_title = ['servicer', 'goods', 'nickname', 'order_id', 'cs_information']
+        _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
         file = request.FILES.get('file', None)
         if request.user.platform:
             if file:
@@ -452,16 +460,29 @@ class GiftInTalkPenddingAdmin(object):
                                 except Exception as e:
                                     result["false"] += 1
                                     result["error"].append(e)
-                            elif len(_rt_talk_data) == 3:
+                            elif len(_rt_talk_data) == 6:
+                                _rt_talk.platform = 2
+                                _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                                for k, v in _rt_talk_dic.items():
+                                    if hasattr(_rt_talk, k):
+                                        setattr(_rt_talk, k, v)
+                                try:
+                                    _rt_talk.save()
+                                    result["successful"] += 1
+                                except Exception as e:
+                                    result["false"] += 1
+                                    result["error"].append(e)
+                            elif len(_rt_talk_data) == 4:
                                 _rt_talk.platform = 1
-                                _rt_talk.servicer = _rt_talk_data[0]
-                                _rt_talk.goods = _rt_talk_data[1]
-                                cs_informations = _rt_talk_data[2].split('\r')
+                                _rt_talk.order_category = _rt_talk_data[0]
+                                _rt_talk.servicer = _rt_talk_data[1]
+                                _rt_talk.goods = _rt_talk_data[2]
+                                cs_informations = _rt_talk_data[3].split('\r')
                                 if len(cs_informations) in [5, 6]:
-                                    _rt_talk.nickname = cs_informations[0].replace('收货信息买家ID\u3000：', '客户ID')
-                                    consignee = cs_informations[1].replace('收货人\u3000：', '收货信息')
-                                    address = cs_informations[2].replace('收货地址：', '')
-                                    mobile = cs_informations[4].replace('电\u3000\u3000话：', '')
+                                    _rt_talk.nickname = cs_informations[1].replace('收货信息买家ID\u3000：', '客户ID')
+                                    consignee = cs_informations[2].replace('收货人\u3000：', '收货信息')
+                                    address = cs_informations[3].replace('收货地址：', '')
+                                    mobile = cs_informations[5].replace('电\u3000\u3000话：', '')
                                     information = [consignee, mobile, address]
                                     _rt_talk.cs_information = ' '.join(information)
                                     try:
@@ -501,10 +522,29 @@ class GiftInTalkPenddingAdmin(object):
         return queryset
 
 
+class GiftInTalkRepeatAdmin(object):
+    list_display = ['order_status', 'nickname', 'cs_information', 'goods', 'order_id', 'mistakes', 'platform',
+                    'order_category', 'servicer', 'creator']
+    list_filter = ['mistakes', 'create_time', 'creator', 'order_category']
+    list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
+    search_fields = ['nickname', 'order_id']
+
+    actions = [SubmitGiftAction, RejectSelectedAction]
+
+    def queryset(self):
+        queryset = super(GiftInTalkRepeatAdmin, self).queryset()
+        repeat_nicks = queryset.filter(mistakes__in=[1, 2], order_status=1).values('nickname')
+        nicks_lis = []
+        for i in repeat_nicks:
+            nicks_lis.append(i['nickname'])
+        queryset = queryset.filter(nickname__in=nicks_lis, order_status__in=[1, 2], platform=self.request.user.platform).order_by("-nickname")
+
+        return queryset
+
 # 对话信息查询
 class GiftInTalkAdmin(object):
-    list_display = ['platform', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
-    list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status']
+    list_display = ['platform', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
+    list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status', 'order_category']
     search_fields = ['nickname', 'order_id']
 
     def has_add_permission(self):
@@ -517,7 +557,7 @@ class GiftOrderPenddingAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['creator', 'update_time', 'shop', 'quantity', 'district']
+    list_filter = ['creator', 'update_time', 'shop', 'quantity', 'district', 'order_category']
     search_fields = ['nickname', 'mobile', 'order_id']
     actions = [SubmitAction, RejectSelectedAction]
 
@@ -536,7 +576,7 @@ class GiftOrderInfoAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['creator', 'update_time', 'order_status', 'city', 'district']
+    list_filter = ['creator', 'update_time', 'order_status', 'city', 'district', 'order_category']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):
@@ -577,6 +617,7 @@ class GiftImportAdmin(object):
 
 
 xadmin.site.register(GiftInTalkPendding, GiftInTalkPenddingAdmin)
+xadmin.site.register(GiftInTalkRepeat, GiftInTalkRepeatAdmin)
 xadmin.site.register(GiftInTalkInfo, GiftInTalkAdmin)
 xadmin.site.register(GiftOrderPendding, GiftOrderPenddingAdmin)
 xadmin.site.register(GiftOrderInfo, GiftOrderInfoAdmin)
