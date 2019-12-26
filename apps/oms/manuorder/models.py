@@ -9,13 +9,8 @@ from django.db import models
 import django.utils.timezone as timezone
 from django.db.models import Sum, Avg, Min, Max
 
-
-
 from db.base_model import BaseModel
-from apps.wms.stockin.models import StockInInfo
 from apps.base.company.models import ManuInfo
-
-
 
 
 class ManuOrderInfo(BaseModel):
@@ -47,7 +42,7 @@ class ManuOrderInfo(BaseModel):
         return self.batch_num
 
     def completednum(self):
-        completed_num = StockInInfo.objects.filter(batch_num=self.batch_num, order_status=2).aggregate(Sum("quantity"))["quantity__sum"]
+        completed_num = self.stockininfo_set.all().filter(order_status=2).aggregate(Sum("quantity"))["quantity__sum"]
         if completed_num:
             if self.order_status == 2:
                 self.order_status = 3
@@ -62,14 +57,14 @@ class ManuOrderInfo(BaseModel):
     completednum.short_description = '已完成'
 
     def processingnum(self):
-        processing_num = self.qcoriinfo_set.all().filter(order_status=1, result=0).aggregate(Sum("quantity"))["quantity__sum"]
+        processing_num = self.qcoriinfo_set.all().filter(order_status=2, result=1).aggregate(Sum("quantity"))["quantity__sum"]
         if not processing_num:
             processing_num = 0
         return processing_num
-    processingnum.short_description = '验货中'
+    processingnum.short_description = '已验货'
 
     def failurenum(self):
-        failure_num = self.qcoriinfo_set.all().filter(order_status__in=[1, 2], result=1).aggregate(Sum("quantity"))["quantity__sum"]
+        failure_num = self.qcoriinfo_set.all().filter(order_status__in=[1, 2], result=0).aggregate(Sum("quantity"))["quantity__sum"]
         if failure_num is None:
             failure_num = 0
         return failure_num
@@ -81,7 +76,7 @@ class ManuOrderInfo(BaseModel):
     penddingnum.short_description = '待生产'
 
     def intransitnum(self):
-        intransit_num = StockInInfo.objects.filter(batch_num=self.batch_num, order_status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
+        intransit_num = self.stockininfo_set.all().filter(batch_num=self.batch_num, order_status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
         if not intransit_num:
             intransit_num = 0
         return intransit_num

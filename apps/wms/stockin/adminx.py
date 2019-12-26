@@ -142,18 +142,23 @@ class SubmitAction(BaseActionView):
                             queryset.filter(stockin_id=obj.stockin_id).update(order_status=2)
                         except Exception as e:
                             self.message_user("%s 入库单出现错误，错误原因：%s" % (obj.stockin_id, e), 'error')
+                            n -= 1
+                            obj.error_tag = 1
+                            obj.save()
 
                     else:
                         stock_order = StockInfo()
                         stock_order.goods_name = obj.goods_name
                         stock_order.goods_id = obj.goods_id
-                        stock_order.goods_name = obj.goods_name
                         goods_attribute = GoodsInfo.objects.filter(goods_id=obj.goods_id)
                         if goods_attribute:
                             stock_order.category = goods_attribute[0].goods_attribute
                             stock_order.size = goods_attribute[0].size
                         else:
                             self.message_user("%s 入库单出现货品错误，请查看货品是否正确" % obj.stockin_id, 'error')
+                            n -= 1
+                            obj.error_tag = 2
+                            obj.save()
                             continue
                         stock_order.warehouse = obj.warehouse
                         stock_order.quantity = obj.quantity

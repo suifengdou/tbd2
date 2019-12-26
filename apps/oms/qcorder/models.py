@@ -23,8 +23,8 @@ class QCOriInfo(BaseModel):
         (3, '异常'),
     )
     RESULT = (
-        (0, '合格'),
-        (1, '不合格'),
+        (0, '不合格'),
+        (1, '合格'),
     )
     CATEGORY = (
         (0, '首检'),
@@ -53,7 +53,7 @@ class QCOriInfo(BaseModel):
     c_flaw = models.IntegerField(verbose_name='C类缺陷')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
     qc_order_id = models.CharField(null=True, max_length=30, verbose_name='质检单号')
-    qc_time = models.DateTimeField(default=timezone.now, verbose_name='质检时间')
+    qc_date = models.DateTimeField(default=timezone.now, verbose_name='质检时间')
 
     error_tag = models.SmallIntegerField(choices=ERROR_LIST, default=0, verbose_name='错误原因')
     order_status = models.SmallIntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
@@ -93,8 +93,8 @@ class QCInfo(BaseModel):
         (4, '异常'),
     )
     RESULT = (
-        (0, '合格'),
-        (1, '不合格'),
+        (0, '不合格'),
+        (1, '合格'),
     )
     CATEGORY = (
         (0, '首检'),
@@ -105,6 +105,7 @@ class QCInfo(BaseModel):
         (0, '正常'),
         (1, '仓库错误'),
         (2, '其他错误'),
+        (3, '重复导入'),
     )
 
     batch_num = models.ForeignKey(ManuOrderInfo, on_delete=models.CASCADE, verbose_name='批次号码')
@@ -126,7 +127,7 @@ class QCInfo(BaseModel):
     b2_flaw = models.IntegerField(verbose_name='B2类缺陷')
     c_flaw = models.IntegerField(verbose_name='C类缺陷')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
-    qc_time = models.DateTimeField(verbose_name='验货时间')
+    qc_date = models.DateTimeField(verbose_name='验货时间')
 
     sn_start = models.CharField(max_length=60, null=True, blank=True, verbose_name='产品序列号首号')
     sn_end = models.CharField(max_length=60, null=True, blank=True, verbose_name='产品序列号尾号')
