@@ -5,7 +5,7 @@
 # @File    : adminx.py
 # @Software: PyCharm
 
-import datetime
+import datetime, re
 from django.core.exceptions import PermissionDenied
 from django.db import router
 from django.utils.encoding import force_text
@@ -24,6 +24,8 @@ from xadmin.layout import Fieldset
 from .models import QCOriInfo, QCInfo, QCSubmitOriInfo, QCSubmitInfo
 from apps.wms.stockin.models import StockInInfo
 from apps.base.relationship.models import ManufactoryToWarehouse
+from apps.oms.manuorder.models import ManuOrderProcessingInfo
+
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -43,7 +45,7 @@ class RejectSelectedOriQCAction(BaseActionView):
     icon = 'fa fa-times'
 
     @filter_hook
-    def delete_models(self, queryset):
+    def reject_models(self, queryset):
         n = queryset.count()
         if n:
             for obj in queryset:
@@ -65,7 +67,7 @@ class RejectSelectedOriQCAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         # Check that the user has delete permission for the actual model
-        if not self.has_delete_permission():
+        if not self.has_change_permission():
             raise PermissionDenied
 
         using = router.db_for_write(self.model)
@@ -78,9 +80,9 @@ class RejectSelectedOriQCAction(BaseActionView):
         # The user has already confirmed the deletion.
         # Do the deletion and return a None to display the change list view again.
         if self.request.POST.get('post'):
-            if perms_needed:
+            if not self.has_change_permission():
                 raise PermissionDenied
-            self.delete_models(queryset)
+            self.reject_models(queryset)
             # Return None to display the change list page again.
             return None
 
@@ -89,6 +91,7 @@ class RejectSelectedOriQCAction(BaseActionView):
         else:
             objects_name = force_text(self.opts.verbose_name_plural)
 
+        perms_needed = []
         if perms_needed or protected:
             title = "Cannot reject %(name)s" % {"name": objects_name}
         else:
@@ -127,7 +130,7 @@ class RejectSelectedQCAction(BaseActionView):
     icon = 'fa fa-times'
 
     @filter_hook
-    def delete_models(self, queryset):
+    def reject_models(self, queryset):
         n = queryset.count()
         if n:
             for obj in queryset:
@@ -156,7 +159,7 @@ class RejectSelectedQCAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         # Check that the user has delete permission for the actual model
-        if not self.has_delete_permission():
+        if not self.has_change_permission():
             raise PermissionDenied
 
         using = router.db_for_write(self.model)
@@ -169,9 +172,9 @@ class RejectSelectedQCAction(BaseActionView):
         # The user has already confirmed the deletion.
         # Do the deletion and return a None to display the change list view again.
         if self.request.POST.get('post'):
-            if perms_needed:
+            if not self.has_change_permission():
                 raise PermissionDenied
-            self.delete_models(queryset)
+            self.reject_models(queryset)
             # Return None to display the change list page again.
             return None
 
@@ -180,6 +183,7 @@ class RejectSelectedQCAction(BaseActionView):
         else:
             objects_name = force_text(self.opts.verbose_name_plural)
 
+        perms_needed = []
         if perms_needed or protected:
             title = "Cannot reject %(name)s" % {"name": objects_name}
         else:
@@ -226,6 +230,12 @@ class SubmitAction(BaseActionView):
                 for obj in queryset:
                     i += 1
                     self.log('change', '', obj)
+                    if QCInfo.objects.filter(qc_order_id=obj.qc_order_id).exists():
+                        self.message_user("单号ID：%s，已经递交过质检单，此次未生成质检单" % obj.qc_order_id, "error")
+                        n -= 1
+                        obj.order_status = 2
+                        obj.save()
+                        continue
                     accumulation = int(obj.batch_num.completednum()) + int(obj.batch_num.processingnum())
                     if accumulation > obj.batch_num.quantity:
                         self.message_user("此原始质检单号ID：%s，验货数量超过了订单数量，请修正" % obj.qc_order_id, "error")
@@ -240,36 +250,29 @@ class SubmitAction(BaseActionView):
                         self.message_user("此原始质检单号ID：%s，工厂未关联仓库，请添加工厂关联到仓库" % obj.qc_order_id, "error")
                         continue
 
-                    qc_order.qc_order_id = obj.qc_order_id
+                    atts = ["qc_order_id", "quantity", "check_quantity", "creator", "a_flaw", "b1_flaw", "b2_flaw",
+                            "c_flaw", "memorandum", "result", "category"]
+                    for i in atts:
+                        # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
+                        if hasattr(qc_order, i):
+                            value = getattr(obj, i, None)
+                            if value in ['nan', 'NaN', 'NaT', None]:
+                                value = ''
+                            setattr(qc_order, i, value)  # 更新对象属性为字典对应键值
+
                     qc_order.manufactory = obj.batch_num.manufactory
                     qc_order.qc_time = obj.qc_time.strftime("%Y-%m-%d")
                     qc_order.batch_num = obj.batch_num
                     qc_order.goods_name = obj.batch_num.goods_name
                     qc_order.goods_id = obj.batch_num.goods_id
-                    qc_order.quantity = obj.quantity
 
-                    qc_order.result = obj.result
                     qc_order.total_quantity = obj.batch_num.quantity
                     qc_order.accumulation = int(obj.batch_num.completednum()) + qc_order.quantity
-                    qc_order.category = obj.category
-                    qc_order.check_quantity = obj.check_quantity
-                    qc_order.a_flaw = obj.a_flaw
-                    qc_order.b1_flaw = obj.b1_flaw
-                    qc_order.b2_flaw = obj.b2_flaw
-                    qc_order.c_flaw = obj.c_flaw
-                    qc_order.memorandum = obj.memorandum
 
                     try:
-                        if QCInfo.objects.filter(qc_order_id=obj.qc_order_id).exists():
-                            self.message_user("单号ID：%s，已经递交过质检单，此次未生成质检单" % obj.qc_order_id, "error")
-                            n -= 1
-                            obj.order_status = 2
-                            obj.save()
-                            continue
-                        else:
-                            qc_order.save()
-                            queryset.filter(id=obj.id).update(order_status=2)
-                            self.message_user("ID：%s，递交质检单成功" % obj.qc_order_id, "success")
+                        qc_order.save()
+                        queryset.filter(id=obj.id).update(order_status=2)
+                        self.message_user("ID：%s，递交质检单成功" % obj.qc_order_id, "success")
                     except Exception as e:
                         self.message_user("此原始质检单号ID：%s，递交到质检单明细出现错误，错误原因：%s" % (obj.qc_order_id, e))
                         continue
@@ -373,6 +376,31 @@ class QCSubmitOriInfoAdmin(object):
     list_display = ['creator', "qc_order_id", "order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
     search_fields = ["batch_num"]
     readonly_fields = ['creator', "qc_order_id"]
+    ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+    INIT_FIELDS_DIC = {
+        '序号': 'null01',
+        '日期': 'qc_date',
+        '订单号': 'null02',
+        '生产工厂': 'null03',
+        '型号': 'null04',
+        '订单数量': 'null05',
+        '当天完成量': 'quantity',
+        '累计完成': 'null06',
+        '产品序列号范围': 'batch_num',
+        '抽检数量': 'check_quantity',
+        '检验结果': 'result',
+        '验货次数': 'category',
+        '检验员': 'creator',
+        'A类缺陷': 'a_flaw',
+        'B1类缺陷': 'b1_flaw',
+        'B2类缺陷': 'b2_flaw',
+        'C类缺陷': 'c_flaw',
+        'DPU': 'null07',
+        '主缺陷备注': 'memorandum',
+        '月序列号': 'null08',
+        'QC单号': 'qc_order_id'
+                        }
+    import_data = True
 
     actions = [SubmitAction, RejectSelectedOriQCAction]
 
@@ -392,6 +420,142 @@ class QCSubmitOriInfoAdmin(object):
             obj.creator = request.user.username
             obj.save()
         super().save_models()
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file', None)
+        if file:
+            result = self.handle_upload_file(request, file)
+            self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
+            if result['false'] > 0 or result['error']:
+                self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
+            if result['repeated'] > 0:
+                self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
+        return super(QCSubmitOriInfoAdmin, self).post(request, *args, **kwargs)
+
+    def handle_upload_file(self, request, _file):
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
+            df = pd.read_excel(_file, sheet_name=0)
+
+            # 获取表头，对表头进行转换成数据库字段名
+            columns_key = df.columns.values.tolist()
+            for i in range(len(columns_key)):
+                if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                    columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+
+            # 验证一下必要的核心字段是否存在
+            _ret_verify_field = QCOriInfo.verify_mandatory(columns_key)
+            if _ret_verify_field is not None:
+                return report_dic['error'].append(_ret_verify_field)
+
+            # 更改一下DataFrame的表名称
+            columns_key_ori = df.columns.values.tolist()
+            ret_columns_key = dict(zip(columns_key_ori, columns_key))
+            df.rename(columns=ret_columns_key, inplace=True)
+
+            # 更改一下DataFrame的表名称
+            num_end = 0
+            step = 300
+            step_num = int(len(df) / step) + 2
+            i = 1
+            while i < step_num:
+                num_start = num_end
+                num_end = step * i
+                intermediate_df = df.iloc[num_start: num_end]
+
+                # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+                _ret_list = intermediate_df.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+                i += 1
+            return report_dic
+        # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
+        elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
+            df = pd.read_csv(_file, encoding="GBK", chunksize=900)
+
+            for piece in df:
+                # 获取表头
+                columns_key = piece.columns.values.tolist()
+                # 剔除表头中特殊字符等于号和空格
+                for i in range(len(columns_key)):
+                    columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+                # 循环处理对应的预先设置，转换成数据库字段名称
+                for i in range(len(columns_key)):
+                    if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                        columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+                # 直接调用验证函数进行验证
+                _ret_verify_field = QCOriInfo.verify_mandatory(columns_key)
+                if _ret_verify_field is not None:
+                    return _ret_verify_field
+                # 验证通过进行重新处理。
+                columns_key_ori = piece.columns.values.tolist()
+                ret_columns_key = dict(zip(columns_key_ori, columns_key))
+                piece.rename(columns=ret_columns_key, inplace=True)
+                _ret_list = piece.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+            return report_dic
+
+        else:
+            report_dic["error"].append('只支持excel和csv文件格式！')
+            return report_dic
+
+    @staticmethod
+    def save_resources(request, resource):
+        # 设置初始报告
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error":[]}
+        category_dic = {'截单退回': 0, '无人收货': 1, '客户拒签': 2, '修改地址': 3, '催件派送': 4, '虚假签收': 5, '其他异常': 6}
+
+        # 开始导入数据
+        for row in resource:
+            if QCOriInfo.objects.filter(is_delete=0, qc_order_id=row['qc_order_id'], order_status__in=[1, 2]).exists():
+                report_dic["repeated"] += 1
+                continue
+            qc_order = QCOriInfo()  # 创建表格每一行为一个对象
+            batch_num = str(row["batch_num"]).replace(" ", "")[:11]
+            # 查询一下批次号，根据批次号查询
+            check_batch = ManuOrderProcessingInfo.objects.filter(is_delete=0, batch_num=batch_num)
+            if check_batch.exists():
+                qc_order.batch_num = check_batch[0]
+            else:
+                report_dic['error'].append('不存批次号:%s，请检查修正源表' % batch_num)
+                report_dic['false'] += 1
+                continue
+            if row['result'] == '合格':
+                qc_order.result = 1
+            else:
+                qc_order.result = 0
+
+            if row['category'] == 1:
+                qc_order.category = 0
+            else:
+                qc_order.category = 1
+            atts = ["qc_order_id", "quantity", "check_quantity", "creator", "a_flaw", "b1_flaw", "b2_flaw", "c_flaw", "memorandum"]
+            for i in atts:
+                # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
+                if hasattr(qc_order, i):
+                    value = row.get(i, None)
+                    if value in ['nan', 'NaN', 'NaT', None]:
+                        value = ''
+                    setattr(qc_order, i, value)  # 更新对象属性为字典对应键值
+            try:
+                qc_order.save()
+                report_dic["successful"] += 1
+            # 保存出错，直接错误条数计数加一。
+            except Exception as e:
+                report_dic["false"] += 1
+                report_dic["error"].append(e)
+        return report_dic
 
 
 class QCSubmitInfoAdmin(object):

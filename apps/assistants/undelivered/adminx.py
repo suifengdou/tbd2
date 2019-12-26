@@ -253,7 +253,7 @@ class PendingOrderInfoAdmin(object):
     list_display = ['goods_title', 'status', 'status_tag', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
                     'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
                     'creator']
-    list_filter = ['status_tag', 'payment_time', 'shop_name', 'goods_title', 'payment_amount', 'refund_amount']
+    list_filter = ['status_tag', 'payment_time', 'memorandum', 'shop_name', 'goods_title', 'payment_amount', 'refund_amount']
     search_fields = ["order_id", "nickname"]
     # model_icon = 'fa fa-refresh'
     list_editable = ['status', 'memorandum']
@@ -285,7 +285,7 @@ class PendingOrderInfoAdmin(object):
                     else:
                         self.order_ids = order_ids
                         self.queryset()
-        return super(PendingOrderInfoAdmin, self).post(request, args, kwargs)
+        return super(PendingOrderInfoAdmin, self).post(request, *args, **kwargs)
 
     def handle_upload_file(self, _file, creator):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}

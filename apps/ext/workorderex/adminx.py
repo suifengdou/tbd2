@@ -22,7 +22,7 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
-from .models import WorkOrder, WorkOrderApp, WorkOrderAppRev, WorkOrderHandle, WorkOrderHandleSto, WorkOrderKeshen, WorkOrderMine
+from .models import WorkOrder, WorkOrderApp, WorkOrderAppRev, WorkOrderHandle, WorkOrderHandleSto, WorkOrderKeshen, WorkOrderMine, WorkOrderFinance
 from apps.base.company.models import LogisticsInfo
 
 from apps.oms.qcorder.models import QCSubmitOriInfo
@@ -46,7 +46,7 @@ class RejectSelectedAction(BaseActionView):
     icon = 'fa fa-times'
 
     @filter_hook
-    def delete_models(self, queryset):
+    def reject_models(self, queryset):
         n = queryset.count()
         if n:
             for obj in queryset:
@@ -54,7 +54,7 @@ class RejectSelectedAction(BaseActionView):
                     obj.order_status -= 3
                     obj.save()
                     self.message_user("%s 取消成功" % obj.express_id, "success")
-                elif obj.order_status in [1, 2, 4, 5, 6]:
+                elif obj.order_status in [1, 2, 4, 5, 6, 7]:
                     if obj.wo_category == 1 and obj.order_status == 4:
                         obj.order_status -= 2
                         obj.save()
@@ -73,7 +73,7 @@ class RejectSelectedAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         # Check that the user has delete permission for the actual model
-        if not self.has_delete_permission():
+        if not self.has_change_permission():
             raise PermissionDenied
 
         using = router.db_for_write(self.model)
@@ -86,9 +86,9 @@ class RejectSelectedAction(BaseActionView):
         # The user has already confirmed the deletion.
         # Do the deletion and return a None to display the change list view again.
         if self.request.POST.get('post'):
-            if perms_needed:
+            if not self.has_change_permission():
                 raise PermissionDenied
-            self.delete_models(queryset)
+            self.reject_models(queryset)
             # Return None to display the change list page again.
             return None
 
@@ -96,7 +96,7 @@ class RejectSelectedAction(BaseActionView):
             objects_name = force_text(self.opts.verbose_name)
         else:
             objects_name = force_text(self.opts.verbose_name_plural)
-
+        perms_needed = []
         if perms_needed or protected:
             title = "Cannot reject %(name)s" % {"name": objects_name}
         else:
@@ -375,7 +375,7 @@ class SetReturnAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         # Check that the user has delete permission for the actual model
-        if not self.has_delete_permission():
+        if not self.has_change_permission():
             raise PermissionDenied
 
         using = router.db_for_write(self.model)
@@ -388,7 +388,7 @@ class SetReturnAction(BaseActionView):
         # The user has already confirmed the deletion.
         # Do the deletion and return a None to display the change list view again.
         if self.request.POST.get('post'):
-            if perms_needed:
+            if not self.has_change_permission():
                 raise PermissionDenied
             self.set_return_models(queryset)
             # Return None to display the change list page again.
@@ -398,7 +398,7 @@ class SetReturnAction(BaseActionView):
             objects_name = force_text(self.opts.verbose_name)
         else:
             objects_name = force_text(self.opts.verbose_name_plural)
-
+        perms_needed = []
         if perms_needed or protected:
             title = "Cannot reject %(name)s" % {"name": objects_name}
         else:
@@ -463,7 +463,7 @@ class CSSubmitAction(BaseActionView):
         model_perm = 'change'
         icon = "fa fa-check-square-o"
 
-        modify_models_batch = True
+        modify_models_batch = False
 
         @filter_hook
         def do_action(self, queryset):
@@ -478,8 +478,10 @@ class CSSubmitAction(BaseActionView):
                 else:
                     for obj in queryset:
                         self.log('change', '', obj)
-                        obj.submit_time = datetime.datetime.now()
-                        obj.order_status = 7
+                        if obj.is_losing == 1:
+                            obj.order_status = 7
+                        else:
+                            obj.order_status = 8
                         obj.save()
                         self.message_user("%s 审核完毕，等待快递反馈" % obj.express_id, "info")
 
@@ -487,6 +489,39 @@ class CSSubmitAction(BaseActionView):
                                   'success')
 
             return None
+
+
+# 客服工单提交
+class FiSubmitAction(BaseActionView):
+    action_name = "submit_wo_finance"
+    description = "提交选中的工单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = True
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=8)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+
+                    obj.order_status = 8
+                    obj.save()
+                    self.message_user("%s 审核完毕" % obj.express_id, "info")
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
 
 
 # 逆向工单创建
@@ -520,7 +555,7 @@ class WorkOrderAppRevAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
             if result['repeated'] > 0:
                 self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
-        return super(WorkOrderAppRevAdmin, self).post(request, args, kwargs)
+        return super(WorkOrderAppRevAdmin, self).post(request, *args, **kwargs)
 
     def handle_upload_file(self, request, _file):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -699,7 +734,7 @@ class WorkOrderAppAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
             if result['repeated'] > 0:
                 self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
-        return super(WorkOrderAppAdmin, self).post(request, args, kwargs)
+        return super(WorkOrderAppAdmin, self).post(request, *args, **kwargs)
 
     def handle_upload_file(self, request, _file):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -896,9 +931,9 @@ class WorkOrderHandleStoAdmin(object):
                     if not re.match(r'^[0-9a-zA-Z]+$', i):
                         self.message_user('%s包含错误的订单编号，请检查' % str(delivery_ids), 'error')
                         break
-                    else:
-                        self.delivery_ids = delivery_ids
-                        self.queryset()
+
+                self.delivery_ids = delivery_ids
+                self.queryset()
 
         return super(WorkOrderHandleStoAdmin, self).post(request, *args, **kwargs)
 
@@ -911,7 +946,6 @@ class WorkOrderHandleStoAdmin(object):
         else:
             queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
         return queryset
-
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -963,6 +997,27 @@ class WorkOrderMineAdmin(object):
         return False
 
 
+class WorkOrderFinanceAdmin(object):
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
+                    'express_id', 'category', 'creator', 'servicer', 'handler', 'update_time']
+    list_filter = ['update_time', 'create_time', 'is_return', 'is_losing', 'category', 'wo_category']
+    search_fields = ['express_id']
+    readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
+                       'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
+                       'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
+    list_editable = ['feedback']
+    actions = [FiSubmitAction, RejectSelectedAction]
+
+    def queryset(self):
+        queryset = super(WorkOrderFinanceAdmin, self).queryset()
+        queryset = queryset.filter(is_delete=0, order_status=7)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
 class WorkOrderAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
                     'express_id', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
@@ -999,4 +1054,5 @@ xadmin.site.register(WorkOrderHandle, WorkOrderHandleAdmin)
 xadmin.site.register(WorkOrderHandleSto, WorkOrderHandleStoAdmin)
 xadmin.site.register(WorkOrderKeshen, WorkOrderKeshenAdmin)
 xadmin.site.register(WorkOrderMine, WorkOrderMineAdmin)
+xadmin.site.register(WorkOrderFinance, WorkOrderFinanceAdmin)
 xadmin.site.register(WorkOrder, WorkOrderAdmin)

@@ -43,7 +43,7 @@ class RejectSelectedAction(BaseActionView):
     icon = 'fa fa-times'
 
     @filter_hook
-    def delete_models(self, queryset):
+    def reject_models(self, queryset):
         n = queryset.count()
         if n:
             queryset.update(order_status=0)
@@ -54,7 +54,7 @@ class RejectSelectedAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         # Check that the user has delete permission for the actual model
-        if not self.has_delete_permission():
+        if not self.has_change_permission():
             raise PermissionDenied
 
         using = router.db_for_write(self.model)
@@ -67,9 +67,9 @@ class RejectSelectedAction(BaseActionView):
         # The user has already confirmed the deletion.
         # Do the deletion and return a None to display the change list view again.
         if self.request.POST.get('post'):
-            if perms_needed:
+            if not self.has_change_permission():
                 raise PermissionDenied
-            self.delete_models(queryset)
+            self.reject_models(queryset)
             # Return None to display the change list page again.
             return None
 
@@ -77,7 +77,7 @@ class RejectSelectedAction(BaseActionView):
             objects_name = force_text(self.opts.verbose_name)
         else:
             objects_name = force_text(self.opts.verbose_name_plural)
-
+        perms_needed = []
         if perms_needed or protected:
             title = "Cannot reject %(name)s" % {"name": objects_name}
         else:
@@ -212,9 +212,10 @@ class SubmitGiftAction(BaseActionView):
                                     else:
                                         gift_order.district = '其他区'
 
-                                elif "州" in gift_order.city:
+                                elif "州" in gift_order.city and '州市' not in gift_order.city:
+                                    # 判断是否是二级州，如果是二级州则用州做结尾，然后向后截取两个字符提取三级。
                                     tag_position = gift_order.address.index("州", 3)
-                                    _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                                    _district_key = gift_order.address[tag_position + 1:tag_position + 3]
                                     _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
                                                                                 district__contains=_district_key)
                                     if _rt_districts.exists():
@@ -436,55 +437,66 @@ class GiftInTalkPenddingAdmin(object):
         if request.user.platform:
             if file:
                 file.open()
-                while True:
-                    s = file.readline()
-                    if s:
-                        if request.user.platform == 2:
-                            s = s.decode("utf-8")
-                        elif request.user.platform == 1:
-                            s = s.decode("GBK")
+                if request.user.platform == 1:
+                    s = file.read()
+                    s = s.decode("GBK")
+                    pattern = re.compile(r'(·客服.{[0-9]}{.*}[\s\S]*?收货信息\[表情\]})')
 
-                        if "·客服" in s:
-                            _rt_talk_data = re.findall(r"{(.*?)}", s)
-                            _rt_talk = GiftInTalkInfo()
-                            _rt_talk.creator = request.user.username
-                            if len(_rt_talk_data) == 5:
-                                _rt_talk.platform = 2
-                                _rt_talk_dic = dict(zip(_rt_talk_title, _rt_talk_data))
-                                for k, v in _rt_talk_dic.items():
-                                    if hasattr(_rt_talk, k):
-                                        setattr(_rt_talk, k, v)
+                    _rt_talk_datas = pattern.findall(s, re.DOTALL)
+                    for talk_data in _rt_talk_datas:
+                        _rt_talk = GiftInTalkInfo()
+                        _rt_talk.creator = request.user.username
+                        pattern_data = re.compile(r"{((?:.|\n)*?)}")
+                        talk_datas = pattern_data.findall(talk_data)
+                        if len(talk_datas) == 4:
+                            _rt_talk.platform = 1
+                            _rt_talk.order_category = talk_datas[0]
+                            _rt_talk.servicer = talk_datas[1]
+                            _rt_talk.goods = talk_datas[2]
+                            cs_informations = talk_datas[3].split('\r')
+                            if len(cs_informations) in [5, 6]:
+                                _rt_talk.nickname = cs_informations[0].replace('收货信息买家ID\u3000：', '客户ID')
+                                consignee = cs_informations[1].replace('收货人\u3000：', '收货信息')
+                                address = cs_informations[2].replace('收货地址：', '')
+                                mobile = cs_informations[4].replace('电\u3000\u3000话：', '')
+                                information = [consignee, mobile, address]
+                                _rt_talk.cs_information = ' '.join(information)
                                 try:
                                     _rt_talk.save()
                                     result["successful"] += 1
                                 except Exception as e:
                                     result["false"] += 1
                                     result["error"].append(e)
-                            elif len(_rt_talk_data) == 6:
-                                _rt_talk.platform = 2
-                                _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
-                                for k, v in _rt_talk_dic.items():
-                                    if hasattr(_rt_talk, k):
-                                        setattr(_rt_talk, k, v)
-                                try:
-                                    _rt_talk.save()
-                                    result["successful"] += 1
-                                except Exception as e:
-                                    result["false"] += 1
-                                    result["error"].append(e)
-                            elif len(_rt_talk_data) == 4:
-                                _rt_talk.platform = 1
-                                _rt_talk.order_category = _rt_talk_data[0]
-                                _rt_talk.servicer = _rt_talk_data[1]
-                                _rt_talk.goods = _rt_talk_data[2]
-                                cs_informations = _rt_talk_data[3].split('\r')
-                                if len(cs_informations) in [5, 6]:
-                                    _rt_talk.nickname = cs_informations[1].replace('收货信息买家ID\u3000：', '客户ID')
-                                    consignee = cs_informations[2].replace('收货人\u3000：', '收货信息')
-                                    address = cs_informations[3].replace('收货地址：', '')
-                                    mobile = cs_informations[5].replace('电\u3000\u3000话：', '')
-                                    information = [consignee, mobile, address]
-                                    _rt_talk.cs_information = ' '.join(information)
+                        else:
+                            result['false'] += 1
+                            result['error'].append("%s 对话的格式不对，导致无法提取" % talk_datas)
+                elif request.user.platform == 2:
+                    while True:
+                        s = file.readline()
+                        if s:
+                            s = s.decode("utf-8")
+                            if "·客服" in s:
+                                _rt_talk_data = re.findall(r"{(.*?)}", s)
+                                _rt_talk = GiftInTalkInfo()
+                                _rt_talk.creator = request.user.username
+                                if len(_rt_talk_data) == 5:
+                                    _rt_talk.platform = 2
+                                    _rt_talk_dic = dict(zip(_rt_talk_title, _rt_talk_data))
+                                    for k, v in _rt_talk_dic.items():
+                                        if hasattr(_rt_talk, k):
+                                            setattr(_rt_talk, k, v)
+                                    try:
+                                        _rt_talk.save()
+                                        result["successful"] += 1
+                                    except Exception as e:
+                                        result["false"] += 1
+                                        result["error"].append(e)
+                                elif len(_rt_talk_data) == 6:
+                                    _rt_talk.platform = 2
+                                    _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                                    for k, v in _rt_talk_dic.items():
+                                        if hasattr(_rt_talk, k):
+                                            setattr(_rt_talk, k, v)
                                     try:
                                         _rt_talk.save()
                                         result["successful"] += 1
@@ -495,12 +507,9 @@ class GiftInTalkPenddingAdmin(object):
                                     result['false'] += 1
                                     result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data)
                             else:
-                                result['false'] += 1
-                                result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data)
+                                result["discard"] += 1
                         else:
-                            result["discard"] += 1
-                    else:
-                        break
+                            break
 
                 self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
                 if result['false'] > 0 or result['error']:

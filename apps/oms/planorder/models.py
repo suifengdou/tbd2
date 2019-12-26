@@ -35,7 +35,7 @@ class PlanOrderInfo(BaseModel):
     category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='订单类型')
 
     class Meta:
-        verbose_name = 'OMS-P-整机采购申请单'
+        verbose_name = 'OMS-P-整机采购计划单'
         verbose_name_plural = verbose_name
         db_table = 'oms_po_order'
 

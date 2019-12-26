@@ -40,7 +40,7 @@ class RejectSelectedAction(BaseActionView):
     icon = 'fa fa-times'
 
     @filter_hook
-    def delete_models(self, queryset):
+    def reject_models(self, queryset):
         n = queryset.count()
         if n:
             for obj in queryset:
@@ -61,7 +61,7 @@ class RejectSelectedAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         # Check that the user has delete permission for the actual model
-        if not self.has_delete_permission():
+        if not self.has_change_permission():
             raise PermissionDenied
 
         using = router.db_for_write(self.model)
@@ -74,9 +74,9 @@ class RejectSelectedAction(BaseActionView):
         # The user has already confirmed the deletion.
         # Do the deletion and return a None to display the change list view again.
         if self.request.POST.get('post'):
-            if perms_needed:
+            if not self.has_change_permission():
                 raise PermissionDenied
-            self.delete_models(queryset)
+            self.reject_models(queryset)
             # Return None to display the change list page again.
             return None
 
@@ -84,7 +84,7 @@ class RejectSelectedAction(BaseActionView):
             objects_name = force_text(self.opts.verbose_name)
         else:
             objects_name = force_text(self.opts.verbose_name_plural)
-
+        perms_needed = []
         if perms_needed or protected:
             title = "Cannot reject %(name)s" % {"name": objects_name}
         else:

@@ -23,3 +23,4 @@ class ListBatchFilterPlugin(BaseAdminPlugin):
 
 
 xadmin.site.register_plugin(ListBatchFilterPlugin, ListAdminView)
+

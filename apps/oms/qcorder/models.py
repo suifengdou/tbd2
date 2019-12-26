@@ -15,6 +15,7 @@ from apps.base.warehouse.models import WarehouseInfo
 
 
 class QCOriInfo(BaseModel):
+    VERIFY_FIELD = ["qc_order_id", "batch_num", "quantity", "category", "check_quantity"]
     ORDERSTATUS = (
         (0, '已取消'),
         (1, '未递交'),
@@ -64,6 +65,15 @@ class QCOriInfo(BaseModel):
 
     def __str__(self):
         return str(self.quantity)
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
 
 
 class QCSubmitOriInfo(QCOriInfo):
@@ -118,8 +128,8 @@ class QCInfo(BaseModel):
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
     qc_time = models.DateTimeField(verbose_name='验货时间')
 
-    sn_start = models.CharField(max_length=60, verbose_name='产品序列号首号')
-    sn_end = models.CharField(max_length=60, verbose_name='产品序列号尾号')
+    sn_start = models.CharField(max_length=60, null=True, blank=True, verbose_name='产品序列号首号')
+    sn_end = models.CharField(max_length=60, null=True, blank=True, verbose_name='产品序列号尾号')
 
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='质检单状态')
     error_tag = models.SmallIntegerField(choices=ERROR_LIST, default=0, verbose_name='错误原因')

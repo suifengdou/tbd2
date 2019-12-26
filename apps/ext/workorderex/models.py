@@ -23,7 +23,8 @@ class WorkOrder(BaseModel):
         (4, '快递在理'),
         (5, '复核未理'),
         (6, '终审未理'),
-        (7, '工单完结'),
+        (7, '财务审核'),
+        (8, '工单完结'),
     )
     CATEGORY = (
         (0, '截单退回'),
@@ -106,7 +107,7 @@ class WorkOrder(BaseModel):
 class WorkOrderAppRev(WorkOrder):
     VERIFY_FIELD = ['express_id', 'information', 'category']
     class Meta:
-        verbose_name = 'EXT-快递工单-逆向'
+        verbose_name = 'EXT-快递工单-逆向创建'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -122,7 +123,7 @@ class WorkOrderAppRev(WorkOrder):
 class WorkOrderApp(WorkOrder):
     VERIFY_FIELD = ['express_id', 'information', 'category', 'company']
     class Meta:
-        verbose_name = 'EXT-快递工单-正向'
+        verbose_name = 'EXT-快递工单-正向创建'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -137,31 +138,35 @@ class WorkOrderApp(WorkOrder):
 
 class WorkOrderHandle(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-快递工单处理-客服'
+        verbose_name = 'EXT-快递工单-客服处理'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class WorkOrderHandleSto(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-快递工单处理-供应商'
+        verbose_name = 'EXT-快递工单-供应商处理'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class WorkOrderKeshen(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-快递工单复核-客审'
+        verbose_name = 'EXT-快递工单-客审复核'
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class WorkOrderMine(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-快递工单-只看自己'
+        verbose_name = 'EXT-快递工单-终审确认'
         verbose_name_plural = verbose_name
         proxy = True
 
 
-
+class WorkOrderFinance(WorkOrder):
+    class Meta:
+        verbose_name = 'EXT-快递工单-财务审核'
+        verbose_name_plural = verbose_name
+        proxy = True
 
