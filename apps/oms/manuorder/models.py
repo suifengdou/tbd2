@@ -22,6 +22,16 @@ class ManuOrderInfo(BaseModel):
         (3, '在生产'),
         (4, '已完成'),
     )
+    TAG_LIST = (
+        (0, '正常'),
+        (1, '超期跟进'),
+        (2, '主动延期'),
+        (3, '等待核实'),
+        (4, '紧急叫停'),
+        (5, '特殊情况'),
+        (6, '其他'),
+    )
+
     batch_num = models.CharField(unique=True, max_length=30, verbose_name='批次号', db_index=True)
     planorder_id = models.CharField(max_length=30, verbose_name='计划采购单号', db_index=True)
     goods_id = models.CharField(max_length=30, verbose_name='货品编码')
@@ -32,6 +42,7 @@ class ManuOrderInfo(BaseModel):
     estimated_time = models.DateTimeField(verbose_name='期望到货时间')
     start_sn = models.CharField(null=True, max_length=30, verbose_name='首号')
     end_sn = models.CharField(null=True, max_length=30, verbose_name='尾号')
+    tag_sign = models.SmallIntegerField(choices=TAG_LIST, default=0, verbose_name='标记')
 
     class Meta:
         verbose_name = 'OMS-M-工厂生产列表'
@@ -76,7 +87,10 @@ class ManuOrderInfo(BaseModel):
     penddingnum.short_description = '待生产'
 
     def intransitnum(self):
-        intransit_num = self.stockininfo_set.all().filter(batch_num=self.batch_num, order_status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
+        try:
+            intransit_num = self.stockininfo_set.all().filter(batch_num=self.batch_num, order_status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
+        except Exception as e:
+            intransit_num = 0
         if not intransit_num:
             intransit_num = 0
         return intransit_num
@@ -86,7 +100,7 @@ class ManuOrderInfo(BaseModel):
 class ManuOrderPenddingInfo(ManuOrderInfo):
 
     class Meta:
-        verbose_name = 'OMS-M-待客供生产列表'
+        verbose_name = 'OMS-M-待审核生产列表'
         verbose_name_plural = verbose_name
         proxy = True
 

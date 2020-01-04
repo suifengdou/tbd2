@@ -626,7 +626,7 @@ class GiftImportAdmin(object):
 
 
 xadmin.site.register(GiftInTalkPendding, GiftInTalkPenddingAdmin)
-xadmin.site.register(GiftInTalkRepeat, GiftInTalkRepeatAdmin)
+# xadmin.site.register(GiftInTalkRepeat, GiftInTalkRepeatAdmin)
 xadmin.site.register(GiftInTalkInfo, GiftInTalkAdmin)
 xadmin.site.register(GiftOrderPendding, GiftOrderPenddingAdmin)
 xadmin.site.register(GiftOrderInfo, GiftOrderInfoAdmin)

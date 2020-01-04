@@ -47,23 +47,17 @@ class RejectSelectedAction(BaseActionView):
         if n:
             for obj in queryset:
                 if obj.order_status == 1:
-                    requisition = CusRequisitionInfo.objects.filter(batch_num=obj.batch_num, order_status__in=[1, 2])
-                    if requisition:
-                        self.message_user("%s 有存在对应的需求单未取消，请处理之后再驳回。" % obj.planorder_id, "error")
-                        n -= 1
-                    else:
-                        obj.order_status -= 1
-                        PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id).update(order_status=2)
-                        obj.save()
-                        self.message_user("%s 工厂订单取消成功，已驳回到计划单待递交界面。" % obj.planorder_id, "success")
+                    obj.order_status -= 1
+                    PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id).update(order_status=2)
+                    obj.save()
+                    self.message_user("%s 工厂订单取消成功，已驳回到计划单待递交界面。" % obj.planorder_id, "success")
                 elif obj.order_status == 2:
-                    qc_tag = QCOriInfo.objects.filter(batch_num=obj)
+                    qc_tag = QCOriInfo.objects.filter(batch_num=obj, order_status__in=[1, 2])
                     if qc_tag:
                         self.message_user("%s 已经开始生产，不可以驳回。" % obj.planorder_id, 'error')
                         n -= 1
                     else:
                         obj.order_status -= 1
-                        PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id).update(order_status=2)
                         obj.save()
                         self.message_user("%s 工厂订单已驳回到待递交界面。" % obj.planorder_id, "success")
                 else:
@@ -184,8 +178,9 @@ class ManuOrderInfoAdmin(object):
 
 
 class ManuOrderPenddingInfoAdmin(object):
-    list_display = ["batch_num","planorder_id","goods_id","goods_name","quantity","order_status","manufactory","estimated_time","creator","start_sn", "end_sn"]
-    list_filter = ["goods_id", "goods_name", "manufactory", "estimated_time"]
+    list_display = ["batch_num","tag_sign","planorder_id","goods_id","goods_name","quantity","order_status","manufactory","estimated_time","creator","start_sn", "end_sn"]
+    list_filter = ["tag_sign","goods_id", "goods_name", "manufactory", "estimated_time","create_time","update_time"]
+    list_editable = ['tag_sign']
     search_fields = ["batch_num", "planorder_id"]
     readonly_fields = ["batch_num","planorder_id","goods_id","goods_name","creator"]
     actions = [CheckAction, RejectSelectedAction]
@@ -201,8 +196,9 @@ class ManuOrderPenddingInfoAdmin(object):
 
 
 class ManuOrderProcessingInfoAdmin(object):
-    list_display = ["batch_num","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum", "intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
-    list_filter = ["goods_id", "goods_name", "manufactory", "estimated_time"]
+    list_display = ["batch_num","tag_sign","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum", "intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
+    list_filter = ["tag_sign","goods_id", "goods_name", "manufactory", "estimated_time","create_time","update_time"]
+    list_editable = ['tag_sign']
     search_fields = ["batch_num", "planorder_id"]
     readonly_fields = ["batch_num","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum","intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
     inlines = [QCOriInfoInline, ]

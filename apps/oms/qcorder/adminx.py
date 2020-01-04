@@ -239,7 +239,7 @@ class SubmitAction(BaseActionView):
                         obj.save()
                         continue
                     accumulation = int(obj.quantity + int(obj.batch_num.processingnum()))
-                    if accumulation > obj.batch_num.quantity:
+                    if accumulation > obj.batch_num.quantity and obj.result == 1:
                         self.message_user("此原始质检单号ID：%s，验货数量超过了订单数量，请修正" % obj.qc_order_id, "error")
                         n -= 1
                         obj.error_tag = 1

@@ -305,8 +305,8 @@ class PassedAction(BaseActionView):
 
 # 逆向工单创建
 class WorkOrder3PLAppRevAdmin(object):
-    list_display = ['company', 'keyword', 'information', 'category', 'create_time', 'creator', 'update_time']
-    list_filter = ['creator']
+    list_display = ['company', 'keyword', 'memo','information', 'category', 'create_time', 'creator', 'update_time']
+    list_filter = ['creator', 'update_time', 'category']
     search_fields = ['express_id']
     form_layout = [
         Fieldset('必填信息',
@@ -339,8 +339,8 @@ class WorkOrder3PLAppRevAdmin(object):
 
 # 正向工单创建
 class WorkOrder3PLAppAdmin(object):
-    list_display = ['company', 'keyword', 'information', 'category', 'create_time', 'servicer', 'update_time']
-    list_filter = ['servicer']
+    list_display = ['company', 'keyword', 'memo','information', 'category', 'create_time', 'servicer', 'update_time']
+    list_filter = ['servicer', 'order_status', 'update_time', 'category']
     search_fields = ['keyword']
     form_layout = [
         Fieldset('必填信息',
@@ -372,8 +372,8 @@ class WorkOrder3PLAppAdmin(object):
 
 # 客服工单审核
 class WorkOrder3PLHandleAdmin(object):
-    list_display = ['company', 'keyword', 'feedback', 'category', 'information', 'create_time', 'creator', 'update_time']
-    list_filter = ['category']
+    list_display = ['company', 'keyword', 'feedback', 'memo','category', 'information', 'create_time', 'creator', 'update_time']
+    list_filter = ['category','servicer', 'order_status', 'update_time', 'category']
     search_fields = ['keyword']
     list_editable = ['feedback']
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
@@ -393,8 +393,8 @@ class WorkOrder3PLHandleAdmin(object):
 
 # 工单审核
 class WorkOrder3PLHandleStoAdmin(object):
-    list_display = ['company', 'keyword', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'category', 'creator', 'create_time', 'servicer', 'submit_time']
-    list_filter = ['category', 'submit_time']
+    list_display = ['company', 'keyword', 'feedback', 'memo','is_losing', 'is_return', 'return_express_id', 'information', 'category', 'creator', 'create_time', 'servicer', 'submit_time']
+    list_filter = ['category', 'submit_time','servicer', 'order_status', 'update_time']
     search_fields = ['keyword']
     list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id']
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'submit_time', 'creator',
@@ -414,9 +414,9 @@ class WorkOrder3PLHandleStoAdmin(object):
 
 
 class WorkOrder3PLKeshenAdmin(object):
-    list_display = ['company', 'is_return', 'keyword', 'return_express_id', 'feedback', 'is_losing', 'memo', 'information',
+    list_display = ['company', 'is_return', 'keyword', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
-    list_filter = ['company', 'is_return', 'is_losing']
+    list_filter = ['company', 'is_return', 'is_losing','category', 'submit_time','servicer', 'order_status', 'update_time']
     search_fields = ['return_express_id', 'keyword']
     list_editable = ['memo']
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
@@ -435,9 +435,9 @@ class WorkOrder3PLKeshenAdmin(object):
 
 
 class WorkOrder3PLMineAdmin(object):
-    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'keyword', 'category', 'creator', 'servicer', 'handler']
-    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category']
+    list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'submit_time','servicer', 'order_status', 'update_time']
     search_fields = ['keyword']
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
@@ -445,8 +445,7 @@ class WorkOrder3PLMineAdmin(object):
 
     def queryset(self):
         queryset = super(WorkOrder3PLMineAdmin, self).queryset()
-        myname = self.request.user.username
-        queryset = queryset.filter(Q(is_delete=0) & (Q(creator=myname) | Q(servicer=myname) | Q(handler=myname)))
+        queryset = queryset.filter(Q(is_delete=0) & Q(order_status__in=[1, 2, 3, 4, 5]))
         return queryset
 
     def has_add_permission(self):
@@ -456,7 +455,7 @@ class WorkOrder3PLMineAdmin(object):
 
 # 工单查询
 class WorkOrder3PLAdmin(object):
-    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'keyword', 'category', 'create_time', 'creator', 'servicer', 'submit_time', 'handle_time', 'handler']
     list_filter = ['order_status', 'create_time', 'handle_time', 'is_return', 'is_losing', 'category']
     search_fields = ['keyword']

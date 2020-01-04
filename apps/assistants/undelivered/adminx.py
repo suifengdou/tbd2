@@ -53,11 +53,11 @@ class SubmitAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=2)
+                queryset.update(order_status=2)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    obj.update(status=2)
+                    obj.update(order_status=2)
             self.message_user("成功审核 %(count)d %(items)s." % {
                 "count": n, "items": model_ngettext(self.opts, n)
             }, 'success')
@@ -88,11 +88,11 @@ class ModifySpecialAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量转入 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=3)
+                queryset.update(order_status=3)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    obj.update(status=3)
+                    obj.update(order_status=3)
             self.message_user("成功转入 %(count)d %(items)s." % {
                 "count": n, "items": model_ngettext(self.opts, n)
             }, 'success')
@@ -127,7 +127,7 @@ class TagAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    obj.update(status=4)
+                    obj.update(order_status=4)
             self.message_user("成功审核 %(count)d %(items)s." % {
                 "count": n, "items": model_ngettext(self.opts, n)
             }, 'success')
@@ -208,9 +208,9 @@ class DelSelectedAction(BaseActionView):
 
 class OriorderInfoAdmin(object):
 
-    list_display = ['order_id', 'nickname', 'total_amount', 'payment_amount', 'order_status', 'payment_time', 'goods_title',
-                    'goods_quantity', 'shop_name', 'refund_amount','create_time', 'creator', 'status']
-    list_filter = ['payment_time', 'shop_name', 'status']
+    list_display = ['order_id', 'nickname', 'payment_amount', 'payment_time', 'goods_title',
+                    'goods_quantity', 'shop_name','create_time', 'creator', 'order_status']
+    list_filter = ['order_status','status_tag', 'payment_time', 'memorandum', 'shop_name', 'goods_title', 'payment_amount',]
     search_fields = ["order_id", "nickname"]
     # model_icon = 'fa fa-refresh'
     ordering = ['payment_time']
@@ -221,42 +221,22 @@ class PendingOrderInfoAdmin(object):
     INIT_FIELDS_DIC = {
         '订单编号': 'order_id',
         '买家会员名': 'nickname',
-        '买家支付宝账号': 'alipay_id',
-        '支付单号': 'alipay_order_id',
-        '支付详情': 'alipay_desc',
-        '买家应付货款': 'account_payable',
-        '买家应付邮费': 'post_fee',
-        '买家支付积分': 'point_payable',
-        '总金额': 'total_amount',
-        '返点积分': 'point',
         '买家实际支付金额': 'payment_amount',
-        '买家实际支付积分': 'payment_point',
-        '订单状态': 'order_status',
         '买家留言': 'buyer_message',
-        '收货人姓名': 'receiver',
-        '收货地址': 'address',
-        '运送方式': 'delivery_type',
-        '联系电话': 'telephone',
-        '联系手机': 'mobile',
         '订单创建时间': 'order_create_time',
         '订单付款时间': 'payment_time',
         '宝贝标题': 'goods_title',
-        '宝贝种类': 'goods_type',
         '订单备注': 'memorandum',
         '宝贝总数量': 'goods_quantity',
-        '店铺Id': 'shop_id',
         '店铺名称': 'shop_name',
-        '订单关闭原因': 'cause_closed',
-        '退款金额': 'refund_amount',
     }
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
-    list_display = ['goods_title', 'status', 'status_tag', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
-                    'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
-                    'creator']
-    list_filter = ['status_tag', 'payment_time', 'memorandum', 'shop_name', 'goods_title', 'payment_amount', 'refund_amount']
+    list_display = ['goods_title', 'order_status', 'status_tag', 'order_id', 'nickname', 'payment_amount', 'memorandum',
+                    'payment_time', 'goods_quantity', 'shop_name', 'create_time', 'creator']
+    list_filter = ['order_status','status_tag', 'payment_time', 'memorandum', 'shop_name', 'goods_title', 'payment_amount',]
     search_fields = ["order_id", "nickname"]
     # model_icon = 'fa fa-refresh'
-    list_editable = ['status', 'memorandum']
+    list_editable = ['order_status', 'memorandum']
     ordering = ['payment_time']
     exclude = ['creator']
     actions = [SubmitAction, ModifySpecialAction, DelSelectedAction, TagAction, ]
@@ -289,11 +269,16 @@ class PendingOrderInfoAdmin(object):
 
     def handle_upload_file(self, _file, creator):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        FILTER_FIELDS = ['订单编号', '买家会员名', '买家实际支付金额', '买家留言', '订单创建时间', '订单付款时间 ', '宝贝标题 ', '订单备注', '宝贝总数量', '店铺名称']
 
         if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
             with pd.ExcelFile(_file) as xls:
                 df = pd.read_excel(xls, sheet_name=0)
-
+                try:
+                    df = df[FILTER_FIELDS]
+                except Exception as e:
+                    report_dic["error"].append(e)
+                    return report_dic
                 # 获取表头，对表头进行转换成数据库字段名
                 columns_key = df.columns.values.tolist()
                 for i in range(len(columns_key)):
@@ -366,7 +351,8 @@ class PendingOrderInfoAdmin(object):
             return report_dic
 
         else:
-            return "只支持excel和csv文件格式！"
+            report_dic["error"].append("只支持excel和csv文件格式！")
+            return report_dic
 
     def save_resources(self, resource, creator):
         # 设置初始报告
@@ -383,18 +369,13 @@ class PendingOrderInfoAdmin(object):
                 report_dic['discard'] += 1
                 continue
             row['order_id'] = str(row['order_id']).replace("=", "").replace('"', "")
-            row['alipay_orer_id'] = str(row['alipay_order_id']).replace("=", "").replace('"', "")
-            row['mobile'] = str(row['mobile']).replace("'", "")
-
             order_id = row['order_id']
 
             # 如果订单号查询，已经存在，丢弃订单，计数为重复订单
             target_order = OriorderInfo.objects.all().filter(order_id=order_id)
             if target_order.exists():
-                if row['order_status'] == '买家已付款，等待卖家发货' and target_order[0].status != 0:
-                    target_order[0].status = 1
-                    if row['refund_amount'] > 0:
-                        target_order[0].status_tag = 5
+                if target_order[0].order_status != 0:
+                    target_order[0].order_status = 1
                     try:
                         target_order[0].save()
                         report_dic["successful"] += 1
@@ -421,16 +402,11 @@ class PendingOrderInfoAdmin(object):
                     else:
                         setattr(order, k, v)  # 更新对象属性为字典对应键值
             # 对订单进行分类判断
-
-            if order.total_amount < 10.1:
-                order.status_tag = 1
             if any(keyword in order.goods_title for keyword in reservation_keywords):
                 order.status_tag = 1
-            if order.refund_amount > 0:
-                order.status_tag = 5
 
             try:
-                order.status = 1
+                order.order_status = 1
                 order.creator = creator
                 order.save()
                 report_dic["successful"] += 1
@@ -443,9 +419,9 @@ class PendingOrderInfoAdmin(object):
     def queryset(self):
         queryset = super(PendingOrderInfoAdmin, self).queryset()
         if self.order_ids:
-            queryset = queryset.filter(status=1, order_id__in=self.order_ids)
+            queryset = queryset.filter(order_status=1, order_id__in=self.order_ids)
         else:
-            queryset = queryset.filter(status=1)
+            queryset = queryset.filter(order_status=1)
         return queryset
 
     def has_add_permission(self):
@@ -454,12 +430,11 @@ class PendingOrderInfoAdmin(object):
 
 
 class RefundOrderInfoAdmin(object):
-    list_display = ['goods_title', 'status', 'order_id', 'nickname', 'total_amount', 'payment_amount', 'memorandum',
-                    'order_status', 'payment_time', 'goods_quantity', 'shop_name', 'refund_amount', 'create_time',
-                    'creator']
-    list_filter = ['create_time', 'payment_time', 'shop_name', 'status']
+    list_display = ['goods_title', 'order_status', 'order_id', 'nickname', 'payment_amount', 'memorandum',
+                    'payment_time', 'goods_quantity', 'shop_name', 'create_time', 'creator']
+    list_filter = ['order_status', 'status_tag', 'payment_time', 'memorandum', 'shop_name', 'goods_title', 'payment_amount', ]
     search_fields = ['order_id',  'nickname']
-    list_editable = ['status', 'memorandum']
+    list_editable = ['order_status', 'memorandum']
     ordering = ['payment_time']
     exclude = ['creator']
     actions = [SubmitAction]
@@ -483,9 +458,9 @@ class RefundOrderInfoAdmin(object):
     def queryset(self):
         queryset = super(RefundOrderInfoAdmin, self).queryset()
         if self.order_ids:
-            queryset = queryset.filter(status=3, order_id__in=self.order_ids)
+            queryset = queryset.filter(order_status=3, order_id__in=self.order_ids)
         else:
-            queryset = queryset.filter(status=3)
+            queryset = queryset.filter(order_status=3)
         return queryset
 
     def has_add_permission(self):

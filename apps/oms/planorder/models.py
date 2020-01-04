@@ -26,6 +26,13 @@ class PlanOrderInfo(BaseModel):
         (1, '加急'),
         (2, '大促'),
     )
+    TAG_SIGN = (
+        (0, '正常'),
+        (1, '重复递交'),
+        (2, '系统错误'),
+        (3, '货品未关联工厂'),
+        (4, '保存单据出错'),
+    )
 
     planorder_id = models.CharField(null=True, blank=True, unique=True, max_length=30, verbose_name="计划采购单号", db_index=True)
     goods_name = models.ForeignKey(MachineInfo, on_delete=models.CASCADE, verbose_name='机器名称')
@@ -33,6 +40,7 @@ class PlanOrderInfo(BaseModel):
     estimated_time = models.DateTimeField(verbose_name='期望到货时间')
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='计划采购单状态')
     category = models.IntegerField(choices=CATEGORY, default=0, verbose_name='订单类型')
+    tag_sign = models.SmallIntegerField(choices=TAG_SIGN, default=0, verbose_name='错误原因')
 
     class Meta:
         verbose_name = 'OMS-P-整机采购计划单'
@@ -41,11 +49,21 @@ class PlanOrderInfo(BaseModel):
 
 
 class PlanOrderPenddingInfo(PlanOrderInfo):
+    VERIFY_FIELD = ["planorder_id", "goods_id", "quantity", "estimated_time"]
 
     class Meta:
         verbose_name = 'OMS-P-未处理计划单'
         verbose_name_plural = verbose_name
         proxy = True
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
 
 
 class PlanOrderSubmitInfo(PlanOrderInfo):

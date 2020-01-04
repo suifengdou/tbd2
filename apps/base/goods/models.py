@@ -24,6 +24,8 @@ class GoodsInfo(BaseModel):
         ("VAR", "智能机器人"),
         ("HUM", "加湿器"),
         ("MOP", "拖把"),
+        ("ETB", "电动牙刷"),
+        ("KIT", "烤箱"),
         ("OTH", "其他"),
     )
 

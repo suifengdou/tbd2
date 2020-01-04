@@ -12,12 +12,14 @@ from .models import GoodsInfo, PartInfo, MachineInfo
 
 class GoodsInfoAdmin(object):
     list_display = ['goods_name', 'goods_id', 'goods_attribute', 'goods_number']
+    list_filter = ['goods_name', 'goods_id', 'goods_attribute',]
     search_fields = ['goods_name']
     relfield_style = 'fk-ajax'
 
 
 class MachineInfoAdmin(object):
     list_display = ['goods_name', 'goods_id', 'goods_attribute', 'goods_number']
+    list_filter = ['goods_name', 'goods_id', 'goods_attribute',]
     search_fields = ['goods_id', 'goods_name']
     # 设置这个外键用搜索的方式输入
     relfield_style = 'fk-ajax'
@@ -30,6 +32,7 @@ class MachineInfoAdmin(object):
 
 class PartInfoAdmin(object):
     list_display = ['goods_name']
+    list_filter = ['goods_name', 'goods_id', 'goods_attribute',]
     search_fields = ['goods_name']
     relfield_style = 'fk-ajax'
 

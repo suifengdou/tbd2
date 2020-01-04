@@ -526,7 +526,7 @@ class FiSubmitAction(BaseActionView):
 
 # 逆向工单创建
 class WorkOrderAppRevAdmin(object):
-    list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'creator', 'update_time']
+    list_display = ['company', 'express_id', 'feedback', 'memo', 'information', 'category', 'create_time', 'creator', 'update_time']
     list_filter = ['creator', 'company', 'category']
     list_editable = ['feedback', 'information']
     search_fields = ['express_id']
@@ -705,7 +705,7 @@ class WorkOrderAppRevAdmin(object):
 
 # 正向工单创建
 class WorkOrderAppAdmin(object):
-    list_display = ['company', 'express_id', 'feedback', 'information', 'category', 'create_time', 'servicer', 'creator', 'update_time']
+    list_display = ['company', 'express_id', 'feedback', 'memo','information', 'category', 'create_time', 'servicer', 'creator', 'update_time']
     list_filter = ['servicer', 'creator', 'company', 'category']
     search_fields = ['express_id']
     list_editable = ['feedback', 'information']
@@ -889,10 +889,10 @@ class WorkOrderAppAdmin(object):
 
 # 客服工单审核
 class WorkOrderHandleAdmin(object):
-    list_display = ['company', 'express_id', 'feedback', 'category', 'information', 'create_time', 'creator', 'update_time']
+    list_display = ['company', 'express_id', 'feedback', 'memo','category', 'information', 'create_time', 'creator', 'update_time']
     list_filter = ['category']
     search_fields = ['express_id']
-    list_editable = ['feedback', 'process_tag']
+    list_editable = ['memo', 'process_tag']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
@@ -910,7 +910,7 @@ class WorkOrderHandleAdmin(object):
 
 # 快递工单审核
 class WorkOrderHandleStoAdmin(object):
-    list_display = ['company', 'category', 'process_tag', 'mid_handler', 'express_id', 'feedback', 'is_losing', 'is_return', 'return_express_id', 'information', 'wo_category', 'create_time', 'servicer', 'submit_time']
+    list_display = ['company', 'category', 'process_tag', 'mid_handler', 'express_id', 'feedback', 'memo','is_losing', 'is_return', 'return_express_id', 'information', 'wo_category', 'create_time', 'servicer', 'submit_time']
     list_filter = ['mid_handler', 'process_tag','category', 'submit_time', 'wo_category', 'is_losing']
     search_fields = ['express_id']
     list_editable = ['feedback', 'is_losing', 'is_return', 'return_express_id', 'process_tag']
@@ -953,11 +953,11 @@ class WorkOrderHandleStoAdmin(object):
 
 
 class WorkOrderKeshenAdmin(object):
-    list_display = ['company', 'is_return', 'express_id', 'return_express_id', 'feedback', 'is_losing', 'memo','information',
+    list_display = ['company', 'is_return', 'express_id', 'return_express_id', 'feedback', 'memo','is_losing', 'memo','information',
                     'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
     list_filter = ['company', 'is_return', 'is_losing']
     search_fields = ['return_express_id', 'express_id']
-    list_editable = ['feedback', 'memo']
+    list_editable = ['memo']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'feedback', 'return_express_id', 'order_status', 'wo_category', 'company']
@@ -974,14 +974,14 @@ class WorkOrderKeshenAdmin(object):
 
 
 class WorkOrderMineAdmin(object):
-    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'express_id', 'category', 'creator', 'servicer', 'handler']
     list_filter = ['submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category']
     search_fields = ['express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
-    list_editable = ['feedback']
+    list_editable = ['memo',]
     actions = [CSSubmitAction, RejectSelectedAction ]
 
 
@@ -998,14 +998,14 @@ class WorkOrderMineAdmin(object):
 
 
 class WorkOrderFinanceAdmin(object):
-    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'express_id', 'category', 'creator', 'servicer', 'handler', 'update_time']
     list_filter = ['update_time', 'create_time', 'is_return', 'is_losing', 'category', 'wo_category']
     search_fields = ['express_id']
     readonly_fields = ['express_id', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
-    list_editable = ['feedback']
+    list_editable = ['memo',]
     actions = [FiSubmitAction, RejectSelectedAction]
 
     def queryset(self):
@@ -1019,7 +1019,7 @@ class WorkOrderFinanceAdmin(object):
 
 
 class WorkOrderAdmin(object):
-    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'is_losing', 'information',
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo', 'is_losing', 'information',
                     'express_id', 'category', 'create_time', 'servicer', 'submit_time', 'handle_time', 'handler']
     list_filter = ['creator', 'submit_time', 'handle_time', 'is_return', 'is_losing', 'category', 'wo_category', 'order_status', 'company', 'servicer', 'handler']
     search_fields = ['express_id', 'return_express_id']
