@@ -231,23 +231,38 @@ class SubmitAction(BaseActionView):
                 for obj in queryset:
 
                     self.log('change', '', obj)
-                    if QCInfo.objects.filter(qc_order_id=obj.qc_order_id).exists():
+                    cancel_order = QCInfo.objects.filter(qc_order_id=obj.qc_order_id, order_status=0)
+                    if QCInfo.objects.filter(qc_order_id=obj.qc_order_id, order_status__in=[1, 2]).exists():
                         self.message_user("单号ID：%s，已经递交过质检单，此次未生成质检单" % obj.qc_order_id, "error")
                         n -= 1
                         obj.error_tag = 5
                         obj.order_status = 2
                         obj.save()
                         continue
-                    accumulation = int(obj.quantity + int(obj.batch_num.processingnum()))
-                    if accumulation > obj.batch_num.quantity and obj.result == 1:
+                    elif cancel_order.exists():
+                        cancel_order = cancel_order[0]
+                        cancel_order.order_status = 1
+                    current_batch = ManuOrderProcessingInfo.objects.filter(batch_num=obj.batch_num, planorder_id=obj.planorder_id)
+                    if current_batch.exists():
+                        current_batch = current_batch[0]
+                    else:
+                        self.message_user("此计划单单号%s没有对应的生产批号单据" % obj.planorder_id, "error")
+                        n -= 1
+                        obj.error_tag = 6
+                        obj.save()
+                        continue
+                    accumulation = int(obj.quantity + int(current_batch.processingnum()))
+                    if accumulation > current_batch.quantity and obj.result == 1:
                         self.message_user("此原始质检单号ID：%s，验货数量超过了订单数量，请修正" % obj.qc_order_id, "error")
                         n -= 1
                         obj.error_tag = 1
                         obj.save()
                         continue
-
-                    qc_order = QCInfo()
-                    warehouse_qs = ManufactoryToWarehouse.objects.filter(manufactory=obj.batch_num.manufactory)
+                    if cancel_order:
+                        qc_order = cancel_order
+                    else:
+                        qc_order = QCInfo()
+                    warehouse_qs = ManufactoryToWarehouse.objects.filter(manufactory=current_batch.manufactory)
                     if warehouse_qs:
                         warehouse = warehouse_qs[0].warehouse
                         qc_order.warehouse = warehouse
@@ -266,28 +281,28 @@ class SubmitAction(BaseActionView):
                             value = getattr(obj, i, None)
                             setattr(qc_order, i, value)  # 更新对象属性为字典对应键值
 
-                    qc_order.manufactory = obj.batch_num.manufactory
-                    qc_order.batch_num = obj.batch_num
-                    qc_order.goods_name = obj.batch_num.goods_name
-                    qc_order.goods_id = obj.batch_num.goods_id
+                    qc_order.manufactory = current_batch.manufactory
+                    qc_order.batch_num = current_batch
+                    qc_order.goods_name = current_batch.goods_name
+                    qc_order.goods_id = current_batch.goods_id
 
                     # 计算出每次的首单号和尾单号
-                    sn_start_num = int(obj.batch_num.processingnum()) + 100001
+                    sn_start_num = int(current_batch.processingnum()) + 100001
                     sn_end_num = sn_start_num + qc_order.quantity - 1
 
-                    qc_order.sn_start = str(obj.batch_num.batch_num) + str(sn_start_num)[-5:]
-                    qc_order.sn_end = str(obj.batch_num.batch_num) + str(sn_end_num)[-5:]
+                    qc_order.sn_start = str(current_batch.batch_num) + str(sn_start_num)[-5:]
+                    qc_order.sn_end = str(current_batch.batch_num) + str(sn_end_num)[-5:]
                     # 得到对应QC单对应的单据数量和累计数量
-                    qc_order.total_quantity = obj.batch_num.quantity
+                    qc_order.total_quantity = current_batch.quantity
                     if obj.result == 1:
-                        qc_order.accumulation = int(obj.batch_num.processingnum()) + qc_order.quantity
+                        qc_order.accumulation = int(current_batch.processingnum()) + qc_order.quantity
                     else:
-                        qc_order.accumulation = int(obj.batch_num.processingnum())
+                        qc_order.accumulation = int(current_batch.processingnum())
 
                     try:
                         qc_order.save()
                         queryset.filter(id=obj.id).update(order_status=2)
-                        self.message_user("ID：%s，递交质检单成功" % obj.qc_order_id, "success")
+                        # self.message_user("ID：%s，递交质检单成功" % obj.qc_order_id, "success")
                     except Exception as e:
                         self.message_user("此原始质检单号ID：%s，递交到质检单明细出现错误，错误原因：%s" % (obj.qc_order_id, e))
                         n -= 1
@@ -367,7 +382,7 @@ class SubmitSockInAction(BaseActionView):
                             continue
                         else:
                             stockin_order.save()
-                            self.message_user("%s，生成入库单号：%s" % (obj.qc_order_id, stockin_order.stockin_id), "success")
+                            # self.message_user("%s，生成入库单号：%s" % (obj.qc_order_id, stockin_order.stockin_id), "success")
                             obj.order_status = 2
                             obj.save()
                             continue
@@ -383,7 +398,8 @@ class SubmitSockInAction(BaseActionView):
 
 class QCOriInfoAdmin(object):
     list_display = ['creator',"qc_date", "qc_order_id", "order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
-    search_fields = ["batch_num"]
+    search_fields = ["batch_num", "qc_order_id"]
+    list_filter = ['creator', "qc_date", "order_status", "quantity", "result", "category", "memorandum"]
     readonly_fields = ["order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum", 'creator', "qc_order_id"]
     ordering = ['qc_date']
     def has_add_permission(self):
@@ -392,17 +408,17 @@ class QCOriInfoAdmin(object):
 
 
 class QCSubmitOriInfoAdmin(object):
-    list_display = ['creator',"qc_date",'error_tag',"order_status", "qc_order_id", "batch_num","quantity","result",
-                    "category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
-    list_filter = ['error_tag', 'creator',"qc_date" , "order_status", "batch_num","quantity","result","category","memorandum"]
-    search_fields = ["batch_num__batch_num", "qc_order_id"]
+    list_display = ['creator',"qc_date",'error_tag',"order_status", "qc_order_id","planorder_id", "batch_num",
+                    "quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
+    list_filter = ['error_tag', 'creator',"qc_date", "order_status", "batch_num","quantity","result","category","memorandum"]
+    search_fields = ["batch_num", "qc_order_id"]
     readonly_fields = ['creator', "qc_order_id"]
     ordering = ['qc_date']
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
     INIT_FIELDS_DIC = {
         '序号': 'null01',
         '日期': 'qc_date',
-        '订单号': 'null02',
+        '订单号': 'planorder_id',
         '生产工厂': 'null03',
         '型号': 'null04',
         '订单数量': 'null05',
@@ -545,13 +561,14 @@ class QCSubmitOriInfoAdmin(object):
             qc_order = QCOriInfo()  # 创建表格每一行为一个对象
             batch_num = str(row["batch_num"]).replace(" ", "")[:11]
             # 查询一下批次号，根据批次号查询
-            check_batch = ManuOrderProcessingInfo.objects.filter(is_delete=0, batch_num=batch_num)
-            if check_batch.exists():
-                qc_order.batch_num = check_batch[0]
+            if batch_num:
+                qc_order.batch_num = batch_num
             else:
                 report_dic['error'].append('不存批次号:%s，请检查修正源表' % batch_num)
                 report_dic['false'] += 1
                 continue
+            planorder_id = "POA%s" % str(row["planorder_id"]).replace(" ", "")
+            qc_order.planorder_id = planorder_id
 
             if re.match('[0-9]{8}', str(row['qc_date'])):
                 qc_date = datetime.datetime.strptime(str(row['qc_date']), '%Y%m%d')
@@ -592,7 +609,8 @@ class QCSubmitInfoAdmin(object):
     list_display = ["batch_num","error_tag","order_status","qc_date", "qc_order_id", "goods_name",  "manufactory", "goods_id", "quantity",
                     "total_quantity", "accumulation", "result", "category", "check_quantity", "a_flaw", "b1_flaw",
                     "b2_flaw", "c_flaw", "memorandum", "sn_start", "sn_end"]
-    list_filter = ["goods_name", "manufactory", "goods_id", "category"]
+    list_filter = ['error_tag', 'creator',"goods_name", "qc_date" , "order_status","quantity","result","category","memorandum"]
+    search_fields = ["batch_num__batch_num", "qc_order_id", "goods_name"]
     ordering = ['qc_date']
     actions = [SubmitSockInAction, RejectSelectedQCAction]
 
@@ -608,7 +626,8 @@ class QCSubmitInfoAdmin(object):
 
 class QCInfoAdmin(object):
     list_display = ["batch_num","qc_date","qc_order_id","goods_name","order_status","manufactory","goods_id","quantity","total_quantity","accumulation","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw","memorandum"]
-    list_filter = ["goods_name", "manufactory", "goods_id", "category"]
+    list_filter = ['error_tag', 'creator',"qc_date" ,"goods_name", "order_status", "quantity","result","category","memorandum"]
+    search_fields = ["batch_num__batch_num", "qc_order_id", "goods_name"]
     ordering = ['qc_date']
 
     def has_add_permission(self):

@@ -207,7 +207,7 @@ class FeedbackReverseAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    if obj.feedback:
+                    if obj.memo:
                         obj.submit_time = datetime.datetime.now()
                         obj.order_status = 4
                         obj.servicer = self.request.user.username
@@ -429,7 +429,7 @@ class PassedAction(BaseActionView):
     model_perm = 'change'
     icon = "fa fa-check-circle"
 
-    modify_models_batch = True
+    modify_models_batch = False
 
     @filter_hook
     def do_action(self, queryset):
@@ -445,8 +445,17 @@ class PassedAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
+                    if obj.is_losing == 0:
+                        if obj.wo_category == 0:
+                            obj.order_status = 6
+                        else:
+                            obj.order_status = 8
+                    elif obj.is_losing == 1:
+                        if obj.wo_category == 0:
+                            obj.order_status = 6
+                        else:
+                            obj.order_status = 7
                     obj.submit_time = datetime.datetime.now()
-                    obj.order_status = 6
                     obj.save()
                     self.message_user("%s 处理完毕，工单完结" % obj.express_id, "info")
 
@@ -989,7 +998,10 @@ class WorkOrderMineAdmin(object):
     def queryset(self):
         queryset = super(WorkOrderMineAdmin, self).queryset()
         myname = self.request.user.username
-        queryset = queryset.filter(is_delete=0, creator=myname, order_status=6)
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.filter(is_delete=0, order_status=6)
+        else:
+            queryset = queryset.filter(is_delete=0, creator=myname, order_status=6)
         return queryset
 
     def has_add_permission(self):

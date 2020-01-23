@@ -178,7 +178,10 @@ class SubmitAction(BaseActionView):
 
 class StockInInfoAdmin(object):
     list_display = ["stockin_id", "source_order_id", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
-    list_filter = ["category", "warehouse", "goods_name"]
+    list_filter = ["create_time", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
+    search_fields = ["source_order_id"]
+    readonly_fields = ["is_delete", "creator", "error_tag","stockin_id", "source_order_id", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
+
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -187,6 +190,8 @@ class StockInInfoAdmin(object):
 
 class StockInPenddingInfoAdmin(object):
     list_display = ["stockin_id", "source_order_id", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
+
+    readonly_fields = ["stockin_id", "source_order_id", "order_status", "category", "batch_num", "planorder_id", "warehouse", "goods_name", "goods_id", "quantity"]
 
     actions = [SubmitAction, RejectSelectedQCAction]
 

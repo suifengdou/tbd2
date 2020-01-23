@@ -5,7 +5,7 @@
 # @File    : adminx.py
 # @Software: PyCharm
 
-import datetime
+import datetime, re
 from django.core.exceptions import PermissionDenied
 from django.db import router
 from django.utils.encoding import force_text
@@ -20,7 +20,7 @@ from xadmin.util import model_ngettext
 
 
 from .models import ManuOrderInfo, ManuOrderPenddingInfo, ManuOrderProcessingInfo
-from apps.oms.qcorder.models import QCSubmitOriInfo, QCOriInfo
+from apps.oms.qcorder.models import QCInfo
 from apps.oms.cusrequisition.models import CusRequisitionInfo
 from apps.oms.planorder.models import PlanOrderInfo
 
@@ -52,7 +52,7 @@ class RejectSelectedAction(BaseActionView):
                     obj.save()
                     self.message_user("%s 工厂订单取消成功，已驳回到计划单待递交界面。" % obj.planorder_id, "success")
                 elif obj.order_status == 2:
-                    qc_tag = QCOriInfo.objects.filter(batch_num=obj, order_status__in=[1, 2])
+                    qc_tag = QCInfo.objects.filter(batch_num=obj, order_status__in=[1, 2])
                     if qc_tag:
                         self.message_user("%s 已经开始生产，不可以驳回。" % obj.planorder_id, 'error')
                         n -= 1
@@ -144,7 +144,7 @@ class CheckAction(BaseActionView):
 
                     else:
                         queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
-                        self.message_user("%s 审核完毕，等待生产" % obj.planorder_id, "info")
+                        # self.message_user("%s 审核完毕，等待生产" % obj.planorder_id, "info")
 
             self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -152,11 +152,11 @@ class CheckAction(BaseActionView):
         return None
 
 
-class QCOriInfoInline(object):
+class QCInfoInline(object):
 
-    model = QCSubmitOriInfo
+    model = QCInfo
     # exclude = ["order_status", "creator", "qc_order_id"]
-    exclude = ["is_delete", 'creator', 'qc_order_id']
+    exclude = ["is_delete", 'creator', 'qc_order_id', "sn_start", "sn_end", "batch_num","planorder_id","goods_id","goods_name","manufactory","warehouse","error_tag","order_status"]
     extra = 0
     style = 'table'
     # list_display = ["order_status", "batch_num","quantity","result","category","check_quantity","a_flaw","b1_flaw","b2_flaw","c_flaw"]
@@ -182,12 +182,32 @@ class ManuOrderPenddingInfoAdmin(object):
     list_filter = ["tag_sign","goods_id", "goods_name", "manufactory", "estimated_time","create_time","update_time"]
     list_editable = ['tag_sign']
     search_fields = ["batch_num", "planorder_id"]
-    readonly_fields = ["batch_num","planorder_id","goods_id","goods_name","creator"]
+    readonly_fields = ["planorder_id","goods_id","goods_name","creator"]
     actions = [CheckAction, RejectSelectedAction]
+
+    batch_data = True
+    order_ids = []
+
+    def post(self, request, *args, **kwargs):
+        order_ids = request.POST.get('ids', None)
+        if order_ids:
+            if " " in order_ids:
+                order_ids = order_ids.split(" ")
+                for i in order_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(order_ids), 'error')
+                        break
+                    else:
+                        self.order_ids = order_ids
+                        self.queryset()
+        return super(ManuOrderPenddingInfoAdmin, self).post(request, *args, **kwargs)
 
     def queryset(self):
         queryset = super(ManuOrderPenddingInfoAdmin, self).queryset()
-        queryset = queryset.filter(order_status=1)
+        if self.order_ids:
+            queryset = queryset.filter(order_status=1, planorder_id__in=self.order_ids)
+        else:
+            queryset = queryset.filter(order_status=1)
         return queryset
 
     def has_add_permission(self):
@@ -196,21 +216,17 @@ class ManuOrderPenddingInfoAdmin(object):
 
 
 class ManuOrderProcessingInfoAdmin(object):
-    list_display = ["batch_num","tag_sign","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum", "intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
-    list_filter = ["tag_sign","goods_id", "goods_name", "manufactory", "estimated_time","create_time","update_time"]
+    list_display = ["batch_num","tag_sign","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum", "penddingnum", "failurenum", "start_sn", "end_sn"]
+    list_filter = ["tag_sign","order_status","goods_id", "goods_name", "manufactory", "estimated_time","create_time","update_time"]
     list_editable = ['tag_sign']
     search_fields = ["batch_num", "planorder_id"]
     readonly_fields = ["batch_num","planorder_id","goods_id", "order_status","estimated_time","creator", "manufactory", "goods_name", "quantity", "processingnum", "completednum","intransitnum", "penddingnum", "failurenum", "start_sn", "end_sn"]
-    inlines = [QCOriInfoInline, ]
+    inlines = [QCInfoInline, ]
     actions = [RejectSelectedAction, ]
-
-    def queryset(self):
-        queryset = super(ManuOrderProcessingInfoAdmin, self).queryset()
-        queryset = queryset.filter(order_status__in=[2, 3])
-        return queryset
+    batch_data = True
+    order_ids = []
 
     def save_related(self):
-
         for i in range(self.formsets[0].forms.__len__()):
             request = self.request
 
@@ -222,9 +238,31 @@ class ManuOrderProcessingInfoAdmin(object):
             self.formsets[0].forms[i].instance.creator = request.user.username
         super().save_related()
 
-        def has_add_permission(self):
-            # 禁用添加按钮
-            return False
+    def post(self, request, *args, **kwargs):
+        order_ids = request.POST.get('ids', None)
+        if order_ids:
+            if " " in order_ids:
+                order_ids = order_ids.split(" ")
+                for i in order_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(order_ids), 'error')
+                        break
+                    else:
+                        self.order_ids = order_ids
+                        self.queryset()
+        return super(ManuOrderProcessingInfoAdmin, self).post(request, *args, **kwargs)
+
+    def queryset(self):
+        queryset = super(ManuOrderProcessingInfoAdmin, self).queryset()
+        if self.order_ids:
+            queryset = queryset.filter(order_status__in=[2, 3], planorder_id__in=self.order_ids)
+        else:
+            queryset = queryset.filter(order_status__in=[2, 3])
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 xadmin.site.register(ManuOrderPenddingInfo, ManuOrderPenddingInfoAdmin)

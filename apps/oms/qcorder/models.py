@@ -38,11 +38,12 @@ class QCOriInfo(BaseModel):
         (3, '已存在入库单，请联系管理员处理'),
         (4, '生入库单出现意外'),
         (5, '已递交过，检查处理'),
-        (6, '递交质检单出现意外'),
+        (6, '生产批号非法'),
+        (7, '递交质检单出现意外'),
     )
 
-    batch_num = models.ForeignKey(ManuOrderInfo, on_delete=models.CASCADE, verbose_name='批次号码')
-
+    batch_num = models.CharField(max_length=60, verbose_name='批次号码')
+    planorder_id = models.CharField(max_length=60, verbose_name='计划采购单号')
     quantity = models.IntegerField(verbose_name='验货数量')
     result = models.SmallIntegerField(choices=RESULT, default=0, verbose_name='验货结果')
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='验货类型')
@@ -52,7 +53,7 @@ class QCOriInfo(BaseModel):
     b2_flaw = models.IntegerField(verbose_name='B2类缺陷')
     c_flaw = models.IntegerField(verbose_name='C类缺陷')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
-    qc_order_id = models.CharField(null=True, max_length=30, verbose_name='质检单号')
+    qc_order_id = models.CharField(max_length=30, verbose_name='质检单号', unique=True)
     qc_date = models.DateTimeField(default=timezone.now, verbose_name='质检时间')
 
     error_tag = models.SmallIntegerField(choices=ERROR_LIST, default=0, verbose_name='错误原因')
@@ -89,8 +90,6 @@ class QCInfo(BaseModel):
         (0, '已取消'),
         (1, '未处理'),
         (2, '已确认'),
-        (3, '已递交'),
-        (4, '异常'),
     )
     RESULT = (
         (0, '不合格'),

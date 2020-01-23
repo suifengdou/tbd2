@@ -68,33 +68,23 @@ class ManuOrderInfo(BaseModel):
     completednum.short_description = '已完成'
 
     def processingnum(self):
-        processing_num = self.qcoriinfo_set.all().filter(order_status=2, result=1).aggregate(Sum("quantity"))["quantity__sum"]
+        processing_num = self.qcinfo_set.all().filter(order_status__in=[1, 2], result=1).aggregate(Sum("quantity"))["quantity__sum"]
         if not processing_num:
             processing_num = 0
         return processing_num
     processingnum.short_description = '已验货'
 
     def failurenum(self):
-        failure_num = self.qcoriinfo_set.all().filter(order_status__in=[1, 2], result=0).aggregate(Sum("quantity"))["quantity__sum"]
+        failure_num = self.qcinfo_set.all().filter(order_status__in=[1, 2], result=0).aggregate(Sum("quantity"))["quantity__sum"]
         if failure_num is None:
             failure_num = 0
         return failure_num
     failurenum.short_description = '验货失败'
 
     def penddingnum(self):
-        pending_num = int(self.quantity) - int(self.processingnum()) - int(self.intransitnum())
+        pending_num = int(self.quantity) - int(self.processingnum())
         return pending_num
     penddingnum.short_description = '待生产'
-
-    def intransitnum(self):
-        try:
-            intransit_num = self.stockininfo_set.all().filter(batch_num=self.batch_num, order_status__in=[1, 2]).aggregate(Sum("quantity"))["quantity__sum"]
-        except Exception as e:
-            intransit_num = 0
-        if not intransit_num:
-            intransit_num = 0
-        return intransit_num
-    intransitnum.short_description = '入库合计'
 
 
 class ManuOrderPenddingInfo(ManuOrderInfo):

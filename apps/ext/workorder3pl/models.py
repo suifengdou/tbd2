@@ -23,7 +23,8 @@ class WorkOrder3PL(BaseModel):
         (3, '正向未递'),
         (4, '仓储未理'),
         (5, '复核未理'),
-        (6, '工单完结'),
+        (6, '财务审核'),
+        (7, '工单完结'),
     )
     CATEGORY = (
         (0, '入库错误'),
@@ -120,6 +121,13 @@ class WorkOrder3PLKeshen(WorkOrder3PL):
 
 class WorkOrder3PLMine(WorkOrder3PL):
     class Meta:
-        verbose_name = 'EXT-仓储工单-只看自己'
+        verbose_name = 'EXT-仓储工单-财务审核'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class WorkOrder3PLProcess(WorkOrder3PL):
+    class Meta:
+        verbose_name = 'EXT-仓储工单-未完结'
         verbose_name_plural = verbose_name
         proxy = True

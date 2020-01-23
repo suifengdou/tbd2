@@ -19,14 +19,16 @@ from apps.oms.manuorder.models import ManuOrderInfo
 
 
 class GoodsToManufactoryInfo(BaseModel):
+
+    VERIFY_FIELD = ['goods_id', 'manufactory']
+
     STATUS = (
         (0, '停用'),
         (1, '正常'),
     )
     CATEGORY = (
         (0, '整机装配厂'),
-        (1, '客供件'),
-        (2, '常规配件'),
+        (1, '常规配件'),
     )
     goods_name = models.OneToOneField(GoodsInfo, on_delete=models.CASCADE, verbose_name='机器名称')
     manufactory = models.ForeignKey(ManuInfo, on_delete=models.CASCADE, verbose_name='工厂名字')
@@ -37,6 +39,16 @@ class GoodsToManufactoryInfo(BaseModel):
         verbose_name = 'BA-R-全部货品与工厂对照表'
         verbose_name_plural = verbose_name
         db_table = 'base_rel_goods2manufactory'
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
+
 
 
 class MachineToManufactoryInfo(GoodsToManufactoryInfo):

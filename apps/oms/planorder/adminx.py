@@ -21,7 +21,7 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
-from .models import PlanOrderInfo, PlanOrderPenddingInfo, PlanOrderSubmitInfo
+from .models import PlanOrderInfo, PlanOrderPenddingInfo, PlanOrderSubmitInfo, OriPlanOrderInfo, OriPlanOrderSubmitInfo
 
 from apps.oms.manuorder.models import ManuOrderInfo
 from apps.base.relationship.models import GoodsToManufactoryInfo, PartToProductInfo
@@ -30,6 +30,7 @@ from apps.base.goods.models import MachineInfo, PartInfo
 
 
 ACTION_CHECKBOX_NAME = '_selected_action'
+
 
 # 驳回审核
 class RejectSelectedAction(BaseActionView):
@@ -116,8 +117,81 @@ class RejectSelectedAction(BaseActionView):
                                 self.get_template_list('views/model_reject_selected_confirm.html'), context)
 
 
-class CheckAction(BaseActionView):
+class SubmitActionORIPO(BaseActionView):
     action_name = "submit_oriorder"
+    description = "递交选中的计划单"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=3)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+
+                    check_order = PlanOrderInfo.objects.filter(planorder_id=obj.planorder_id, order_status__in=[1, 2, 3, 4])
+                    if check_order.exists():
+                        self.message_user("此订单%s已经存在，请不要重复递交" % obj.planorder_id, "error")
+                        obj.tag_sign = 1
+                        n -= 1
+                        obj.save()
+                        continue
+                    is_cancel_order = PlanOrderInfo.objects.filter(is_delete=0, planorder_id=obj.planorder_id, order_status=0)
+                    if is_cancel_order.exists():
+                        n -= 1
+                        self.message_user("%s已经被取消，不能导入，尝试直接恢复" % is_cancel_order[0].planorder_id)
+                        obj.tag_sign = 2
+                        obj.save()
+                        continue
+                    # 创建工厂订单
+                    planorder_order = PlanOrderInfo()
+                    check_goods = MachineInfo.objects.filter(goods_id=obj.goods_name)
+                    if check_goods.exists():
+                        planorder_order.goods_name = check_goods[0]
+                    else:
+                        self.message_user("此订单%s货品非法" % obj.planorder_id, "error")
+                        obj.tag_sign = 3
+                        n -= 1
+                        obj.save()
+                        continue
+                    atts = ["planorder_id", "estimated_time", "quantity"]
+                    for i in atts:
+                        # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
+                        if hasattr(planorder_order, i):
+                            value = getattr(obj, i, None)
+                            if value in ['nan', 'NaN', 'NaT', None]:
+                                value = ''
+                            setattr(planorder_order, i, value)  # 更新对象属性为字典对应键值
+                    planorder_order.creator = self.request.user.username
+                    try:
+                        planorder_order.save()
+                        # self.message_user("订单 %s 工厂订单创建完毕" % obj.planorder_id, 'success')
+                        queryset.filter(planorder_id=obj.planorder_id).update(order_status=2)
+                    except Exception as e:
+                        obj.tag_sign = 4
+                        n -= 1
+                        obj.save()
+                        self.message_user("订单 %s 创建错误，错误原因：%s" % (obj.planorder_id, e))
+
+            self.message_user("成功处理完毕 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+
+class CheckAction(BaseActionView):
+    action_name = "submit_order"
     description = "审核选中的计划单"
     model_perm = 'change'
     icon = "fa fa-flag"
@@ -145,7 +219,7 @@ class CheckAction(BaseActionView):
 
 
 class SubmitActionPO(BaseActionView):
-    action_name = "submit_oriorder"
+    action_name = "submit_order"
     description = "递交选中的计划单"
     model_perm = 'change'
     icon = "fa fa-flag"
@@ -278,58 +352,27 @@ class SubmitActionPO(BaseActionView):
         pass
 
 
-class PlanOrderInfoAdmin(object):
-    list_display = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
-    list_filter = ["goods_name__goods_name", "category"]
+class OriPlanOrderInfoAdmin(object):
+    list_display = ["planorder_id", "estimated_time", "quantity", "goods_name"]
+    list_filter = ["order_status", "tag_sign", "estimated_time", "quantity", "goods_name"]
+    search_fields = ["planorder_id"]
+    actions = []
+
+
+class OriPlanOrderSubmitInfoAdmin(object):
+    list_display = ["planorder_id", "order_status", "tag_sign", "estimated_time", "quantity", "goods_name"]
+    list_filter = ["order_status", "tag_sign", "estimated_time", "quantity", "goods_name"]
     search_fields = ["planorder_id"]
     ordering = ["planorder_id"]
-    readonly_fields = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
-
-    def has_add_permission(self):
-        # 禁用添加按钮
-        return False
-
-
-class PlanOrderPenddingInfoAdmin(object):
-    list_display = ["planorder_id","tag_sign","goods_name","quantity","estimated_time","order_status","category","creator"]
-    list_filter = ["tag_sign","goods_name__goods_name", "category","order_status","category","create_time","update_time"]
-    search_fields = ["planorder_id","goods_name__goods_name"]
-    ordering = ["planorder_id"]
-    form_layout = [
-        Fieldset('必填信息',
-                 'planorder_id', 'goods_name', "estimated_time", "quantity", "category"),
-        Fieldset(None,
-                 'creator', 'order_status', 'is_delete', **{"style": "display:None"}),
-    ]
-
+    actions = [SubmitActionORIPO, ]
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
     INIT_FIELDS_DIC = {
-        "PO单号": "planorder_id",
-        "期望到货时间": "estimated_time",
-        "申请量": "quantity",
-        "商家编码": "goods_id"
+        'PO单号': 'planorder_id',
+        '期望到货时间': 'estimated_time',
+        '申请量': 'quantity',
+        '商家编码': 'goods_name'
     }
     import_data = True
-
-    actions = [CheckAction, RejectSelectedAction]
-
-    def queryset(self):
-        qs = super(PlanOrderPenddingInfoAdmin, self).queryset()
-        qs = qs.filter(order_status=1)
-        return qs
-
-    def save_models(self):
-        obj = self.new_obj
-        request = self.request
-        obj.creator = request.user.username
-        obj.save()
-        if obj.planorder_id is None:
-            prefix = "PO"
-            serial_number = str(datetime.datetime.now())
-            serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
-            obj.planorder_id = prefix + str(serial_number)[0:17] + "A"
-            obj.save()
-        super().save_models()
 
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file', None)
@@ -340,7 +383,7 @@ class PlanOrderPenddingInfoAdmin(object):
                 self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
             if result['repeated'] > 0:
                 self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
-        return super(PlanOrderPenddingInfoAdmin, self).post(request, *args, **kwargs)
+        return super(OriPlanOrderSubmitInfoAdmin, self).post(request, *args, **kwargs)
 
     def handle_upload_file(self, request, _file):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -354,7 +397,7 @@ class PlanOrderPenddingInfoAdmin(object):
                     columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
 
             # 验证一下必要的核心字段是否存在
-            _ret_verify_field = PlanOrderPenddingInfo.verify_mandatory(columns_key)
+            _ret_verify_field = OriPlanOrderSubmitInfo.verify_mandatory(columns_key)
             if _ret_verify_field is not None:
                 return report_dic['error'].append(_ret_verify_field)
 
@@ -399,7 +442,7 @@ class PlanOrderPenddingInfoAdmin(object):
                     if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
                         columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
                 # 直接调用验证函数进行验证
-                _ret_verify_field = PlanOrderPenddingInfo.verify_mandatory(columns_key)
+                _ret_verify_field = OriPlanOrderSubmitInfo.verify_mandatory(columns_key)
                 if _ret_verify_field is not None:
                     return _ret_verify_field
                 # 验证通过进行重新处理。
@@ -427,45 +470,235 @@ class PlanOrderPenddingInfoAdmin(object):
 
         # 开始导入数据
         for row in resource:
-            if PlanOrderInfo.objects.filter(is_delete=0, planorder_id=row['planorder_id']).exists():
+            if OriPlanOrderInfo.objects.filter(is_delete=0, planorder_id=row['planorder_id'], order_status__in=[1, 2]).exists():
                 report_dic["repeated"] += 1
                 continue
-            plan_order = PlanOrderInfo()  # 创建表格每一行为一个对象
+            is_cancel_order = OriPlanOrderInfo.objects.filter(is_delete=0, planorder_id=row['planorder_id'],order_status=0)
+            if is_cancel_order.exists():
+                report_dic['error'].append("%s已经被取消，不能导入，尝试直接恢复" % is_cancel_order[0].planorder_id)
+                report_dic['false'] += 1
+                continue
+            planorder_order = OriPlanOrderInfo()  # 创建表格每一行为一个对象
 
-            goods_id = row["goods_id"]
-            goods_name = MachineInfo.objects.filter(goods_id=goods_id)
-            if goods_name.exists():
-                goods_name = goods_name[0]
-                plan_order.goods_name = goods_name
+            row["planorder_id"] = str(row["planorder_id"]).replace(" ", "")
+            if re.match('[POA0-9]+$', row["planorder_id"]):
+                atts = ["planorder_id", "estimated_time", "quantity", "goods_name"]
+                for i in atts:
+                    # 查询是否有这个字段属性，如果有就更新到对象。nan, NaT 是pandas处理数据时候生成的。
+                    if hasattr(planorder_order, i):
+                        value = row.get(i, None)
+                        if value in ['nan', 'NaN', 'NaT', None]:
+                            value = ''
+                        setattr(planorder_order, i, value)  # 更新对象属性为字典对应键值
             else:
-                report_dic["error"].append("%s单据货品错误" % row["planorder_id"])
-                report_dic["false"] += 1
+                report_dic['error'].append('错误:%s，请检查修正单号' % row["planorder_id"])
+                report_dic['false'] += 1
                 continue
-            planorder_id = str(row["planorder_id"]).replace(" ", "")
-            if re.match("^POA[0-9]+$", planorder_id):
-                plan_order.planorder_id = planorder_id
-            else:
-                report_dic["error"].append("%s单据单号错误" % row["planorder_id"])
-                report_dic["false"] += 1
-                continue
-            quantity = str(row["quantity"]).replace(" ", "")
-            if re.match("^[0-9]+$", quantity):
-                plan_order.quantity = int(quantity)
-            else:
-                report_dic["error"].append("%s单据数量错误" % row["planorder_id"])
-                report_dic["false"] += 1
-                continue
-            estimated_time = row["estimated_time"]
-            plan_order.estimated_time = estimated_time
+            planorder_order.creator = request.user.username
 
             try:
-                plan_order.save()
+                planorder_order.save()
                 report_dic["successful"] += 1
             # 保存出错，直接错误条数计数加一。
             except Exception as e:
                 report_dic["false"] += 1
                 report_dic["error"].append(e)
         return report_dic
+
+    def queryset(self):
+        queryset = super(OriPlanOrderSubmitInfoAdmin, self).queryset()
+        queryset = queryset.filter(order_status=1)
+        return queryset
+
+
+class PlanOrderInfoAdmin(object):
+    list_display = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
+    list_filter = ["goods_name__goods_name", "category"]
+    search_fields = ["planorder_id"]
+    ordering = ["planorder_id"]
+    readonly_fields = ["planorder_id","goods_name","quantity","estimated_time","order_status","category","creator"]
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
+class PlanOrderPenddingInfoAdmin(object):
+    list_display = ["planorder_id","tag_sign","goods_name","quantity","estimated_time","order_status","category","creator"]
+    list_filter = ["tag_sign","goods_name__goods_name", "category","order_status","category","create_time","update_time"]
+    search_fields = ["planorder_id","goods_name__goods_name"]
+    ordering = ["planorder_id"]
+    form_layout = [
+        Fieldset('必填信息',
+                 'planorder_id', 'goods_name', "estimated_time", "quantity", "category"),
+        Fieldset(None,
+                 'creator', 'order_status', 'is_delete', **{"style": "display:None"}),
+    ]
+    #
+    # ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+    # INIT_FIELDS_DIC = {
+    #     "PO单号": "planorder_id",
+    #     "期望到货时间": "estimated_time",
+    #     "申请量": "quantity",
+    #     "商家编码": "goods_id"
+    # }
+    # import_data = True
+
+    actions = [CheckAction, RejectSelectedAction]
+
+    def queryset(self):
+        qs = super(PlanOrderPenddingInfoAdmin, self).queryset()
+        qs = qs.filter(order_status=1)
+        return qs
+
+    # def save_models(self):
+    #     obj = self.new_obj
+    #     request = self.request
+    #     obj.creator = request.user.username
+    #     obj.save()
+    #     if obj.planorder_id is None:
+    #         prefix = "PO"
+    #         serial_number = str(datetime.datetime.now())
+    #         serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
+    #         obj.planorder_id = prefix + str(serial_number)[0:17] + "A"
+    #         obj.save()
+    #     super().save_models()
+    #
+    # def post(self, request, *args, **kwargs):
+    #     file = request.FILES.get('file', None)
+    #     if file:
+    #         result = self.handle_upload_file(request, file)
+    #         self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
+    #         if result['false'] > 0 or result['error']:
+    #             self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')
+    #         if result['repeated'] > 0:
+    #             self.message_user('包含更新重复数据%s条' % int(result['repeated']), 'error')
+    #     return super(PlanOrderPenddingInfoAdmin, self).post(request, *args, **kwargs)
+    #
+    # def handle_upload_file(self, request, _file):
+    #     report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+    #     if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
+    #         df = pd.read_excel(_file, sheet_name=0)
+    #
+    #         # 获取表头，对表头进行转换成数据库字段名
+    #         columns_key = df.columns.values.tolist()
+    #         for i in range(len(columns_key)):
+    #             if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+    #                 columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+    #
+    #         # 验证一下必要的核心字段是否存在
+    #         _ret_verify_field = PlanOrderPenddingInfo.verify_mandatory(columns_key)
+    #         if _ret_verify_field is not None:
+    #             return report_dic['error'].append(_ret_verify_field)
+    #
+    #         # 更改一下DataFrame的表名称
+    #         columns_key_ori = df.columns.values.tolist()
+    #         ret_columns_key = dict(zip(columns_key_ori, columns_key))
+    #         df.rename(columns=ret_columns_key, inplace=True)
+    #
+    #         # 更改一下DataFrame的表名称
+    #         num_end = 0
+    #         step = 300
+    #         step_num = int(len(df) / step) + 2
+    #         i = 1
+    #         while i < step_num:
+    #             num_start = num_end
+    #             num_end = step * i
+    #             intermediate_df = df.iloc[num_start: num_end]
+    #
+    #             # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+    #             _ret_list = intermediate_df.to_dict(orient='records')
+    #             intermediate_report_dic = self.save_resources(request, _ret_list)
+    #             for k, v in intermediate_report_dic.items():
+    #                 if k == "error":
+    #                     if intermediate_report_dic["error"]:
+    #                         report_dic[k].append(v)
+    #                 else:
+    #                     report_dic[k] += v
+    #             i += 1
+    #         return report_dic
+    #     # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
+    #     elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
+    #         df = pd.read_csv(_file, encoding="GBK", chunksize=900)
+    #
+    #         for piece in df:
+    #             # 获取表头
+    #             columns_key = piece.columns.values.tolist()
+    #             # 剔除表头中特殊字符等于号和空格
+    #             for i in range(len(columns_key)):
+    #                 columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+    #             # 循环处理对应的预先设置，转换成数据库字段名称
+    #             for i in range(len(columns_key)):
+    #                 if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+    #                     columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+    #             # 直接调用验证函数进行验证
+    #             _ret_verify_field = PlanOrderPenddingInfo.verify_mandatory(columns_key)
+    #             if _ret_verify_field is not None:
+    #                 return _ret_verify_field
+    #             # 验证通过进行重新处理。
+    #             columns_key_ori = piece.columns.values.tolist()
+    #             ret_columns_key = dict(zip(columns_key_ori, columns_key))
+    #             piece.rename(columns=ret_columns_key, inplace=True)
+    #             _ret_list = piece.to_dict(orient='records')
+    #             intermediate_report_dic = self.save_resources(request, _ret_list)
+    #             for k, v in intermediate_report_dic.items():
+    #                 if k == "error":
+    #                     if intermediate_report_dic["error"]:
+    #                         report_dic[k].append(v)
+    #                 else:
+    #                     report_dic[k] += v
+    #         return report_dic
+    #
+    #     else:
+    #         report_dic["error"].append('只支持excel和csv文件格式！')
+    #         return report_dic
+    #
+    # @staticmethod
+    # def save_resources(request, resource):
+    #     # 设置初始报告
+    #     report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error":[]}
+    #
+    #     # 开始导入数据
+    #     for row in resource:
+    #         if PlanOrderInfo.objects.filter(is_delete=0, planorder_id=row['planorder_id']).exists():
+    #             report_dic["repeated"] += 1
+    #             continue
+    #         plan_order = PlanOrderInfo()  # 创建表格每一行为一个对象
+    #
+    #         goods_id = row["goods_id"]
+    #         goods_name = MachineInfo.objects.filter(goods_id=goods_id)
+    #         if goods_name.exists():
+    #             goods_name = goods_name[0]
+    #             plan_order.goods_name = goods_name
+    #         else:
+    #             report_dic["error"].append("%s单据货品错误" % row["planorder_id"])
+    #             report_dic["false"] += 1
+    #             continue
+    #         planorder_id = str(row["planorder_id"]).replace(" ", "")
+    #         if re.match("^POA[0-9]+$", planorder_id):
+    #             plan_order.planorder_id = planorder_id
+    #         else:
+    #             report_dic["error"].append("%s单据单号错误" % row["planorder_id"])
+    #             report_dic["false"] += 1
+    #             continue
+    #         quantity = str(row["quantity"]).replace(" ", "")
+    #         if re.match("^[0-9]+$", quantity):
+    #             plan_order.quantity = int(quantity)
+    #         else:
+    #             report_dic["error"].append("%s单据数量错误" % row["planorder_id"])
+    #             report_dic["false"] += 1
+    #             continue
+    #         estimated_time = row["estimated_time"]
+    #         plan_order.estimated_time = estimated_time
+    #
+    #         try:
+    #             plan_order.save()
+    #             report_dic["successful"] += 1
+    #         # 保存出错，直接错误条数计数加一。
+    #         except Exception as e:
+    #             report_dic["false"] += 1
+    #             report_dic["error"].append(e)
+    #     return report_dic
 
 
 class PlanOrderSubmitInfoAdmin(object):
@@ -485,6 +718,8 @@ class PlanOrderSubmitInfoAdmin(object):
         return False
 
 
+xadmin.site.register(OriPlanOrderSubmitInfo, OriPlanOrderSubmitInfoAdmin)
+xadmin.site.register(OriPlanOrderInfo, OriPlanOrderInfoAdmin)
 xadmin.site.register(PlanOrderPenddingInfo, PlanOrderPenddingInfoAdmin)
 xadmin.site.register(PlanOrderSubmitInfo, PlanOrderSubmitInfoAdmin)
 xadmin.site.register(PlanOrderInfo, PlanOrderInfoAdmin)

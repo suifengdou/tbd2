@@ -178,12 +178,13 @@ class CalcAction(BaseActionView):
             current_date = min_date
             verify_date = min_date - datetime.timedelta(days=2)
 
-            verify_summary = MaintenanceSummary.objects.all().filter(finish_time=verify_date)
-            if MaintenanceSummary.objects.first() is not None:
-                if not verify_summary.exists():
-                    day = verify_date.weekday()
-                    if day != 6:
-                        return self.message_user('亲，请按照时间顺序进行递交计算，别胡搞行吗。', 'error')
+            if verify_date.month not in [1, 2]:
+                verify_summary = MaintenanceSummary.objects.all().filter(finish_time=verify_date)
+                if MaintenanceSummary.objects.first() is not None:
+                    if not verify_summary.exists():
+                        day = verify_date.weekday()
+                        if day != 6:
+                            return self.message_user('亲，请按照时间顺序进行递交计算，别胡搞行吗。', 'error')
 
             while current_date < max_date:
                 repeat_dic = {"successful": 0, "tag_successful": 0, "false": 0, "error": []}

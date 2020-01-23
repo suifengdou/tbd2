@@ -22,7 +22,7 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
-from .models import WorkOrder3PL, WorkOrder3PLApp, WorkOrder3PLAppRev, WorkOrder3PLHandle, WorkOrder3PLHandleSto, WorkOrder3PLKeshen, WorkOrder3PLMine
+from .models import WorkOrder3PL, WorkOrder3PLApp, WorkOrder3PLAppRev, WorkOrder3PLHandle, WorkOrder3PLHandleSto, WorkOrder3PLKeshen, WorkOrder3PLMine, WorkOrder3PLProcess
 
 
 ACTION_CHECKBOX_NAME = '_selected_action'
@@ -51,7 +51,7 @@ class RejectSelectedAction(BaseActionView):
                     obj.order_status -= 3
                     obj.save()
                     self.message_user("%s 取消成功" % obj.keyword, "success")
-                elif obj.order_status in [1, 2, 4, 5]:
+                elif obj.order_status in [1, 2, 4, 5, 6]:
                     if obj.wo_category == 1 and obj.order_status == 4:
                         obj.order_status -= 2
                         obj.save()
@@ -135,7 +135,7 @@ class SubmitReverseAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=2)
+                queryset.update(order_status=2)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
@@ -167,7 +167,7 @@ class SubmitAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=4)
+                queryset.update(order_status=4)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
@@ -200,7 +200,7 @@ class FeedbackReverseAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=4)
+                queryset.update(order_status=4)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
@@ -226,7 +226,7 @@ class FeedbackReverseAction(BaseActionView):
         return None
 
 
-# 工单快递反馈
+# 工单反馈
 class CheckExpressAction(BaseActionView):
     action_name = "submit_exp_check"
     description = "提交选中的工单"
@@ -244,7 +244,7 @@ class CheckExpressAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=5)
+                queryset.update(order_status=5)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
@@ -288,12 +288,51 @@ class PassedAction(BaseActionView):
             if self.modify_models_batch:
                 self.log('change',
                          '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(status=6)
+                queryset.update(order_status=6)
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
                     obj.submit_time = datetime.datetime.now()
-                    obj.order_status = 6
+                    if obj.is_losing == 0:
+                        obj.order_status = 7
+                    else:
+                        obj.order_status = 6
+                    obj.save()
+                    # self.message_user("%s 处理复核完毕" % obj.keyword, "info")
+
+            self.message_user("成功完成 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+# 财审工单通过
+class AuditAction(BaseActionView):
+    action_name = "submit_audit"
+    description = "提交选中的工单"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = True
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=7)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+                    obj.submit_time = datetime.datetime.now()
+                    if obj.is_losing == 0:
+                        obj.order_status = 7
+                    else:
+                        obj.order_status = 6
                     obj.save()
                     self.message_user("%s 处理完毕，工单完结" % obj.keyword, "info")
 
@@ -442,10 +481,11 @@ class WorkOrder3PLMineAdmin(object):
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
                        'feedback', 'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
+    actions = [AuditAction, RejectSelectedAction]
 
     def queryset(self):
         queryset = super(WorkOrder3PLMineAdmin, self).queryset()
-        queryset = queryset.filter(Q(is_delete=0) & Q(order_status__in=[1, 2, 3, 4, 5]))
+        queryset = queryset.filter(is_delete=0, order_status=6)
         return queryset
 
     def has_add_permission(self):
@@ -453,11 +493,43 @@ class WorkOrder3PLMineAdmin(object):
         return False
 
 
+# 未完结工单查询
+class WorkOrder3PLProcessAdmin(object):
+    list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
+                    'keyword', 'category', 'create_time', 'creator', 'servicer', 'submit_time', 'handle_time', 'handler']
+    list_filter = ['order_status', 'create_time', 'creator', 'handle_time', 'is_return', 'is_losing', 'category']
+    search_fields = ['keyword']
+    readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
+                       'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
+                       'feedback', 'return_express_id', 'order_status', 'wo_category', 'company', 'memo']
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+    def queryset(self):
+        request = self.request
+        if request.user.company is not None:
+
+            if request.user.company.company_name == '小狗电器':
+                queryset = super(WorkOrder3PLProcessAdmin, self).queryset()
+                queryset = queryset.filter(order_status__in=[1, 2, 3, 4, 5, 6])
+                return queryset
+            else:
+                queryset = super(WorkOrder3PLProcessAdmin, self).queryset()
+                queryset = queryset.filter(company=request.user.company, order_status__in=[1, 2, 3, 4, 5, 6])
+                return queryset
+        else:
+            queryset = super(WorkOrder3PLProcessAdmin, self).queryset().filter(id=0)
+            self.message_user("当前账号查询出错，当前账号没有设置公司，请联系管理员设置公司！！", "error")
+            return queryset
+
+
 # 工单查询
 class WorkOrder3PLAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'keyword', 'category', 'create_time', 'creator', 'servicer', 'submit_time', 'handle_time', 'handler']
-    list_filter = ['order_status', 'create_time', 'handle_time', 'is_return', 'is_losing', 'category']
+    list_filter = ['order_status', 'create_time', 'creator', 'handle_time', 'is_return', 'is_losing', 'category']
     search_fields = ['keyword']
     readonly_fields = ['keyword', 'information', 'category', 'is_delete', 'is_losing', 'is_return', 'submit_time',
                        'creator', 'services_interval', 'handler', 'handle_time', 'servicer', 'express_interval',
@@ -490,4 +562,5 @@ xadmin.site.register(WorkOrder3PLHandle, WorkOrder3PLHandleAdmin)
 xadmin.site.register(WorkOrder3PLHandleSto, WorkOrder3PLHandleStoAdmin)
 xadmin.site.register(WorkOrder3PLKeshen, WorkOrder3PLKeshenAdmin)
 xadmin.site.register(WorkOrder3PLMine, WorkOrder3PLMineAdmin)
+xadmin.site.register(WorkOrder3PLProcess, WorkOrder3PLProcessAdmin)
 xadmin.site.register(WorkOrder3PL, WorkOrder3PLAdmin)
