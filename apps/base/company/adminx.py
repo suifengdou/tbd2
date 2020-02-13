@@ -20,7 +20,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
 
-from .models import CompanyInfo, LogisticsInfo, ManuInfo, WareInfo
+from .models import CompanyInfo, LogisticsInfo, ManuInfo, WareInfo, DealerInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -163,7 +163,22 @@ class ManuInfoAdmin(object):
         return False
 
 
+class DealerInfoAdmin(object):
+    list_display = ['company_name', 'tax_fil_number', 'status', 'category']
+    relfield_style = 'fk-ajax'
+
+    def queryset(self):
+        queryset = super(DealerInfoAdmin, self).queryset()
+        queryset = queryset.filter(category=4)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
 xadmin.site.register(LogisticsInfo, LogisticsInfoAdmin)
 xadmin.site.register(WareInfo, WareInfoAdmin)
 xadmin.site.register(ManuInfo, ManuInfoAdmin)
 xadmin.site.register(CompanyInfo, CompanyInfoAdmin)
+xadmin.site.register(DealerInfo, DealerInfoAdmin)

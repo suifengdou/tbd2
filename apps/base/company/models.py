@@ -22,7 +22,8 @@ class CompanyInfo(BaseModel):
         (1, '物流快递'),
         (2, '仓库存储'),
         (3, '生产制造'),
-        (4, '其他类型'),
+        (4, '经销代理'),
+        (5, '其他类型'),
     )
 
     company_name = models.CharField(unique=True, max_length=30, verbose_name='公司简称', db_index=True)
@@ -64,6 +65,16 @@ class ManuInfo(CompanyInfo):
 class WareInfo(CompanyInfo):
     class Meta:
         verbose_name = 'BASE-公司-仓库存储'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+    def __str__(self):
+        return self.company_name
+
+
+class DealerInfo(CompanyInfo):
+    class Meta:
+        verbose_name = 'BASE-公司-经销代理'
         verbose_name_plural = verbose_name
         proxy = True
 
