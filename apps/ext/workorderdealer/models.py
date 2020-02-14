@@ -81,7 +81,7 @@ class WorkOrder(BaseModel):
 
     company = models.ForeignKey(DealerInfo, on_delete=models.CASCADE, null=True, blank=True, related_name='dealer', verbose_name='经销商')
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
-    mistake_tag =
+    mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
 
     class Meta:
         verbose_name = 'EXT-经销商工单-查询'
