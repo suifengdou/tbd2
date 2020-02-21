@@ -494,7 +494,10 @@ class WOCreateAdmin(object):
 
     def queryset(self):
         queryset = super(WOCreateAdmin, self).queryset()
-        queryset = queryset.filter(order_status=1, is_delete=0, company=self.request.user.company)
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.filter(order_status=1, is_delete=0)
+        else:
+            queryset = queryset.filter(order_status=1, is_delete=0, company=self.request.user.company)
         return queryset
 
 
@@ -524,6 +527,10 @@ class WOServiceAdmin(object):
         queryset = super(WOServiceAdmin, self).queryset()
         queryset = queryset.filter(order_status=2, is_delete=0)
         return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 # 经销商工单界面
@@ -556,6 +563,10 @@ class WODealerAdmin(object):
             queryset = queryset.filter(order_status=3, is_delete=0, company=self.request.user.company)
         return queryset
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 # 运营对账界面
 class WOOperatorAdmin(object):
@@ -580,6 +591,10 @@ class WOOperatorAdmin(object):
         else:
             queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
         return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 # 单据追踪界面
@@ -606,6 +621,10 @@ class WOTrackAdmin(object):
             queryset = queryset.exclude(order_status__in=[0, 5], is_delete=0, company=self.request.user.company)
         return queryset
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class WorkOrderAdmin(object):
     list_display = ['order_id','order_status', 'company',  'information', 'feedback', 'memo', 'goods_name', 'quantity',
@@ -629,6 +648,10 @@ class WorkOrderAdmin(object):
         else:
             queryset = queryset.filter(is_delete=0, company=self.request.user.company)
         return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 xadmin.site.register(WOCreate, WOCreateAdmin)

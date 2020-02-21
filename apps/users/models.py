@@ -19,7 +19,7 @@ class UserProfile(AbstractUser, BaseModel):
     PLATFORM = (
         (0, '无'),
         (1, '淘系'),
-        (2, '京东'),
+        (2, '非淘'),
         (3, '官方商城'),
         (4, '售后'),
     )

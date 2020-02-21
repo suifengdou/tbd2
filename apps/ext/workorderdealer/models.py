@@ -49,11 +49,17 @@ class WorkOrder(BaseModel):
     WO_CATEGORY = (
         (0, '退货'),
         (1, '换货'),
+        (2, '维修'),
     )
 
     LOGICAL_DEXISION = (
         (0, '否'),
         (1, '是'),
+    )
+    PLATFORM = (
+        (0, '无'),
+        (1, '淘系'),
+        (2, '非淘'),
     )
 
     order_id = models.CharField(unique=True, max_length=100, verbose_name='源订单单号')
@@ -82,6 +88,7 @@ class WorkOrder(BaseModel):
     company = models.ForeignKey(DealerInfo, on_delete=models.CASCADE, null=True, blank=True, related_name='dealer', verbose_name='经销商')
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
+    platform = models.SmallIntegerField(choices=PLATFORM, default=0, verbose_name='平台')
 
     class Meta:
         verbose_name = 'EXT-经销商工单-查询'
