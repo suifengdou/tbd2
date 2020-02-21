@@ -55,6 +55,7 @@ class RejectAction(BaseActionView):
             for obj in queryset:
 
                 obj.order_status -= 1
+                obj.mistake_tag = 0
                 obj.save()
                 if obj.order_status == 0:
                     self.message_user("%s 取消成功" % obj.order_id, "success")
@@ -138,6 +139,8 @@ class SubmitAction(BaseActionView):
                 for obj in queryset:
                     self.log('change', '', obj)
                     obj.order_status = 2
+                    obj.mistake_tag = 0
+                    obj.create_time = datetime.datetime.now()
                     obj.save()
                     self.message_user("%s 审核完毕，等待客户反馈" % obj.order_id, "info")
 
@@ -178,10 +181,24 @@ class SubmitServiceAction(BaseActionView):
                         obj.mistake_tag = 2
                         obj.save()
                         continue
+                    if obj.process_tag != 6:
+                        self.message_user("%s 先标记为已处理才能审核" % obj.order_id, "error")
+                        obj.mistake_tag = 4
+                        obj.save()
+                        continue
                     self.log('change', '', obj)
-                    obj.order_status = 2
+                    obj.order_status = 3
+                    obj.mistake_tag = 0
+                    obj.submit_time = datetime.datetime.now()
+                    obj.servicer = self.request.user.username
+                    start_time = datetime.datetime.strptime(str(obj.create_time).split(".")[0], "%Y-%m-%d %H:%M:%S")
+                    end_time = datetime.datetime.strptime(str(obj.submit_time).split(".")[0], "%Y-%m-%d %H:%M:%S")
+                    d_value = end_time - start_time
+                    days_seconds = d_value.days * 3600
+                    total_seconds = days_seconds + d_value.seconds
+                    obj.services_interval = math.floor(total_seconds / 60)
                     obj.save()
-                    self.message_user("%s 审核完毕，等待客户反馈" % obj.order_id, "info")
+                    self.message_user("%s 审核完毕" % obj.order_id, "info")
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -211,7 +228,235 @@ class SetSFAction(BaseActionView):
                     self.message_user("%s 客户寄回订单不可以更改快递" % obj.order_id, "error")
                     continue
                 obj.return_express_company = '顺丰'
+                obj.save()
+                self.message_user("成功设置 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 工单批量设置处理中
+class SetUHAction(BaseActionView):
+    action_name = "set_unhandle"
+    description = "批量设置处理中"
+    model_perm = 'change'
+    icon = "fa fa-reply-all"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                self.log('change', '', obj)
+                obj.process_tag = 1
+                obj.save()
+                self.message_user("成功设置 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 工单批量设置已处理
+class SetHDAction(BaseActionView):
+    action_name = "set_handled"
+    description = "批量设置已处理"
+    model_perm = 'change'
+    icon = "fa fa-reply-all"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                self.log('change', '', obj)
+                obj.process_tag = 6
+                obj.save()
+                self.message_user("成功设置 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 经销商审核工单
+class SubmitDealerAction(BaseActionView):
+    action_name = "submit_dealer"
+    description = "审核选中的工单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                self.log('change', '', obj)
+                if not obj.memo:
+                    n -= 1
+                    self.message_user("%s 无经销商反馈" % obj.order_id, "error")
+                    obj.mistake_tag = 3
+                    obj.save()
+                    continue
+                if obj.process_tag != 7:
+                    n -= 1
+                    self.message_user("%s 先标记为终端清才能审核" % obj.order_id, "error")
+                    obj.mistake_tag = 7
+                    obj.save()
+                    continue
+                obj.order_status = 4
+                obj.mistake_tag = 0
+                obj.handle_time = datetime.datetime.now()
+                obj.handler = self.request.user.username
+                start_time = datetime.datetime.strptime(str(obj.submit_time).split(".")[0], "%Y-%m-%d %H:%M:%S")
+                end_time = datetime.datetime.strptime(str(obj.handle_time).split(".")[0], "%Y-%m-%d %H:%M:%S")
+                d_value = end_time - start_time
+                days_seconds = d_value.days * 3600
+                total_seconds = days_seconds + d_value.seconds
+                obj.express_interval = math.floor(total_seconds / 60)
+                obj.save()
                 self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 经销商工单批量设置反馈意见为已确认
+class SetMEAction(BaseActionView):
+    action_name = "set_memo"
+    description = "批量确认反馈意见"
+    model_perm = 'change'
+    icon = "fa fa-reply-all"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                self.log('change', '', obj)
+                obj.memo = '已确认'
+                obj.save()
+                self.message_user("成功设置 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 工单批量设置终端清
+class SetFIAction(BaseActionView):
+    action_name = "set_finished"
+    description = "批量设置终端清"
+    model_perm = 'change'
+    icon = "fa fa-reply-all"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                self.log('change', '', obj)
+                obj.process_tag = 7
+                obj.save()
+                self.message_user("成功设置 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 运营审核工单
+class SubmitOperatorAction(BaseActionView):
+    action_name = "submit_operator"
+    description = "审核选中的工单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                if obj.process_tag != 8:
+                    n -= 1
+                    self.message_user("%s 先标记为已对账才能审核" % obj.order_id, "error")
+                    obj.mistake_tag = 5
+                    obj.save()
+                    continue
+                self.log('change', '', obj)
+                obj.order_status = 5
+                obj.mistake_tag = 0
+                obj.save()
+                self.message_user("成功审核 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 运营批量设置已对账
+class SetCHAction(BaseActionView):
+    action_name = "set_check"
+    description = "批量设置已对账"
+    model_perm = 'change'
+    icon = "fa fa-reply-all"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                self.log('change', '', obj)
+                obj.process_tag = 8
+                obj.save()
+                self.message_user("成功设置 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+        return None
+
+
+# 恢复取消工单
+class RecoverAction(BaseActionView):
+    action_name = "recover"
+    description = "恢复选中的工单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+                if obj.order_status != 0:
+                    n -= 1
+                    self.message_user("%s 工单必须为取消状态" % obj.order_id, "error")
+                    obj.mistake_tag = 6
+                    obj.save()
+                    continue
+                self.log('change', '', obj)
+                obj.order_status = 1
+                obj.mistake_tag = 0
+                obj.save()
+                self.message_user("成功恢复 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                                   'success')
         return None
 
@@ -232,7 +477,7 @@ class WOCreateAdmin(object):
         Fieldset(None,
                  'company', 'memo', 'submit_time', 'servicer', 'services_interval', 'is_losing', 'feedback', 'handler',
                  'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator',
-                 'process_tag', **{"style": "display:None"}),
+                 'process_tag','mistake_tag', **{"style": "display:None"}),
     ]
 
     readonly_fields = ['feedback']
@@ -254,15 +499,16 @@ class WOCreateAdmin(object):
 
 
 class WOServiceAdmin(object):
-    list_display = ['company', 'process_tag', 'order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity',
+    list_display = ['company', 'process_tag', 'mistake_tag', 'order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity',
                     'amount', 'wo_category', 'is_customer_post', 'return_express_company', 'return_express_id',
                     'submit_time', 'order_status']
-    list_filter = ['company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['process_tag', 'mistake_tag', 'company', 'order_status', 'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
 
     search_fields = ['order_id', 'return_express_id']
-    actions = [RejectAction, SubmitServiceAction, SetSFAction]
+    actions = [RejectAction, SubmitServiceAction, SetSFAction, SetUHAction, SetHDAction]
     list_editable = ['feedback', 'process_tag', 'return_express_company', 'return_express_id']
+
     form_layout = [
         Fieldset('必填信息',
                  'order_id', 'feedback', 'information', 'goods_name', 'quantity', 'amount', 'wo_category',
@@ -274,26 +520,70 @@ class WOServiceAdmin(object):
 
     readonly_fields = ['company', 'order_id', 'information', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category']
 
-
     def queryset(self):
         queryset = super(WOServiceAdmin, self).queryset()
-        queryset = queryset.filter(order_status=1, is_delete=0)
+        queryset = queryset.filter(order_status=2, is_delete=0)
         return queryset
 
 
+# 经销商工单界面
 class WODealerAdmin(object):
-    pass
+    list_display = ['company', 'process_tag', 'mistake_tag', 'order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity',
+                    'amount', 'wo_category', 'is_customer_post', 'return_express_company', 'return_express_id',
+                    'submit_time', 'order_status']
+    list_filter = ['process_tag', 'mistake_tag', 'company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+                   'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
+
+    search_fields = ['order_id', 'return_express_id']
+    actions = [RejectAction, SubmitDealerAction, SetMEAction, SetFIAction]
+    list_editable = ['memo']
+    form_layout = [
+        Fieldset('必填信息',
+                 'order_id', 'feedback', 'information', 'goods_name', 'quantity', 'amount', 'wo_category',
+                 'is_customer_post', 'return_express_company', 'return_express_id'),
+        Fieldset(None,
+                 'company', 'memo', 'submit_time', 'servicer', 'services_interval',  'handler',
+                 'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator', **{"style": "display:None"}),
+    ]
+
+    readonly_fields = ['company', 'order_id', 'information', 'feedback', 'process_tag', 'return_express_company', 'return_express_id', 'goods_name', 'quantity', 'amount', 'wo_category']
+
+    def queryset(self):
+        queryset = super(WODealerAdmin, self).queryset()
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.filter(order_status=3, is_delete=0)
+        else:
+            queryset = queryset.filter(order_status=3, is_delete=0, company=self.request.user.company)
+        return queryset
 
 
+# 运营对账界面
 class WOOperatorAdmin(object):
-    pass
+    list_display = ['order_id','order_status', 'process_tag', 'mistake_tag', 'company',  'information', 'feedback', 'memo', 'goods_name', 'quantity',
+                    'amount', 'wo_category','return_express_company', 'return_express_id', 'submit_time', 'servicer',
+                    'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'process_tag']
+
+    list_filter = ['process_tag', 'mistake_tag', 'company', 'order_status',  'create_time', 'update_time', 'goods_name__goods_name',
+                   'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
+
+    search_fields = ['order_id', 'return_express_id']
+    actions = [RejectAction, SubmitOperatorAction, SetCHAction]
+    readonly_fields = ['order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
+                       'is_customer_post', 'return_express_company', 'return_express_id', 'submit_time', 'servicer',
+                       'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'order_status',
+                       'company', 'process_tag']
+
+    def queryset(self):
+        queryset = super(WOOperatorAdmin, self).queryset()
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.filter(order_status=4, is_delete=0)
+        else:
+            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
+        return queryset
 
 
+# 单据追踪界面
 class WOTrackAdmin(object):
-    pass
-
-
-class WorkOrderAdmin(object):
     list_display = ['order_id','order_status', 'company',  'information', 'feedback', 'memo', 'goods_name', 'quantity',
                     'amount', 'wo_category','return_express_company', 'return_express_id', 'submit_time', 'servicer',
                     'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'process_tag']
@@ -306,7 +596,39 @@ class WorkOrderAdmin(object):
     readonly_fields = ['order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
                        'is_customer_post', 'return_express_company', 'return_express_id', 'submit_time', 'servicer',
                        'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'order_status',
-                       'company', 'process_tag']
+                       'company', 'process_tag', 'mistake_tag', 'is_delete']
+
+    def queryset(self):
+        queryset = super(WOTrackAdmin, self).queryset()
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.exclude(order_status__in=[0, 5], is_delete=0)
+        else:
+            queryset = queryset.exclude(order_status__in=[0, 5], is_delete=0, company=self.request.user.company)
+        return queryset
+
+
+class WorkOrderAdmin(object):
+    list_display = ['order_id','order_status', 'company',  'information', 'feedback', 'memo', 'goods_name', 'quantity',
+                    'amount', 'wo_category','return_express_company', 'return_express_id', 'submit_time', 'servicer',
+                    'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'process_tag']
+
+    list_filter = ['company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+                   'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
+    actions = [RecoverAction, ]
+    search_fields = ['order_id', 'return_express_id']
+
+    readonly_fields = ['order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
+                       'is_customer_post', 'return_express_company', 'return_express_id', 'submit_time', 'servicer',
+                       'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'order_status',
+                       'company', 'process_tag', 'creator', 'mistake_tag', 'is_delete']
+
+    def queryset(self):
+        queryset = super(WorkOrderAdmin, self).queryset()
+        if self.request.user.company.company_name == '小狗电器':
+            queryset = queryset.filter(is_delete=0)
+        else:
+            queryset = queryset.filter(is_delete=0, company=self.request.user.company)
+        return queryset
 
 
 xadmin.site.register(WOCreate, WOCreateAdmin)

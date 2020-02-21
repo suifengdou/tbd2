@@ -19,6 +19,12 @@
             <h4 class="modal-title">{% trans "Export" %} {{et.name}}</h4>
           </div>
           <div class="modal-body">
+
+              <div><h4><b>特别注意：</b></h4>
+              系统限制导出最大条数为1500条，如果超过1500条，请根据时间条件重新筛选。否则只导出前1500条!如果要大量导出数据请联系管理员。<br>
+              <b>勾选导出全部数据，否则只导出表头！</b>
+              </div>
+
             {{ form_params|safe }}
             <input type="hidden" name="export_type" value="{{et.type}}">
               <label class="checkbox">
@@ -39,9 +45,12 @@
                 {% endif %}
               </label>
               <label class="checkbox">
-                <input type="checkbox" name="all" value="on"> {% trans "Export all data." %}
+                <input type="checkbox" name="all" checked="checked" value="on"> {% trans "Export all data." %}
               </label>
           </div>
+
+
+
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Close" %}</button>
             <button class="btn btn-success" type="submit"><i class="fa fa-share"></i> {% trans "Export" %}</button>

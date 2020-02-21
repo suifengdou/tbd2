@@ -81,7 +81,11 @@ class ExportPlugin(BaseAdminPlugin):
             enumerate(filter(lambda c:getattr(c, 'export', False), r.cells))]) for r in rows]
 
     def _get_datas(self, context):
-        rows = context['results']
+        # 设置导出最多限制为1500条数据。
+        if len(context['results']) > 3500:
+            rows = context['results'][:3500]
+        else:
+            rows = context['results']
 
         new_rows = [[self._format_value(o) for o in
             filter(lambda c:getattr(c, 'export', False), r.cells)] for r in rows]
