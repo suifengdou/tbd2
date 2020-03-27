@@ -23,7 +23,8 @@ class CompanyInfo(BaseModel):
         (2, '仓库存储'),
         (3, '生产制造'),
         (4, '经销代理'),
-        (5, '其他类型'),
+        (5, '本埠公司'),
+        (6, '其他类型'),
     )
 
     company_name = models.CharField(unique=True, max_length=30, verbose_name='公司简称', db_index=True)
@@ -31,6 +32,8 @@ class CompanyInfo(BaseModel):
     tax_fil_number = models.CharField(unique=True, null=True, blank=True, max_length=30, verbose_name='税号')
     status = models.IntegerField(choices=ORDER_STATUS, default=1, verbose_name='状态')
     category = models.IntegerField(choices=CATEGORY, default=1, verbose_name='公司类型')
+    spain_invoice = models.FloatField(null=True, blank=True, verbose_name='普票限额')
+    special_invoice = models.FloatField(null=True, blank=True, verbose_name='专票限额')
 
     class Meta:
         verbose_name = 'BASE-公司-公司管理'
@@ -75,6 +78,16 @@ class WareInfo(CompanyInfo):
 class DealerInfo(CompanyInfo):
     class Meta:
         verbose_name = 'BASE-公司-经销代理'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+    def __str__(self):
+        return self.company_name
+
+
+class MainInfo(CompanyInfo):
+    class Meta:
+        verbose_name = 'BASE-公司-本埠'
         verbose_name_plural = verbose_name
         proxy = True
 

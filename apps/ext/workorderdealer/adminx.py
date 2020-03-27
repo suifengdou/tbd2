@@ -31,6 +31,7 @@ from xadmin.layout import Fieldset
 from .models import WorkOrder, WOCreate, WOService, WODealer, WOOperator, WOTrack
 
 
+
 ACTION_CHECKBOX_NAME = '_selected_action'
 
 
@@ -464,7 +465,7 @@ class RecoverAction(BaseActionView):
 class WOCreateAdmin(object):
     list_display = ['company', 'order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
                     'is_customer_post', 'return_express_company', 'return_express_id', 'order_status','process_tag']
-    list_filter = ['company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['company__company_name', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
 
     search_fields = ['order_id', 'return_express_id']
@@ -477,7 +478,7 @@ class WOCreateAdmin(object):
         Fieldset(None,
                  'company', 'memo', 'submit_time', 'servicer', 'services_interval', 'is_losing', 'feedback', 'handler',
                  'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator',
-                 'process_tag','mistake_tag', **{"style": "display:None"}),
+                 'process_tag','mistake_tag', 'platform', **{"style": "display:None"}),
     ]
 
     readonly_fields = ['feedback']
@@ -486,9 +487,8 @@ class WOCreateAdmin(object):
         obj = self.new_obj
         request = self.request
         obj.creator = request.user.username
-        obj.order_status = 1
-        obj.wo_category = 1
         obj.company = request.user.company
+        obj.platform = request.user.platform
         obj.save()
         super().save_models()
 
@@ -497,7 +497,7 @@ class WOCreateAdmin(object):
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=1, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=1, is_delete=0, company=self.request.user.company)
+            queryset = queryset.filter(order_status=1, is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
         return queryset
 
 
@@ -505,7 +505,7 @@ class WOServiceAdmin(object):
     list_display = ['company', 'process_tag', 'mistake_tag', 'order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity',
                     'amount', 'wo_category', 'is_customer_post', 'return_express_company', 'return_express_id',
                     'submit_time', 'order_status']
-    list_filter = ['process_tag', 'mistake_tag', 'company', 'order_status', 'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['process_tag', 'mistake_tag', 'company__company_name', 'order_status', 'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
 
     search_fields = ['order_id', 'return_express_id']
@@ -518,14 +518,14 @@ class WOServiceAdmin(object):
                  'is_customer_post', 'return_express_company', 'return_express_id'),
         Fieldset(None,
                  'company', 'memo', 'submit_time', 'servicer', 'services_interval',  'handler',
-                 'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator', **{"style": "display:None"}),
+                 'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator', 'platform', **{"style": "display:None"}),
     ]
 
-    readonly_fields = ['company', 'order_id', 'information', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category']
+    readonly_fields = ['company', 'order_id', 'information', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category', 'platform',]
 
     def queryset(self):
         queryset = super(WOServiceAdmin, self).queryset()
-        queryset = queryset.filter(order_status=2, is_delete=0)
+        queryset = queryset.filter(order_status=2, is_delete=0, platform=self.request.user.platform)
         return queryset
 
     def has_add_permission(self):
@@ -538,7 +538,7 @@ class WODealerAdmin(object):
     list_display = ['company', 'process_tag', 'mistake_tag', 'order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity',
                     'amount', 'wo_category', 'is_customer_post', 'return_express_company', 'return_express_id',
                     'submit_time', 'order_status']
-    list_filter = ['process_tag', 'mistake_tag', 'company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['process_tag', 'mistake_tag', 'company__company_name', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
 
     search_fields = ['order_id', 'return_express_id']
@@ -550,17 +550,17 @@ class WODealerAdmin(object):
                  'is_customer_post', 'return_express_company', 'return_express_id'),
         Fieldset(None,
                  'company', 'memo', 'submit_time', 'servicer', 'services_interval',  'handler',
-                 'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator', **{"style": "display:None"}),
+                 'handle_time', 'express_interval', 'order_status', 'is_delete', 'creator', 'platform', **{"style": "display:None"}),
     ]
 
-    readonly_fields = ['company', 'order_id', 'information', 'feedback', 'process_tag', 'return_express_company', 'return_express_id', 'goods_name', 'quantity', 'amount', 'wo_category']
+    readonly_fields = ['company', 'order_id', 'information', 'feedback', 'process_tag', 'return_express_company', 'return_express_id', 'goods_name', 'quantity', 'amount', 'wo_category', 'platform',]
 
     def queryset(self):
         queryset = super(WODealerAdmin, self).queryset()
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=3, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=3, is_delete=0, company=self.request.user.company)
+            queryset = queryset.filter(order_status=3, is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
         return queryset
 
     def has_add_permission(self):
@@ -574,7 +574,7 @@ class WOOperatorAdmin(object):
                     'amount', 'wo_category','return_express_company', 'return_express_id', 'submit_time', 'servicer',
                     'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'process_tag']
 
-    list_filter = ['process_tag', 'mistake_tag', 'company', 'order_status',  'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['process_tag', 'mistake_tag', 'company__company_name', 'order_status',  'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
 
     search_fields = ['order_id', 'return_express_id']
@@ -582,14 +582,14 @@ class WOOperatorAdmin(object):
     readonly_fields = ['order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
                        'is_customer_post', 'return_express_company', 'return_express_id', 'submit_time', 'servicer',
                        'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'order_status',
-                       'company', 'process_tag']
+                       'company', 'process_tag', 'platform',]
 
     def queryset(self):
         queryset = super(WOOperatorAdmin, self).queryset()
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=4, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
+            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
         return queryset
 
     def has_add_permission(self):
@@ -603,7 +603,7 @@ class WOTrackAdmin(object):
                     'amount', 'wo_category','return_express_company', 'return_express_id', 'submit_time', 'servicer',
                     'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'process_tag']
 
-    list_filter = ['company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['company__company_name', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
 
     search_fields = ['order_id', 'return_express_id']
@@ -611,14 +611,14 @@ class WOTrackAdmin(object):
     readonly_fields = ['order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
                        'is_customer_post', 'return_express_company', 'return_express_id', 'submit_time', 'servicer',
                        'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'order_status',
-                       'company', 'process_tag', 'mistake_tag', 'is_delete']
+                       'company', 'process_tag', 'mistake_tag', 'is_delete', 'platform',]
 
     def queryset(self):
         queryset = super(WOTrackAdmin, self).queryset()
         if self.request.user.is_superuser == 1:
             queryset = queryset.exclude(order_status__in=[0, 5], is_delete=0)
         else:
-            queryset = queryset.exclude(order_status__in=[0, 5], is_delete=0, company=self.request.user.company)
+            queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
         return queryset
 
     def has_add_permission(self):
@@ -631,7 +631,7 @@ class WorkOrderAdmin(object):
                     'amount', 'wo_category','return_express_company', 'return_express_id', 'submit_time', 'servicer',
                     'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'process_tag']
 
-    list_filter = ['company', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
+    list_filter = ['company__company_name', 'order_status', 'process_tag', 'create_time', 'update_time', 'goods_name__goods_name',
                    'quantity', 'amount', 'wo_category', 'is_losing', 'is_customer_post']
     actions = [RecoverAction, ]
     search_fields = ['order_id', 'return_express_id']
@@ -639,14 +639,14 @@ class WorkOrderAdmin(object):
     readonly_fields = ['order_id', 'information', 'feedback', 'memo', 'goods_name', 'quantity', 'amount', 'wo_category',
                        'is_customer_post', 'return_express_company', 'return_express_id', 'submit_time', 'servicer',
                        'services_interval', 'is_losing', 'handler', 'handle_time', 'express_interval', 'order_status',
-                       'company', 'process_tag', 'creator', 'mistake_tag', 'is_delete']
+                       'company', 'process_tag', 'creator', 'mistake_tag', 'is_delete', 'platform',]
 
     def queryset(self):
         queryset = super(WorkOrderAdmin, self).queryset()
         if self.request.user.company.company_name == '小狗电器':
             queryset = queryset.filter(is_delete=0)
         else:
-            queryset = queryset.filter(is_delete=0, company=self.request.user.company)
+            queryset = queryset.filter(is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
         return queryset
 
     def has_add_permission(self):

@@ -9,4 +9,4 @@ from django.apps import AppConfig
 
 class RefurbishmentConfig(AppConfig):
     name = 'apps.crm.refurbishment'
-    verbose_name = 'crm-refurbishment'
+    verbose_name = 'crm-翻新处理'

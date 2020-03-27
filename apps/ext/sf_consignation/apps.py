@@ -9,4 +9,4 @@ from django.apps import AppConfig
 
 class SfConsignationConfig(AppConfig):
     name = 'apps.ext.sf_consignation'
-    verbose_name = 'ext-consignation-sf'
+    verbose_name = 'ext-顺丰委托件'

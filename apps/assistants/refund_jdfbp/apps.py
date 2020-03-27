@@ -10,4 +10,4 @@ from django.apps import AppConfig
 class RefundJdfbpConfig(AppConfig):
     # 名字要带路径
     name = 'apps.assistants.refund_jdfbp'
-    verbose_name = 'ass-refund-jdfbp'
+    verbose_name = 'ass-京东售后服务单'

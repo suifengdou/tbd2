@@ -12,7 +12,7 @@ from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 
-from apps.wms.stockout.models import StockOutInfo, StockOutPenddingInfo
+from apps.wms.stockout.models import OriStockOutInfo, OriSOUnhandle
 from apps.wms.stock.models import StockInfo
 
 
@@ -57,7 +57,7 @@ class SubmitAction(BaseActionView):
         return None
 
 
-class StockOutInfoAdmin(object):
+class OriStockOutInfoAdmin(object):
     list_display = ["stockout_id", "source_order_id", "order_status", "category", "goods_name", "goods_id", "quantity",
                     "warehouse", "nickname", "receiver", "province", "city", "district", "mobile", "memorandum"]
 
@@ -66,17 +66,17 @@ class StockOutInfoAdmin(object):
         return False
 
 
-class StockOutPenddingInfoAdmin(object):
+class OriSOUnhandleAdmin(object):
     list_display = ["stockout_id", "source_order_id", "order_status", "category", "goods_name", "goods_id", "quantity",
                     "warehouse", "nickname", "receiver", "province", "city", "district", "mobile", "memorandum"]
 
     actions = [SubmitAction, ]
 
     def queryset(self):
-        queryset = super(StockOutPenddingInfoAdmin, self).queryset()
+        queryset = super(OriSOUnhandleAdmin, self).queryset()
         queryset = queryset.filter(order_status=1)
         return queryset
 
 
-xadmin.site.register(StockOutPenddingInfo, StockOutPenddingInfoAdmin)
-xadmin.site.register(StockOutInfo, StockOutInfoAdmin)
+xadmin.site.register(OriSOUnhandle, OriSOUnhandleAdmin)
+xadmin.site.register(OriStockOutInfo, OriStockOutInfoAdmin)
