@@ -1047,7 +1047,7 @@ class WorkOrderAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.company_name == '小狗电器':
+            if request.user.company.company_name == '小狗吸尘器':
                 queryset = super(WorkOrderAdmin, self).queryset()
                 return queryset
             else:

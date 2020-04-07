@@ -20,6 +20,7 @@ class PlatformInfo(BaseModel):
     )
 
     platform = models.CharField(unique=True, max_length=30, verbose_name='平台名称', db_index=True)
+    category = models.CharField(null=True, blank=True, max_length=30, verbose_name='类型', db_index=True)
     status = models.IntegerField(choices=ORDER_STATUS, default=1, verbose_name='平台状态')
 
     class Meta:

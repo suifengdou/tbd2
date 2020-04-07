@@ -12,11 +12,12 @@ from .models import ShopInfo, PlatformInfo
 
 
 class ShopInfoAdmin(object):
-    pass
+    list_display = ['shop_name', 'shop_id', 'platform', 'group_name', 'company', 'status']
 
 
 class PlatformInfoAdmin(object):
-    pass
+    list_display = ['platform', 'category', 'status']
+    list_editable = ['category']
 
 
 xadmin.site.register(ShopInfo, ShopInfoAdmin)

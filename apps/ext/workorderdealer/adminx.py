@@ -497,7 +497,7 @@ class WOCreateAdmin(object):
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=1, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=1, is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
+            queryset = queryset.filter(order_status=1, is_delete=0, creator=self.request.user.username)
         return queryset
 
 
@@ -560,7 +560,7 @@ class WODealerAdmin(object):
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=3, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=3, is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
+            queryset = queryset.filter(order_status=3, is_delete=0, creator=self.request.user.username)
         return queryset
 
     def has_add_permission(self):
@@ -589,7 +589,7 @@ class WOOperatorAdmin(object):
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=4, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
+            queryset = queryset.filter(order_status=4, is_delete=0, company=self.request.user.company)
         return queryset
 
     def has_add_permission(self):
@@ -616,9 +616,17 @@ class WOTrackAdmin(object):
     def queryset(self):
         queryset = super(WOTrackAdmin, self).queryset()
         if self.request.user.is_superuser == 1:
-            queryset = queryset.exclude(order_status__in=[0, 5], is_delete=0)
+            queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0)
         else:
-            queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
+            if self.request.user.company.company_name == '小狗吸尘器':
+                queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, platform=self.request.user.platform)
+            else:
+                if self.request.user.category == 1:
+
+                    queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, company=self.request.user.company)
+                else:
+                    queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, creator=self.requset.user.username)
+
         return queryset
 
     def has_add_permission(self):
@@ -643,10 +651,13 @@ class WorkOrderAdmin(object):
 
     def queryset(self):
         queryset = super(WorkOrderAdmin, self).queryset()
-        if self.request.user.company.company_name == '小狗电器':
-            queryset = queryset.filter(is_delete=0)
+        if self.request.user.company.company_name == '小狗吸尘器':
+            queryset = queryset.filter(is_delete=0, platform=self.request.user.platform)
         else:
-            queryset = queryset.filter(is_delete=0, company=self.request.user.company, platform=self.request.user.platform)
+            if self.request.user.category == 1:
+                queryset = queryset.filter(is_delete=0, company=self.request.user.company)
+            else:
+                queryset = queryset.filter(is_delete=0, company=self.request.user.company, creator=self.request.user.username)
         return queryset
 
     def has_add_permission(self):

@@ -23,9 +23,14 @@ class UserProfile(AbstractUser, BaseModel):
         (3, '官方商城'),
         (4, '售后'),
     )
+    CATEGORY = (
+        (0, '外埠'),
+        (1, '本埠'),
+    )
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
     platform = models.SmallIntegerField(choices=PLATFORM, default=0, verbose_name='平台')
     company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属公司')
+    category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='平台')
 
     class Meta:
         verbose_name = u'USR-用户信息'
