@@ -122,6 +122,13 @@ class WOCheck(WorkOrder):
         proxy = True
 
 
+class WOApply(WorkOrder):
+    class Meta:
+        verbose_name = 'EXT-发票工单-待申请'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
 class GoodsDetail(BaseModel):
 
     invoice = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, verbose_name='发票工单')

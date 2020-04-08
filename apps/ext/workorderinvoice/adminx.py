@@ -33,7 +33,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
 
-from .models import WorkOrder, GoodsDetail, InvoiceOrder, InvoiceGoods, WOUnhandle, WOCheck, IOhandle, IOCheck, DeliverOrder, DOCheck
+from .models import WorkOrder, GoodsDetail, InvoiceOrder, InvoiceGoods, WOUnhandle, WOCheck, IOhandle, IOCheck, DeliverOrder, DOCheck, WOApply
 from apps.utils.geography.models import DistrictInfo
 from apps.base.goods.models import MachineInfo
 
@@ -222,13 +222,14 @@ class SubmitWOAction(BaseActionView):
                             n -= 1
                             continue
                     if obj.is_deliver == 1:
-                        if not re.match(r'^[0-9]+$', obj.sent_smartphone):
+                        if not re.match(r'^[0-9-]+$', obj.sent_smartphone):
                             self.message_user("%s 收件人手机错误" % obj.order_id, "error")
                             obj.mistake_tag = 4
                             obj.save()
                             n -= 1
                             continue
                     if not re.match("^([159Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-90-9ABCDEFGHJKLMNPQRTUWXY])$", obj.tax_id):
+
                         self.message_user("%s 税号错误" % obj.order_id, "error")
                         obj.mistake_tag = 13
                         obj.save()
@@ -727,6 +728,86 @@ class GoodsDetailInline(object):
 
 
 # 发票工单创建界面
+class WOApplyAdmin(object):
+    list_display = ['company', 'order_id', 'process_tag', 'mistake_tag', 'memorandum', 'order_status', 'message',
+                    'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark', 'is_deliver',
+                    'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'amount']
+    actions = [SubmitWOAction, RejectSelectedAction, ]
+
+    search_fields = ['order_id']
+    list_filter = ['company__company_name', 'process_tag', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount']
+
+    list_editable = ['order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark',
+                     'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'is_deliver',
+                     'message', 'is_deliver']
+
+    readonly_fields = []
+    inlines = [GoodsDetailInline]
+
+    form_layout = [
+        Fieldset('收款开票公司信息',
+                 Row('shop', 'company'),
+                 'order_id', 'order_category', ),
+        Fieldset('发票信息',
+                 Row('title', 'tax_id'),
+                 Row('phone', 'bank'),
+                 'account', 'address', 'remark'),
+        Fieldset('发货快递相关信息',
+                 'is_deliver',
+                 Row('sent_consignee', 'sent_smartphone'),
+                 Row('sent_city', 'sent_district'),
+                 'sent_address'),
+        Fieldset(None,
+                 'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator',
+                 **{"style": "display:None"}),
+    ]
+
+    def save_models(self):
+        obj = self.new_obj
+        request = self.request
+        obj.creator = request.user.username
+        if obj.shop.company:
+            obj.company = obj.shop.company
+        obj.save()
+        super().save_models()
+
+    def save_related(self):
+        for i in range(self.formsets[0].forms.__len__()):
+            try:
+                if self.formsets[0].forms[i].instance.quantity > 0:
+                    request = self.request
+                    self.formsets[0].forms[i].instance.goods_id = self.formsets[0].forms[i].instance.goods_name.goods_id
+                    self.formsets[0].forms[i].instance.creator = request.user.username
+            except Exception as e:
+                self.message_user("%s 添加的货品不能为空，此单未保存货品" % e, "info")
+                self.queryset()
+                break
+        super().save_related()
+
+    def queryset(self):
+        queryset = super(WOApplyAdmin, self).queryset()
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.filter(order_status=1, is_delete=0)
+        else:
+            queryset = queryset.filter(order_status=1, is_delete=0, creator=self.request.user.username)
+        for obj in queryset:
+            try:
+                amount = obj.goodsdetail_set.all().aggregate(
+                    sum_product=Sum(F("quantity") * F('price'), output_field=models.FloatField()))["sum_product"]
+            except Exception as e:
+                amount = 0
+                print(e)
+            if amount is None:
+                amount = 0
+            obj.amount = amount
+            obj.save()
+        return queryset
+
+
+
+
+# 发票工单创建界面
 class WOUnhandleAdmin(object):
     list_display = ['company', 'order_id', 'process_tag', 'mistake_tag', 'memorandum', 'order_status', 'message',
                     'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark', 'is_deliver',
@@ -1046,7 +1127,7 @@ class InvoiceOrderAdmin(object):
 
     def queryset(self):
         queryset = super(InvoiceOrderAdmin, self).queryset()
-        if self.request.user.cateogry == 1:
+        if self.request.user.category == 1:
             queryset = queryset.filter(is_delete=0)
         else:
             queryset = queryset.filter(is_delete=0, creator=self.request.user.username)
