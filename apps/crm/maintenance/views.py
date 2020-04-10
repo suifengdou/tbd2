@@ -350,7 +350,7 @@ class MaintenanceOverview(LoginRequiredMixin, View):
                 end_time = datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
                 d_value = end_time - start_time
                 # 计算一下时间间隔，是否是三个月内。如果超出或者选择错误。
-                if d_value.days in range(1, 91):
+                if d_value.days in range(1, 95):
                     confirm_data["start_time"] = start_time.strftime("%Y-%m-%d %H:%M:%S")
                     confirm_data["end_time"] = end_time.strftime("%Y-%m-%d %H:%M:%S")
                     confirm_data["tag_date"] = 0

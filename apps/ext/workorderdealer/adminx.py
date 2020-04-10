@@ -625,7 +625,7 @@ class WOTrackAdmin(object):
 
                     queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, company=self.request.user.company)
                 else:
-                    queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, creator=self.requset.user.username)
+                    queryset = queryset.filter(order_status__in=[1, 2, 3, 4], is_delete=0, creator=self.request.user.username)
 
         return queryset
 

@@ -28,6 +28,7 @@ class WorkOrder(BaseModel):
         (4, '信息错'),
         (5, '被驳回'),
         (6, '已处理'),
+        (7, '未申请'),
     )
     MISTAKE_LIST = (
         (0, '正常'),
