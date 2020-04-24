@@ -8,9 +8,10 @@ import django.utils.timezone as timezone
 from db.base_model import BaseModel
 
 from apps.utils.geography.models import CityInfo, ProvinceInfo, DistrictInfo
-from apps.base.company.models import MainInfo
+from apps.base.company.models import MainInfo, CompanyInfo
 from apps.base.shop.models import ShopInfo
 from apps.base.goods.models import MachineInfo
+from apps.base.department.models import DepartmentInfo
 
 
 class WorkOrder(BaseModel):
@@ -45,9 +46,11 @@ class WorkOrder(BaseModel):
         (11, '生成发票订单货品出错'),
         (12, '单据被驳回'),
         (13, '税号错误'),
+        (14, '源单号格式错误'),
+        (15, '导入货品错误'),
     )
 
-    LOGICAL_DEXISION = (
+    LOGICAL_DECISION = (
         (0, '否'),
         (1, '是'),
     )
@@ -77,7 +80,7 @@ class WorkOrder(BaseModel):
 
     amount = models.FloatField(default=0, verbose_name='申请税前开票总额')
 
-    is_deliver = models.SmallIntegerField(choices=LOGICAL_DEXISION, default=0, verbose_name='是否发顺丰')
+    is_deliver = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否发顺丰')
 
     submit_time = models.DateTimeField(null=True, blank=True, verbose_name='申请提交时间')
 
@@ -86,6 +89,11 @@ class WorkOrder(BaseModel):
 
     message = models.CharField(null=True, blank=True, max_length=300, verbose_name='工单留言')
     memorandum = models.CharField(null=True, blank=True, max_length=300, verbose_name='工单反馈')
+
+    sign_company = models.ForeignKey(CompanyInfo, on_delete=models.CASCADE, related_name='sign_company', null=True, blank=True, verbose_name='创建公司')
+    sign_department = models.ForeignKey(DepartmentInfo, on_delete=models.CASCADE, related_name='sign_department', null=True, blank=True, verbose_name='创建部门')
+
+    nickname = models.CharField(max_length=150, null=True, blank=True, verbose_name='客户昵称')
 
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
@@ -101,7 +109,10 @@ class WorkOrder(BaseModel):
 
     @classmethod
     def verify_mandatory(cls, columns_key):
-        VERIFY_FIELD = ['order_id', 'information', 'category']
+        VERIFY_FIELD = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account',
+                        'remark', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',
+                        'is_deliver', 'message', 'goods_id', 'goods_name', 'quantity', 'price']
+
         for i in VERIFY_FIELD:
             if i not in columns_key:
                 return 'verify_field error, must have mandatory field: "{}""'.format(i)
@@ -220,9 +231,16 @@ class InvoiceOrder(BaseModel):
     message = models.CharField(null=True, blank=True, max_length=300, verbose_name='工单留言')
     memorandum = models.CharField(null=True, blank=True, max_length=300, verbose_name='工单反馈')
 
+    sign_company = models.ForeignKey(CompanyInfo, on_delete=models.CASCADE, related_name='inv_sign_company', null=True,
+                                     blank=True, verbose_name='创建公司')
+    sign_department = models.ForeignKey(DepartmentInfo, on_delete=models.CASCADE, related_name='inv_sign_department',
+                                        null=True, blank=True, verbose_name='创建部门')
+
+    nickname = models.CharField(max_length=150, null=True, blank=True, verbose_name='客户昵称')
+
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='工单状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='订单状态')
 
     class Meta:
         verbose_name = 'EXT-发票订单-查询'
@@ -261,6 +279,7 @@ class InvoiceGoods(BaseModel):
     invoice = models.ForeignKey(InvoiceOrder, on_delete=models.CASCADE, verbose_name='发票订单')
     goods_id = models.CharField(max_length=50, verbose_name='货品编码', db_index=True)
     goods_name = models.ForeignKey(MachineInfo, verbose_name='货品名称')
+    goods_nickname = models.CharField(max_length=100, null=True, blank=True, verbose_name='货品简称')
     quantity = models.IntegerField(verbose_name='数量')
     price = models.FloatField(verbose_name='含税单价')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
@@ -310,7 +329,8 @@ class DeliverOrder(BaseModel):
     goods_name = models.CharField(max_length=100, default='文件：发票', verbose_name='货品名称')
     quantity = models.SmallIntegerField(default=1, verbose_name='货品数量')
     order_category = models.CharField(max_length=30, default='线下零售', verbose_name='订单类别')
-    message = models.CharField(max_length=150, verbose_name='买家备注')
+    message = models.CharField(max_length=150, verbose_name='客服备注')
+    remark = models.CharField(null=True, blank=True, max_length=150, verbose_name='买家备注')
     province = models.CharField(max_length=60, verbose_name='省')
     city = models.CharField(max_length=60, verbose_name='市')
     district = models.CharField(null=True, blank=True, max_length=60, verbose_name='区')

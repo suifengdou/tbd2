@@ -993,8 +993,6 @@ class WorkOrderMineAdmin(object):
     list_editable = ['memo',]
     actions = [CSSubmitAction, RejectSelectedAction ]
 
-
-
     def queryset(self):
         queryset = super(WorkOrderMineAdmin, self).queryset()
         myname = self.request.user.username
@@ -1047,7 +1045,7 @@ class WorkOrderAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.company_name == '小狗吸尘器':
+            if request.user.company.category == 1:
                 queryset = super(WorkOrderAdmin, self).queryset()
                 return queryset
             else:

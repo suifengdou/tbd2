@@ -13,7 +13,7 @@ from django.template.response import TemplateResponse
 
 from django.contrib.admin.utils import get_deleted_objects
 
-import math, re
+import math, re, operator
 import datetime
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -26,6 +26,7 @@ from django.db import models
 from django.contrib.admin.utils import get_deleted_objects
 
 import pandas as pd
+import numpy as np
 import xadmin
 from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
@@ -35,7 +36,10 @@ from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import WorkOrder, GoodsDetail, InvoiceOrder, InvoiceGoods, WOUnhandle, WOCheck, IOhandle, IOCheck, DeliverOrder, DOCheck, WOApply
 from apps.utils.geography.models import DistrictInfo
+from apps.base.shop.models import ShopInfo
+from apps.base.company.models import MainInfo
 from apps.base.goods.models import MachineInfo
+from apps.utils.geography.models import CityInfo
 
 
 ACTION_CHECKBOX_NAME = '_selected_action'
@@ -66,6 +70,7 @@ class RejectSelectedAction(BaseActionView):
                 if check_tag:
                     if obj.order_status > 0:
                         obj.order_status -= 1
+                        obj.process_tag = 5
                         obj.save()
                         if obj.order_status == 0:
                             self.message_user("%s 取消成功" % obj.order_id, "success")
@@ -228,7 +233,7 @@ class ConfirmWOAction(BaseActionView):
                             obj.save()
                             n -= 1
                             continue
-                    if not re.match("^([159Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-90-9ABCDEFGHJKLMNPQRTUWXY])$", obj.tax_id):
+                    if not re.match("^([1589Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-90-9ABCDEFGHJKLMNPQRTUWXY])$", obj.tax_id):
 
                         self.message_user("%s 税号错误" % obj.order_id, "error")
                         obj.mistake_tag = 13
@@ -307,7 +312,7 @@ class SubmitWOAction(BaseActionView):
                             n -= 1
                             continue
                     if not re.match(
-                            "^([159Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-90-9ABCDEFGHJKLMNPQRTUWXY])$",
+                            "^([1598Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-9ABCDEFGHJKLMNPQRTUWXY])$",
                             obj.tax_id):
                         self.message_user("%s 税号错误" % obj.order_id, "error")
                         obj.mistake_tag = 13
@@ -317,9 +322,8 @@ class SubmitWOAction(BaseActionView):
 
                     obj.order_status = 2
                     obj.mistake_tag = 0
-
+                    obj.process_tag = 0
                     obj.save()
-                    self.message_user("%s 审核完毕，等待客户反馈" % obj.order_id, "info")
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -365,9 +369,11 @@ class CheckWOAction(BaseActionView):
                             continue
 
                     invoice_order = IOhandle()
-                    copy_fields_order = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank',
-                                   'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone', 'sent_city',
-                                   'sent_district', 'sent_address', 'amount', 'is_deliver', 'message', 'creator']
+                    copy_fields_order = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone',
+                                         'bank', 'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
+                                         'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver',
+                                         'message', 'creator', 'sign_company', 'sign_department']
+
                     for key in copy_fields_order:
                         value = getattr(obj, key, None)
                         setattr(invoice_order, key, value)
@@ -388,7 +394,8 @@ class CheckWOAction(BaseActionView):
                     for good in _q_goods:
                         invoice_good = InvoiceGoods()
                         invoice_good.invoice = invoice_order
-                        copy_fields_goods = ['goods_id', 'goods_name', 'quantity', 'price', 'memorandum']
+                        invoice_good.goods_nickname = good.goods_name.goods_name
+                        copy_fields_goods = ['goods_id', 'goods_name', 'quantity', 'price', 'sign_company', 'sing_department', 'nickname', 'memorandum']
                         for key in copy_fields_goods:
                             value = getattr(good, key, None)
                             setattr(invoice_good, key, value)
@@ -403,9 +410,9 @@ class CheckWOAction(BaseActionView):
 
                     obj.order_status = 3
                     obj.mistake_tag = 0
+                    obj.process_tag = 3
 
                     obj.save()
-                    self.message_user("%s 审核完毕，等待客户反馈" % obj.order_id, "info")
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -539,9 +546,11 @@ class SplitWOAction(BaseActionView):
                             invoice_order.order_id = order_id
 
                             invoice_order.work_order = obj
-                            copy_fields_order = ['shop', 'company', 'order_category', 'title', 'tax_id', 'phone', 'bank',
-                                           'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone', 'sent_city',
-                                           'sent_district', 'sent_address',  'is_deliver', 'message', 'creator']
+                            copy_fields_order = ['shop', 'company', 'order_category', 'title', 'tax_id', 'phone',
+                                                 'bank', 'account', 'address', 'remark', 'sent_consignee',
+                                                 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',
+                                                 'is_deliver', 'message', 'sign_company', 'sign_department', 'creator',
+                                                 'nickname']
                             for key in copy_fields_order:
                                 value = getattr(obj, key, None)
                                 setattr(invoice_order, key, value)
@@ -564,6 +573,7 @@ class SplitWOAction(BaseActionView):
                                 current_amount = current_amount + (detail[0] * detail[1])
                                 goods_order.invoice = invoice_order
                                 goods_order.goods_name = goods
+                                goods_order.goods_nickname = goods.goods_name
                                 goods_order.goods_id = goods.goods_id
                                 goods_order.quantity = detail[0]
                                 goods_order.price = detail[1]
@@ -588,6 +598,8 @@ class SplitWOAction(BaseActionView):
                             continue
 
                         obj.order_status = 3
+                        obj.mistake_tag = 0
+                        obj.process_tag = 3
                         obj.save()
 
                     else:
@@ -631,62 +643,92 @@ class SubmitIOAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
-                    _q_work_order = DeliverOrder.objects.filter(work_order=obj.work_order, order_status=1)
-                    if _q_work_order.exists():
-                        deliver_order = _q_work_order[0]
-                        if str(obj.invoice_id) in str(deliver_order.ori_order_id):
-                            self.message_user("%s 重复递交了订单" % obj.order_id, "error")
-                            obj.order_status = 2
-                            obj.mistake_tag = 0
-                            obj.save()
-                            n -= 1
-                            continue
-                        else:
-                            deliver_order.ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
-                            invoice_num = len(deliver_order.ori_order_id.split(','))
-                            deliver_order.message = '%s共%s张' % (obj.creator, invoice_num)
-                            deliver_order.save()
-                            obj.order_status = 2
-                            obj.mistake_tag = 0
-                            obj.save()
-                            continue
-                    else:
-                        deliver_order = DeliverOrder()
-                        deliver_order.work_order = obj.work_order
-                        deliver_order.shop = obj.shop.shop_name
-                        deliver_order.ori_order_id = obj.invoice_id
-                        deliver_order.province = obj.sent_city.province.province
-                        deliver_order.city = obj.sent_city.city
-                        deliver_order.nickname = obj.sent_consignee
-                        deliver_order.consignee = obj.sent_consignee
-                        deliver_order.smartphone = obj.sent_smartphone
-                        deliver_order.message = '%s共1张' % obj.creator
-                        deliver_order.address = obj.sent_address
-
-                        if obj.is_deliver == 1:
-                            deliver_order.logistics = '顺丰'
-                        else:
-                            deliver_order.logistics = '申通'
-                        if obj.sent_district:
-                            _q_district = DistrictInfo.objects.filter(city=obj.sent_city, district=obj.sent_district)
-                            if _q_district.exists():
-                                deliver_order.district = _q_district[0].district
+                    _q_creator_order = DeliverOrder.objects.filter(creator=obj.creator, order_status=1)
+                    if _q_creator_order.exists():
+                        _q_work_order = DeliverOrder.objects.filter(work_order=obj.work_order, order_status=1)
+                        if _q_work_order.exists():
+                            deliver_order = _q_work_order[0]
+                            if str(obj.invoice_id) in str(deliver_order.ori_order_id):
+                                self.message_user("%s 重复递交了订单" % obj.order_id, "error")
+                                obj.order_status = 2
+                                obj.mistake_tag = 0
+                                obj.save()
+                                n -= 1
+                                continue
                             else:
-                                deliver_order.district = '其他区'
-                        try:
-                            deliver_order.save()
-                        except Exception as e:
-                            self.message_user("%s 生成快递运单失败，请仔细检查 %s" % (obj.order_id, e), "error")
-                            obj.mistake_tag = 2
-                            obj.save()
-                            n -= 1
-                            continue
+                                deliver_order.ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
+                                invoice_num = len(deliver_order.ori_order_id.split(','))
+                                deliver_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
+                                deliver_order.save()
+                                obj.order_status = 2
+                                obj.mistake_tag = 0
+                                obj.save()
+                                continue
+                        _q_repeat_order = DeliverOrder.objects.filter(consignee=obj.sent_consignee,
+                                                                      smartphone=obj.sent_smartphone,
+                                                                      address=obj.sent_address,
+                                                                      order_status=1)
+                        if _q_repeat_order.exists():
+                            repeat_order = _q_repeat_order[0]
+                            if str(obj.invoice_id) in str(repeat_order.ori_order_id):
+                                self.message_user("%s 重复递交了订单" % obj.order_id, "error")
+                                obj.order_status = 2
+                                obj.mistake_tag = 0
+                                obj.save()
+                                n -= 1
+                                continue
+                            else:
+                                deliver_order.ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
+                                invoice_num = len(deliver_order.ori_order_id.split(','))
+                                deliver_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
+                                deliver_order.save()
+                                obj.order_status = 2
+                                obj.mistake_tag = 0
+                                obj.save()
+                                continue
+
+                    deliver_order = DeliverOrder()
+
+                    if obj.nickname:
+                        deliver_order.nickname = obj.nickname
+                    else:
+                        deliver_order.nickname = obj.sent_consignee
+                    deliver_order.work_order = obj.work_order
+                    deliver_order.shop = obj.shop.shop_name
+                    deliver_order.ori_order_id = obj.invoice_id
+                    deliver_order.province = obj.sent_city.province.province
+                    deliver_order.city = obj.sent_city.city
+
+                    deliver_order.consignee = obj.sent_consignee
+                    deliver_order.smartphone = obj.sent_smartphone
+                    deliver_order.message = '%s%s共1张' % (obj.sign_department.name, obj.creator)
+                    deliver_order.address = obj.sent_address
+                    deliver_order.creator = obj.creator
+
+                    if obj.is_deliver == 1:
+                        deliver_order.logistics = '顺丰'
+                    else:
+                        deliver_order.logistics = '申通'
+                    deliver_order.remark = deliver_order.logistics
+                    if obj.sent_district:
+                        _q_district = DistrictInfo.objects.filter(city=obj.sent_city, district=obj.sent_district)
+                        if _q_district.exists():
+                            deliver_order.district = _q_district[0].district
+                        else:
+                            deliver_order.district = '其他区'
+                    try:
+                        deliver_order.save()
+                    except Exception as e:
+                        self.message_user("%s 生成快递运单失败，请仔细检查 %s" % (obj.order_id, e), "error")
+                        obj.mistake_tag = 2
+                        obj.save()
+                        n -= 1
+                        continue
                     obj.order_status = 2
                     obj.mistake_tag = 0
                     obj.process_tag = 4
 
                     obj.save()
-                    self.message_user("%s 审核完毕，等待客户反馈" % obj.order_id, "info")
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -733,7 +775,6 @@ class CheckIOAction(BaseActionView):
                     obj.order_status = 3
                     obj.mistake_tag = 0
                     obj.save()
-                    self.message_user("%s 审核完毕，等待客户反馈" % obj.order_id, "info")
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -809,9 +850,10 @@ class GoodsDetailInline(object):
 
 # 发票工单申请界面
 class WOApplyAdmin(object):
-    list_display = ['shop', 'company', 'order_id', 'process_tag', 'mistake_tag', 'memorandum', 'creator', 'order_status', 'message',
-                    'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark', 'is_deliver',
-                    'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'amount']
+    list_display = ['shop', 'company', 'amount', 'order_id', 'process_tag', 'mistake_tag', 'memorandum', 'creator',
+                    'order_status', 'message', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account',
+                    'address', 'remark', 'is_deliver', 'sent_consignee', 'sent_smartphone', 'sent_city',
+                    'sent_district', 'sent_address', ]
     actions = [ConfirmWOAction, RejectSelectedAction, ]
 
     search_fields = ['order_id']
@@ -827,7 +869,8 @@ class WOApplyAdmin(object):
     form_layout = [
         Fieldset('收款开票公司信息',
                  Row('shop', 'company'),
-                 'order_id', 'order_category', ),
+                 Row('order_id', 'nickname'),
+                 'order_category', ),
         Fieldset('发票信息',
                  Row('title', 'tax_id'),
                  Row('phone', 'bank'),
@@ -839,9 +882,284 @@ class WOApplyAdmin(object):
                  'sent_address'),
         Fieldset(None,
                  'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
-                 'mistake_tag', 'order_status', 'is_delete', 'creator',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator', 'sign_company', 'sign_department',
                  **{"style": "display:None"}),
     ]
+    import_data = True
+
+    def post(self, request, *args, **kwargs):
+
+        file = request.FILES.get('file', None)
+        if file:
+            result = self.handle_upload_file(file)
+            if isinstance(result, int):
+                self.message_user('导入成功数据%s条' % result['successful'], 'success')
+                if result['false'] > 0:
+                    self.message_user('导入失败数据%s条,主要的错误是%s' % (result['false'], result['error']), 'warning')
+                if result['repeated'] > 0:
+                    self.message_user('包含更新重复数据%s条' % result['repeated'], 'error')
+            else:
+                self.message_user('结果提示：%s' % result)
+        return super(WOApplyAdmin, self).post(request, *args, **kwargs)
+
+    def handle_upload_file(self, _file):
+        INIT_FIELDS_DIC = {
+            '店铺': 'shop',
+            '收款开票公司': 'company',
+            '源单号': 'order_id',
+            '发票类型': 'order_category',
+            '发票抬头': 'title',
+            '纳税人识别号': 'tax_id',
+            '联系电话': 'phone',
+            '银行名称': 'bank',
+            '银行账户': 'account',
+            '地址': 'address',
+            '发票备注': 'remark',
+            '收件人姓名': 'sent_consignee',
+            '收件人手机': 'sent_smartphone',
+            '收件城市': 'sent_city',
+            '收件区县': 'sent_district',
+            '收件地址': 'sent_address',
+            '是否发顺丰': 'is_deliver',
+            '工单留言': 'message',
+            '货品编码': 'goods_id',
+            '货品名称': 'goods_name',
+            '数量': 'quantity',
+            '含税单价': 'price',
+            '用户昵称': 'nickname',
+        }
+        ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+
+        if '.' in _file.name and _file.name.rsplit('.')[-1] in ALLOWED_EXTENSIONS:
+            with pd.ExcelFile(_file) as xls:
+                df = pd.read_excel(xls, sheet_name=0)
+                FILTER_FIELDS = ['店铺', '收款开票公司', '源单号', '发票类型', '发票抬头', '纳税人识别号', '联系电话', '银行名称',
+                                 '银行账户', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
+                                 '是否发顺丰', '工单留言', '货品编码', '货品名称', '数量', '含税单价','用户昵称']
+
+                try:
+                    df = df[FILTER_FIELDS]
+                except Exception as e:
+                    report_dic["error"].append(e)
+                    return report_dic
+
+
+                # 获取表头，对表头进行转换成数据库字段名
+                columns_key = df.columns.values.tolist()
+                for i in range(len(columns_key)):
+                    columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+
+                for i in range(len(columns_key)):
+                    if INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                        columns_key[i] = INIT_FIELDS_DIC.get(columns_key[i])
+
+                # 验证一下必要的核心字段是否存在
+                _ret_verify_field = WorkOrder.verify_mandatory(columns_key)
+                if _ret_verify_field is not None:
+                    report_dic["error"].append(str(_ret_verify_field))
+                    return report_dic
+
+                # 更改一下DataFrame的表名称
+                columns_key_ori = df.columns.values.tolist()
+                ret_columns_key = dict(zip(columns_key_ori, columns_key))
+                df.rename(columns=ret_columns_key, inplace=True)
+                check_list = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank',
+                              'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
+                              'sent_city', 'sent_district', 'sent_address', 'is_deliver', 'goods_id']
+                df_check = df[check_list]
+
+                tax_ids = list(set(df_check.tax_id))
+                for tax_id in tax_ids:
+                    data_check = df_check[df_check.tax_id == tax_id]
+                    check_list.pop()
+                    if len(data_check.goods_id) != len(list(set(data_check.goods_id))):
+                        error = '税号%s，货品重复，请剔除重复货品' % str(tax_id)
+                        report_dic["error"].append(error)
+                        return report_dic
+                    for word in check_list:
+                        check_word = data_check[word]
+                        if np.any(check_word.isnull() == True):
+                            continue
+                        check_word = list(set(check_word))
+                        if len(check_word) > 1:
+                            error = '税号%s的%s不一致，相同税号%s必须相同' % (str(tax_id), str(word), str(word))
+                            report_dic["error"].append(error)
+                            return report_dic
+
+                # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+                for tax_id in tax_ids:
+                    df_invoice = df[df.tax_id == tax_id]
+                    _ret_list = df_invoice.to_dict(orient='records')
+                    intermediate_report_dic = self.save_resources(_ret_list)
+                    for k, v in intermediate_report_dic.items():
+                        if k == "error":
+                            if intermediate_report_dic["error"]:
+                                report_dic[k].append(v)
+                        else:
+                            report_dic[k] += v
+                return report_dic
+
+        else:
+            error = "只支持excel文件格式！"
+            report_dic["error"].append(error)
+            return report_dic
+
+    def save_resources(self, resource):
+        # 设置初始报告
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+
+        work_order = WorkOrder()
+
+        if not re.match(r'^[0-9A-Z]+$', resource[0]['order_id']):
+            error = '源单号%s非法，请使用正确的源单号格式（只支持英文字母和数字组合）' % resource[0]['order_id']
+            report_dic['error'].append(error)
+            return report_dic
+        else:
+            work_order.order_id = resource[0]['order_id']
+
+        _q_work_order = WorkOrder.objects.filter(order_id=resource[0]['order_id'])
+        if not _q_work_order.exists():
+            # 开始导入数据
+            check_list = ['title', 'tax_id',  'sent_consignee', 'sent_smartphone', 'sent_district', 'sent_address',
+                          'phone', 'bank', 'account', 'address', 'remark', 'message', 'nickname']
+
+            _q_shop = ShopInfo.objects.filter(shop_name=resource[0]['shop'])
+            if _q_shop.exists():
+                work_order.shop = _q_shop[0]
+            else:
+                error = '店铺%s不存在，请使用正确的店铺名' % resource[0]['shop']
+                report_dic['error'].append(error)
+                return report_dic
+            _q_company = MainInfo.objects.filter(company_name=resource[0]['company'])
+            if _q_company.exists():
+                work_order.company = _q_company[0]
+            else:
+                error = '开票公司%s不存在，请使用正确的公司名' % resource[0]['company']
+                report_dic['error'].append(error)
+                return report_dic
+            category = {
+                '专票': 1,
+                '普票': 2,
+            }
+            order_category = category.get(resource[0]['order_category'], None)
+            if order_category:
+                work_order.order_category = order_category
+
+            else:
+                error = '开票类型%s不存在，请使用正确的开票类型' % resource[0]['order_category']
+                report_dic['error'].append(error)
+                return report_dic
+
+
+
+            _q_city = CityInfo.objects.filter(city=resource[0]['sent_city'])
+            if _q_city.exists():
+                work_order.sent_city = _q_city[0]
+            else:
+                error = '城市%s非法，请使用正确的二级城市名称' % resource[0]['sent_city']
+                report_dic['error'].append(error)
+                return report_dic
+
+            logical_decision = {
+                '是': 1,
+                '否': 0,
+            }
+            is_deliver = logical_decision.get(resource[0]['is_deliver'], None)
+            if is_deliver is None:
+                error = '是否发顺丰字段：%s非法（只可以填是否）' % resource[0]['is_deliver']
+                report_dic['error'].append(error)
+                return report_dic
+            else:
+                work_order.is_deliver = is_deliver
+
+            if order_category == 1:
+                check_list = check_list[:10]
+                for k in check_list:
+                    if not resource[0][k]:
+                        error = '%s非法，开专票请把必填项补全' % k
+                        report_dic['error'].append(error)
+                        return report_dic
+            elif order_category == 2:
+                check_list = check_list[:6]
+                for k in check_list:
+                    if not resource[0][k]:
+                        error = '%s非法，开普票请把必填项补全' % k
+                        report_dic['error'].append(error)
+                        return report_dic
+            if self.request.user.company:
+                work_order.sign_company = self.request.user.company
+            else:
+                error = '账号公司未设置或非法，联系管理员处理'
+                report_dic['error'].append(error)
+                return report_dic
+
+            if self.request.user.department:
+                work_order.sign_department = self.request.user.department
+            else:
+                error = '账号部门未设置或非法，联系管理员处理'
+                report_dic['error'].append(error)
+                return report_dic
+
+            for attr in check_list:
+                if resource[0][attr]:
+                    setattr(work_order, attr, resource[0][attr])
+
+            try:
+                work_order.creator = self.request.user.username
+                work_order.process_tag = 7
+                work_order.save()
+                report_dic["successful"] += 1
+            # 保存出错，直接错误条数计数加一。
+            except Exception as e:
+                report_dic["error"].append(e)
+                report_dic["false"] += 1
+                return report_dic
+        else:
+            work_order = _q_work_order[0]
+            if work_order.order_status != 1:
+                error = '此订单%s已经存在，请核实再导入' % (work_order.order_id)
+                report_dic["error"].append(error)
+                report_dic["false"] += 1
+                return report_dic
+            work_order.process_tag = 7
+            work_order.save()
+            all_goods_info = work_order.goodsdetail_set.all()
+            all_goods_info.delete()
+
+        goods_ids = [row['goods_id'] for row in resource]
+        goods_quantity = [row['quantity'] for row in resource]
+        goods_prices = [row['price'] for row in resource]
+
+        for goods_id, quantity, price in zip(goods_ids, goods_quantity, goods_prices):
+            goods_order = GoodsDetail()
+            _q_goods_id = MachineInfo.objects.filter(goods_id=goods_id)
+            if _q_goods_id.exists():
+                goods_order.goods_name = _q_goods_id[0]
+                goods_order.goods_id = goods_id
+                goods_order.quantity = quantity
+                goods_order.price = price
+                goods_order.invoice = work_order
+                goods_order.creator = self.request.user.username
+                try:
+                    goods_order.save()
+                    report_dic["successful"] += 1
+                # 保存出错，直接错误条数计数加一。
+                except Exception as e:
+                    report_dic["error"].append(e)
+                    report_dic["false"] += 1
+                    work_order.mistake_tag = 15
+                    work_order.save()
+                    return report_dic
+            else:
+                error = '发票工单的货品编码错误，请处理好编码再导入'
+                report_dic["error"].append(error)
+                report_dic["false"] += 1
+                work_order.mistake_tag = 15
+                work_order.save()
+                return report_dic
+
+        return report_dic
 
     def save_models(self):
         obj = self.new_obj
@@ -850,6 +1168,10 @@ class WOApplyAdmin(object):
         obj.process_tag = 7
         if obj.shop.company:
             obj.company = obj.shop.company
+        if not obj.sign_company:
+            obj.sign_company = self.request.user.company
+        if not obj.sign_department:
+            obj.sign_department = self.request.user.department
         obj.save()
         super().save_models()
 
@@ -871,7 +1193,6 @@ class WOApplyAdmin(object):
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=1, is_delete=0)
         else:
-
             queryset = queryset.filter(order_status=1, is_delete=0, creator=self.request.user.username, process_tag__in=[5, 7])
         for obj in queryset:
             try:
@@ -887,11 +1208,12 @@ class WOApplyAdmin(object):
         return queryset
 
 
-# 发票工单创建界面
+# 发票工单创建并提交界面
 class WOUnhandleAdmin(object):
-    list_display = ['shop', 'company', 'order_id', 'process_tag', 'mistake_tag', 'memorandum', 'creator', 'order_status', 'message',
-                    'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark', 'is_deliver',
-                    'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'amount']
+    list_display = ['shop', 'company', 'amount', 'order_id', 'process_tag', 'mistake_tag', 'memorandum', 'creator',
+                    'order_status', 'message', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account',
+                    'address', 'remark', 'is_deliver', 'sent_consignee', 'sent_smartphone', 'sent_city',
+                    'sent_district', 'sent_address', ]
     actions = [SubmitWOAction, RejectSelectedAction, ]
 
     search_fields = ['order_id']
@@ -903,11 +1225,284 @@ class WOUnhandleAdmin(object):
 
     readonly_fields = []
     inlines = [GoodsDetailInline]
+    import_data = True
+
+    def post(self, request, *args, **kwargs):
+
+        file = request.FILES.get('file', None)
+        if file:
+            result = self.handle_upload_file(file)
+            if isinstance(result, int):
+                self.message_user('导入成功数据%s条' % result['successful'], 'success')
+                if result['false'] > 0:
+                    self.message_user('导入失败数据%s条,主要的错误是%s' % (result['false'], result['error']), 'warning')
+                if result['repeated'] > 0:
+                    self.message_user('包含更新重复数据%s条' % result['repeated'], 'error')
+            else:
+                self.message_user('结果提示：%s' % result)
+        return super(WOUnhandleAdmin, self).post(request, *args, **kwargs)
+
+    def handle_upload_file(self, _file):
+        INIT_FIELDS_DIC = {
+            '店铺': 'shop',
+            '收款开票公司': 'company',
+            '源单号': 'order_id',
+            '发票类型': 'order_category',
+            '发票抬头': 'title',
+            '纳税人识别号': 'tax_id',
+            '联系电话': 'phone',
+            '银行名称': 'bank',
+            '银行账户': 'account',
+            '地址': 'address',
+            '发票备注': 'remark',
+            '收件人姓名': 'sent_consignee',
+            '收件人手机': 'sent_smartphone',
+            '收件城市': 'sent_city',
+            '收件区县': 'sent_district',
+            '收件地址': 'sent_address',
+            '是否发顺丰': 'is_deliver',
+            '工单留言': 'message',
+            '货品编码': 'goods_id',
+            '货品名称': 'goods_name',
+            '数量': 'quantity',
+            '含税单价': 'price',
+            '用户昵称': 'nickname',
+        }
+        ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+
+        if '.' in _file.name and _file.name.rsplit('.')[-1] in ALLOWED_EXTENSIONS:
+            with pd.ExcelFile(_file) as xls:
+                df = pd.read_excel(xls, sheet_name=0)
+                FILTER_FIELDS = ['店铺', '收款开票公司', '源单号', '发票类型', '发票抬头', '纳税人识别号', '联系电话', '银行名称',
+                                 '银行账户', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
+                                 '是否发顺丰', '工单留言', '货品编码', '货品名称', '数量', '含税单价','用户昵称']
+
+                try:
+                    df = df[FILTER_FIELDS]
+                except Exception as e:
+                    report_dic["error"].append(e)
+                    return report_dic
+
+
+                # 获取表头，对表头进行转换成数据库字段名
+                columns_key = df.columns.values.tolist()
+                for i in range(len(columns_key)):
+                    columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+
+                for i in range(len(columns_key)):
+                    if INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                        columns_key[i] = INIT_FIELDS_DIC.get(columns_key[i])
+
+                # 验证一下必要的核心字段是否存在
+                _ret_verify_field = WorkOrder.verify_mandatory(columns_key)
+                if _ret_verify_field is not None:
+                    report_dic["error"].append(str(_ret_verify_field))
+                    return report_dic
+
+                # 更改一下DataFrame的表名称
+                columns_key_ori = df.columns.values.tolist()
+                ret_columns_key = dict(zip(columns_key_ori, columns_key))
+                df.rename(columns=ret_columns_key, inplace=True)
+                check_list = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank',
+                              'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
+                              'sent_city', 'sent_district', 'sent_address', 'is_deliver', 'goods_id']
+                df_check = df[check_list]
+
+                tax_ids = list(set(df_check.tax_id))
+                for tax_id in tax_ids:
+                    data_check = df_check[df_check.tax_id == tax_id]
+                    check_list.pop()
+                    if len(data_check.goods_id) != len(list(set(data_check.goods_id))):
+                        error = '税号%s，货品重复，请剔除重复货品' % str(tax_id)
+                        report_dic["error"].append(error)
+                        return report_dic
+                    for word in check_list:
+                        check_word = data_check[word]
+                        if np.any(check_word.isnull() == True):
+                            continue
+                        check_word = list(set(check_word))
+                        if len(check_word) > 1:
+                            error = '税号%s的%s不一致，相同税号%s必须相同' % (str(tax_id), str(word), str(word))
+                            report_dic["error"].append(error)
+                            return report_dic
+
+                # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+                for tax_id in tax_ids:
+                    df_invoice = df[df.tax_id == tax_id]
+                    _ret_list = df_invoice.to_dict(orient='records')
+                    intermediate_report_dic = self.save_resources(_ret_list)
+                    for k, v in intermediate_report_dic.items():
+                        if k == "error":
+                            if intermediate_report_dic["error"]:
+                                report_dic[k].append(v)
+                        else:
+                            report_dic[k] += v
+                return report_dic
+
+        else:
+            error = "只支持excel文件格式！"
+            report_dic["error"].append(error)
+            return report_dic
+
+    def save_resources(self, resource):
+        # 设置初始报告
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+
+        work_order = WorkOrder()
+
+        if not re.match(r'^[0-9A-Z]+$', resource[0]['order_id']):
+            error = '源单号%s非法，请使用正确的源单号格式（只支持英文字母和数字组合）' % resource[0]['order_id']
+            report_dic['error'].append(error)
+            return report_dic
+        else:
+            work_order.order_id = resource[0]['order_id']
+
+        _q_work_order = WorkOrder.objects.filter(order_id=resource[0]['order_id'])
+        if not _q_work_order.exists():
+            # 开始导入数据
+            check_list = ['title', 'tax_id',  'sent_consignee', 'sent_smartphone', 'sent_district', 'sent_address',
+                          'phone', 'bank', 'account', 'address', 'remark', 'message', 'nickname']
+
+            _q_shop = ShopInfo.objects.filter(shop_name=resource[0]['shop'])
+            if _q_shop.exists():
+                work_order.shop = _q_shop[0]
+            else:
+                error = '店铺%s不存在，请使用正确的店铺名' % resource[0]['shop']
+                report_dic['error'].append(error)
+                return report_dic
+            _q_company = MainInfo.objects.filter(company_name=resource[0]['company'])
+            if _q_company.exists():
+                work_order.company = _q_company[0]
+            else:
+                error = '开票公司%s不存在，请使用正确的公司名' % resource[0]['company']
+                report_dic['error'].append(error)
+                return report_dic
+            category = {
+                '专票': 1,
+                '普票': 2,
+            }
+            order_category = category.get(resource[0]['order_category'], None)
+            if order_category:
+                work_order.order_category = order_category
+
+            else:
+                error = '开票类型%s不存在，请使用正确的开票类型' % resource[0]['order_category']
+                report_dic['error'].append(error)
+                return report_dic
+
+
+
+            _q_city = CityInfo.objects.filter(city=resource[0]['sent_city'])
+            if _q_city.exists():
+                work_order.sent_city = _q_city[0]
+            else:
+                error = '城市%s非法，请使用正确的二级城市名称' % resource[0]['sent_city']
+                report_dic['error'].append(error)
+                return report_dic
+
+            logical_decision = {
+                '是': 1,
+                '否': 0,
+            }
+            is_deliver = logical_decision.get(resource[0]['is_deliver'], None)
+            if is_deliver is None:
+                error = '是否发顺丰字段：%s非法（只可以填是否）' % resource[0]['is_deliver']
+                report_dic['error'].append(error)
+                return report_dic
+            else:
+                work_order.is_deliver = is_deliver
+
+            if order_category == 1:
+                check_list = check_list[:10]
+                for k in check_list:
+                    if not resource[0][k]:
+                        error = '%s非法，开专票请把必填项补全' % k
+                        report_dic['error'].append(error)
+                        return report_dic
+            elif order_category == 2:
+                check_list = check_list[:6]
+                for k in check_list:
+                    if not resource[0][k]:
+                        error = '%s非法，开普票请把必填项补全' % k
+                        report_dic['error'].append(error)
+                        return report_dic
+            if self.request.user.company:
+                work_order.sign_company = self.request.user.company
+            else:
+                error = '账号公司未设置或非法，联系管理员处理'
+                report_dic['error'].append(error)
+                return report_dic
+
+            if self.request.user.department:
+                work_order.sign_department = self.request.user.department
+            else:
+                error = '账号部门未设置或非法，联系管理员处理'
+                report_dic['error'].append(error)
+                return report_dic
+
+            for attr in check_list:
+                if resource[0][attr]:
+                    setattr(work_order, attr, resource[0][attr])
+
+            try:
+                work_order.creator = self.request.user.username
+                work_order.save()
+                report_dic["successful"] += 1
+            # 保存出错，直接错误条数计数加一。
+            except Exception as e:
+                report_dic["error"].append(e)
+                report_dic["false"] += 1
+                return report_dic
+        else:
+            work_order = _q_work_order[0]
+            if work_order.order_status != 1:
+                error = '此订单%s已经存在，请核实再导入' % (work_order.order_id)
+                report_dic["error"].append(error)
+                report_dic["false"] += 1
+                return report_dic
+            all_goods_info = work_order.goodsdetail_set.all()
+            all_goods_info.delete()
+
+        goods_ids = [row['goods_id'] for row in resource]
+        goods_quantity = [row['quantity'] for row in resource]
+        goods_prices = [row['price'] for row in resource]
+
+        for goods_id, quantity, price in zip(goods_ids, goods_quantity, goods_prices):
+            goods_order = GoodsDetail()
+            _q_goods_id = MachineInfo.objects.filter(goods_id=goods_id)
+            if _q_goods_id.exists():
+                goods_order.goods_name = _q_goods_id[0]
+                goods_order.goods_id = goods_id
+                goods_order.quantity = quantity
+                goods_order.price = price
+                goods_order.invoice = work_order
+                goods_order.creator = self.request.user.username
+                try:
+                    goods_order.save()
+                    report_dic["successful"] += 1
+                # 保存出错，直接错误条数计数加一。
+                except Exception as e:
+                    report_dic["error"].append(e)
+                    report_dic["false"] += 1
+                    work_order.mistake_tag = 15
+                    work_order.save()
+                    return report_dic
+            else:
+                error = '发票工单的货品编码错误，请处理好编码再导入'
+                report_dic["error"].append(error)
+                report_dic["false"] += 1
+                work_order.mistake_tag = 15
+                work_order.save()
+                return report_dic
+
+        return report_dic
 
     form_layout = [
         Fieldset('收款开票公司信息',
                  Row('shop', 'company'),
-                 'order_id', 'order_category', ),
+                 Row('order_id', 'nickname'),
+                 'order_category', ),
         Fieldset('发票信息',
                  Row('title', 'tax_id'),
                  Row('phone', 'bank'),
@@ -919,7 +1514,7 @@ class WOUnhandleAdmin(object):
                  'sent_address'),
         Fieldset(None,
                  'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
-                 'mistake_tag', 'order_status', 'is_delete', 'creator',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator','sign_company', 'sign_department',
                  **{"style": "display:None"}),
     ]
 
@@ -929,6 +1524,10 @@ class WOUnhandleAdmin(object):
         obj.creator = request.user.username
         if obj.shop.company:
             obj.company = obj.shop.company
+        if not obj.sign_company:
+            obj.sign_company = self.request.user.company
+        if not obj.sign_department:
+            obj.sign_department = self.request.user.department
         obj.save()
         super().save_models()
 
@@ -950,15 +1549,18 @@ class WOUnhandleAdmin(object):
         if self.request.user.is_superuser == 1:
             queryset = queryset.filter(order_status=1, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=1, is_delete=0, company=self.request.user.company,
-                                       process_tag__in=[0, 1, 2, 3, 4, 5, 6])
+            if self.request.user.company.company_name == '小狗吸尘器':
+                queryset = queryset.filter(order_status=1, is_delete=0, sign_department=self.request.user.department,
+                                           process_tag__in=[0, 1, 2, 3, 4, 5, 6])
+            else:
+                queryset = queryset.filter(order_status=1, is_delete=0, sign_company=self.request.user.company,
+                                           process_tag__in=[0, 1, 2, 3, 4, 5, 6])
         for obj in queryset:
             try:
                 amount = obj.goodsdetail_set.all().aggregate(
                     sum_product=Sum(F("quantity") * F('price'), output_field=models.FloatField()))["sum_product"]
             except Exception as e:
                 amount = 0
-                print(e)
             if amount is None:
                 amount = 0
             obj.amount = amount
@@ -979,9 +1581,9 @@ class WOCheckAdmin(object):
     list_filter = ['company__company_name', 'process_tag', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount']
     list_editable = ['memorandum',]
     readonly_fields = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account',
-                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'sent_city',
+                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sign_company',
                        'sent_district', 'sent_address', 'amount', 'is_deliver', 'submit_time', 'handle_time',
-                       'handle_interval', 'message', 'process_tag', 'mistake_tag', 'order_status']
+                       'handle_interval', 'message', 'process_tag', 'mistake_tag', 'order_status', 'nickname']
 
     form_layout = [
         Fieldset('收款开票公司信息',
@@ -992,7 +1594,7 @@ class WOCheckAdmin(object):
                  'is_deliver', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address'),
         Fieldset(None,
                  'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
-                 'mistake_tag', 'order_status', 'is_delete', 'creator',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator', 'sign_company', 'nickname', 'sign_department',
                  **{"style": "display:None"}),
     ]
 
@@ -1016,13 +1618,12 @@ class WorkOrderAdmin(object):
     actions = []
 
     search_fields = ['order_id']
-    list_filter = ['company__company_name', 'process_tag', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount',
-                   'creator']
+    list_filter = ['company__company_name', 'order_status', 'process_tag', 'mistake_tag', 'order_category', 'title',
+                   'tax_id', 'amount', 'creator', 'sent_consignee', 'sent_smartphone',]
     readonly_fields = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account',
-                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'sent_city',
+                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sign_company',
                        'sent_district', 'sent_address', 'amount', 'is_deliver', 'submit_time', 'handle_time',
-                       'handle_interval', 'message', 'process_tag', 'mistake_tag', 'order_status']
-    inlines = [GoodsDetailInline]
+                       'handle_interval', 'message', 'process_tag', 'mistake_tag', 'order_status', 'nickname']
 
     form_layout = [
         Fieldset('收款开票公司信息',
@@ -1039,39 +1640,46 @@ class WorkOrderAdmin(object):
                  'sent_address'),
         Fieldset(None,
                  'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
-                 'mistake_tag', 'order_status', 'is_delete', 'creator',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator', 'sign_company', 'nickname', 'sign_department',
                  **{"style": "display:None"}),
     ]
 
     def queryset(self):
         queryset = super(WorkOrderAdmin, self).queryset()
-        queryset = queryset.filter(is_delete=0)
+        if self.request.user.is_superuser == 1:
+            queryset = queryset.filter(is_delete=0)
+        else:
+            if self.request.user.category == 1:
+                queryset = queryset.filter(is_delete=0, sign_department=self.request.user.department)
+            else:
+                queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
         return queryset
 
 
     def has_add_permission(self):
         # 禁用添加按钮
         return False
-
-
 
 
 # 发票工单货品界面
 class GoodsDetailAdmin(object):
-    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator']
+    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'price', 'creator']
     readonly_fields = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'is_delete', 'create_time',
                        'price', 'memorandum', 'update_time']
 
+    search_fields = ['invoice__order_id']
+    list_filter = ['creator', 'goods_id', 'goods_name__goods_name',]
+
     def queryset(self):
-        queryset = super(InvoiceGoodsAdmin, self).queryset()
-        queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
+        queryset = super(GoodsDetailAdmin, self).queryset()
+        if self.request.user.category == 1:
+            queryset = queryset.filter(is_delete=0)
+        else:
+            queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
         return queryset
 
     def has_add_permission(self):
         # 禁用添加按钮
-        return False
-
-    def has_delete_permission(self):
         return False
 
 
@@ -1095,7 +1703,7 @@ class IOhandleAdmin(object):
                    'amount', 'ori_amount']
 
     readonly_fields = ['shop', 'company', 'order_id', 'process_tag',  'mistake_tag', 'order_status', 'message',
-                       'order_category', 'title','tax_id', 'phone', 'bank', 'account', 'ori_amount',
+                       'order_category', 'title','tax_id', 'phone', 'bank', 'account', 'ori_amount', 'nickname',
                        'address', 'remark', 'sent_consignee', 'sent_smartphone', 'memorandum', 'work_order',
                        'sent_province', 'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver']
     inlines = [InvoiceGoodsInline]
@@ -1106,15 +1714,16 @@ class IOhandleAdmin(object):
                  'order_category', ),
         Fieldset('发票信息',
                  Row('title', 'tax_id'),
-                 Row('phone', 'bank', 'account'),
-                 'address', 'remark'),
+                 Row('address','phone', ),
+                 Row('bank', 'account'),
+                 'remark'),
         Fieldset('单据金额',
                  Row('amount', 'ori_amount'),),
         Fieldset(None,
                  'order_id', 'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
                  'mistake_tag', 'order_status', 'is_delete', 'creator', 'track_no','is_deliver', 'sent_consignee',
                  'sent_smartphone', 'sent_province', 'sent_city', 'sent_district','sent_address', 'work_order',
-                 'message', 'ori_amount', **{"style": "display:None"}),
+                 'message', 'ori_amount', 'sign_company', 'nickname', 'sign_department', **{"style": "display:None"}),
     ]
 
     def queryset(self):
@@ -1141,13 +1750,13 @@ class IOCheckAdmin(object):
                     'sent_consignee', 'sent_smartphone', 'sent_address', 'message', 'memorandum', 'creator']
 
     search_fields = ['order_id']
-    list_filter = ['company__company_name', 'process_tag', 'order_category', 'mistake_tag', 'title', 'tax_id', 'remark',
-                   'amount', 'ori_amount']
+    list_filter = ['company__company_name', 'process_tag', 'creator', 'order_category', 'mistake_tag', 'title',
+                   'tax_id', 'remark', 'amount', 'ori_amount']
     actions = [CheckIOAction]
     readonly_fields = ['shop', 'company', 'order_id', 'process_tag',  'mistake_tag', 'order_status', 'message',
                        'order_category', 'title','tax_id', 'phone', 'bank', 'account', 'ori_amount', 'work_order',
-                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'memorandum', 'invoice_id',
-                       'sent_province', 'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver']
+                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'memorandum', 'invoice_id', 'nickname',
+                       'sent_province', 'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver', 'sign_company']
     inlines = [InvoiceGoodsInline]
 
     form_layout = [
@@ -1160,8 +1769,8 @@ class IOCheckAdmin(object):
                  'sent_address', 'track_no',),
         Fieldset(None,
                  'amount', 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag',
-                 'mistake_tag', 'order_status', 'is_delete', 'creator',  'work_order',
-                 **{"style": "display:None"}),
+                 'mistake_tag', 'order_status', 'is_delete', 'creator',  'work_order', 'sign_company', 'nickname',
+                 'sign_department', **{"style": "display:None"}),
     ]
 
     def queryset(self):
@@ -1169,29 +1778,29 @@ class IOCheckAdmin(object):
         if self.request.user.is_superuser:
             queryset = queryset.filter(order_status=2, is_delete=0)
         else:
-            queryset = queryset.filter(order_status=2, is_delete=0, creator=self.request.user.username)
+            if self.request.user.category == 1:
+                queryset = queryset.filter(order_status=2, is_delete=0, sign_company=self.request.user.company, sign_department=self.request.user.department)
+            else:
+                queryset = queryset.filter(order_status=2, is_delete=0, creator=self.request.user.username)
         return queryset
 
     def has_add_permission(self):
         # 禁用添加按钮
         return False
 
-    def has_delete_permission(self):
-        return False
-
 
 class InvoiceOrderAdmin(object):
-    list_display = ['company', 'order_id', 'process_tag', 'mistake_tag', 'order_status', 'order_category', 'title',
+    list_display = ['company', 'order_id', 'track_no', 'invoice_id', 'process_tag', 'mistake_tag', 'order_status', 'order_category', 'title',
                     'tax_id', 'phone', 'bank', 'account', 'ori_amount', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
                     'sent_province', 'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver', 'message',
                     'memorandum', 'creator']
 
-    search_fields = ['order_id']
-    list_filter = ['company__company_name', 'process_tag', 'order_category', 'mistake_tag', 'title', 'tax_id', 'remark',
-                   'amount', 'ori_amount', 'creator']
-    readonly_fields = ['shop', 'company', 'order_id', 'process_tag',  'mistake_tag', 'order_status', 'message',
-                       'order_category', 'title','tax_id', 'phone', 'bank', 'account', 'ori_amount', 'work_order',
-                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'memorandum', 'invoice_id',
+    search_fields = ['order_id', 'invoice_id']
+    list_filter = ['company__company_name', 'process_tag', 'order_category', 'mistake_tag', 'order_status', 'title', 'tax_id', 'remark',
+                   'amount', 'ori_amount', 'creator', 'sent_consignee', 'sent_smartphone', ]
+    readonly_fields = ['shop', 'company', 'order_id', 'process_tag',  'mistake_tag', 'order_status', 'message', 'track_no',
+                       'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'ori_amount', 'work_order',
+                       'address', 'remark', 'sent_consignee', 'sent_smartphone', 'memorandum', 'invoice_id', 'nickname',
                        'sent_province', 'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver']
     inlines = [InvoiceGoodsInline]
 
@@ -1206,9 +1815,9 @@ class InvoiceOrderAdmin(object):
         Fieldset('发票号及对应金额',
                  'invoice_id', 'amount', 'ori_amount'),
         Fieldset(None,
-                 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag', 'message',
-                 'mistake_tag', 'order_status', 'is_delete', 'creator', 'track_no', 'work_order',
-                 **{"style": "display:None"}),
+                 'submit_time', 'handle_time', 'handle_interval', 'memorandum', 'process_tag', 'message', 'nickname',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator', 'track_no', 'work_order', 'sign_company',
+                 'sign_department', **{"style": "display:None"}),
     ]
 
     def queryset(self):
@@ -1223,9 +1832,6 @@ class InvoiceOrderAdmin(object):
         # 禁用添加按钮
         return False
 
-    def has_delete_permission(self):
-        return False
-
 
 class InvoiceGoodsAdmin(object):
     list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator']
@@ -1233,21 +1839,18 @@ class InvoiceGoodsAdmin(object):
                        'price', 'memorandum', 'update_time']
 
     def queryset(self):
-        queryset = super(GoodsDetailAdmin, self).queryset()
+        queryset = super(InvoiceGoodsAdmin, self).queryset()
         queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
         return queryset
-
-    def has_delete_permission(self):
-        return False
 
 
 class DOCheckAdmin(object):
     list_display = ['order_status', 'process_tag', 'logistics', 'track_no', 'mistake_tag', 'memorandum', 'shop',
                     'ori_order_id', 'nickname', 'consignee', 'address', 'smartphone', 'condition_deliver', 'discounts',
-                    'postage', 'receivable', 'goods_price', 'goods_amount',
-                    'goods_id', 'goods_name', 'quantity', 'order_category', 'message', 'province', 'city', 'district']
+                    'postage', 'receivable', 'goods_price', 'goods_amount','goods_id', 'goods_name', 'quantity',
+                    'order_category', 'message', 'remark', 'province', 'city', 'district']
     search_fields = ['track_no', 'ori_order_id']
-    list_filter = ['logistics', 'shop', 'mistake_tag', 'process_tag', 'province', 'city', 'district']
+    list_filter = ['nickname', 'logistics', 'shop', 'mistake_tag', 'process_tag', 'province', 'city', 'district']
     list_editable = ['logistics', 'track_no',]
     readonly_fields = ['order_status', 'process_tag', 'mistake_tag', 'memorandum', 'shop',
                        'ori_order_id', 'nickname', 'consignee', 'address', 'smartphone', 'condition_deliver', 'discounts',
@@ -1255,7 +1858,7 @@ class DOCheckAdmin(object):
                        'goods_id', 'goods_name', 'quantity', 'order_category', 'message', 'province', 'city', 'district']
     actions = [SubmitDOAction]
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
-    INIT_FIELDS_DIC = {"原始单号": "ori_order_id", "快递公司": "logistics", "快递单号": "track_no"}
+    INIT_FIELDS_DIC = {"原始单号": "ori_order_id", "物流公司": "logistics", "物流单号": "track_no"}
     import_data = True
 
     def post(self, request, *args, **kwargs):
@@ -1272,7 +1875,7 @@ class DOCheckAdmin(object):
     def handle_upload_file(self, request, _file):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
-            df = pd.read_excel(_file, sheet_name=0)
+            df = pd.read_excel(_file, sheet_name=0, converters={u'原始单号': str})
 
             # 获取表头，对表头进行转换成数据库字段名
             columns_key = df.columns.values.tolist()
@@ -1283,7 +1886,8 @@ class DOCheckAdmin(object):
             # 验证一下必要的核心字段是否存在
             _ret_verify_field = DOCheck.verify_mandatory(columns_key)
             if _ret_verify_field is not None:
-                return _ret_verify_field
+                report_dic['error'].append(_ret_verify_field)
+                return report_dic
 
             # 更改一下DataFrame的表名称
             columns_key_ori = df.columns.values.tolist()
@@ -1387,8 +1991,6 @@ class DOCheckAdmin(object):
         # 禁用添加按钮
         return False
 
-    def has_delete_permission(self):
-        return False
 
 
 class DeliverOrderAdmin(object):
@@ -1402,15 +2004,11 @@ class DeliverOrderAdmin(object):
                        'goods_id', 'goods_name', 'quantity', 'order_category', 'message', 'province', 'city', 'district']
 
     search_fields = ['track_no', 'ori_order_id']
-    list_filter = ['logistics', 'shop', 'mistake_tag', 'process_tag', 'province', 'city', 'district']
+    list_filter = ['logistics', 'shop', 'mistake_tag', 'order_status', 'process_tag', 'nickname', 'consignee', 'smartphone', 'province', 'city', 'district']
 
 
     def has_add_permission(self):
         # 禁用添加按钮
-        return False
-
-
-    def has_delete_permission(self):
         return False
 
 

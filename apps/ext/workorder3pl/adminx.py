@@ -473,6 +473,7 @@ class WorkOrder3PLKeshenAdmin(object):
         return False
 
 
+# 财务工单审核
 class WorkOrder3PLMineAdmin(object):
     list_display = ['order_status', 'company', 'is_return', 'return_express_id', 'feedback', 'memo','is_losing', 'information',
                     'keyword', 'category', 'creator', 'servicer', 'handler']
@@ -511,7 +512,7 @@ class WorkOrder3PLProcessAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.company_name == '小狗电器':
+            if request.user.company.category == 1:
                 queryset = super(WorkOrder3PLProcessAdmin, self).queryset()
                 queryset = queryset.filter(order_status__in=[1, 2, 3, 4, 5, 6])
                 return queryset
@@ -543,7 +544,7 @@ class WorkOrder3PLAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.company_name == '小狗电器':
+            if request.user.company.category == 1:
                 queryset = super(WorkOrder3PLAdmin, self).queryset()
                 return queryset
             else:

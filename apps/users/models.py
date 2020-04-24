@@ -8,6 +8,7 @@ from django.contrib.auth.models import AbstractUser
 
 from db.base_model import BaseModel
 from apps.base.company.models import CompanyInfo
+from apps.base.department.models import DepartmentInfo
 
 
 # Create your models here.
@@ -29,8 +30,9 @@ class UserProfile(AbstractUser, BaseModel):
     )
     nick = models.CharField(max_length=50, verbose_name=u'昵称', default=u'')
     platform = models.SmallIntegerField(choices=PLATFORM, default=0, verbose_name='平台')
-    company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属公司')
-    category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='平台')
+    company = models.ForeignKey(CompanyInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='公司')
+    department = models.ForeignKey(DepartmentInfo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='部门')
+    category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='归属')
 
     class Meta:
         verbose_name = u'USR-用户信息'
