@@ -40,6 +40,7 @@ from apps.base.shop.models import ShopInfo
 from apps.base.company.models import MainInfo
 from apps.base.goods.models import MachineInfo
 from apps.utils.geography.models import CityInfo
+from apps.users.models import UserProfile
 
 
 ACTION_CHECKBOX_NAME = '_selected_action'
@@ -175,6 +176,45 @@ class RejectSelectedAction(BaseActionView):
                                 self.get_template_list('views/model_reject_selected_confirm.html'), context)
 
 
+# 驳回经销商工单
+class RejectDealerAction(BaseActionView):
+        action_name = "reject_r_wo"
+        description = "驳回工单至经销商"
+        model_perm = 'change'
+        icon = "fa fa-check-square-o"
+
+        modify_models_batch = False
+
+        @filter_hook
+        def do_action(self, queryset):
+            if not self.has_change_permission():
+                raise PermissionDenied
+            n = queryset.count()
+            if n:
+                if self.modify_models_batch:
+                    self.log('change',
+                             '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                    queryset.update(order_status=2)
+                else:
+                    for obj in queryset:
+                        self.log('change', '', obj)
+                        _q_user = UserProfile.objects.filter(username=obj.creator)
+                        if _q_user.exists():
+                            creator = _q_user[0]
+                            if creator.category:
+                                self.message_user("%s 非经销商工单无法驳回，" % obj.order_id, "error")
+                            else:
+                                obj.process_tag = 5
+                                obj.save()
+                        else:
+                            self.message_user("%s 创建者非法，联系管理员处理，" % obj.order_id, "error")
+
+                self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+
+            return None
+
+
 # 工单提交
 class ConfirmWOAction(BaseActionView):
     action_name = "confirm_r_wo"
@@ -237,6 +277,13 @@ class ConfirmWOAction(BaseActionView):
 
                         self.message_user("%s 税号错误" % obj.order_id, "error")
                         obj.mistake_tag = 13
+                        obj.save()
+                        n -= 1
+                        continue
+
+                    if not re.match(r"^[0-9A-Z-,]+$", obj.order_id):
+                        self.message_user("%s 源单号错误，只支持大写字母和数字以及英文逗号" % obj.order_id, "error")
+                        obj.mistake_tag = 16
                         obj.save()
                         n -= 1
                         continue
@@ -319,6 +366,13 @@ class SubmitWOAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
+                    if not re.match(r"^[0-9A-Z-,]+$", obj.order_id):
+                        self.message_user("%s 源单号错误，只支持大写字母和数字以及英文逗号" % obj.order_id, "error")
+                        obj.mistake_tag = 16
+                        obj.save()
+                        n -= 1
+                        continue
+
 
                     obj.order_status = 2
                     obj.mistake_tag = 0
@@ -410,7 +464,7 @@ class CheckWOAction(BaseActionView):
 
                     obj.order_status = 3
                     obj.mistake_tag = 0
-                    obj.process_tag = 3
+                    obj.process_tag = 6
 
                     obj.save()
 
@@ -457,7 +511,7 @@ class SplitWOAction(BaseActionView):
                         _q_goods = obj.goodsdetail_set.all()
 
                         l_name, l_quantity, l_price = [goods.goods_name for goods in _q_goods], [goods.quantity for goods in _q_goods], [goods.price for goods in _q_goods]
-                        print(l_name, l_quantity, l_price)
+
                         if max(l_price) > quota:
                             self.message_user("%s 此订单为无法拆单的超限额工单，需驳回修正" % obj.order_id, "error")
                             obj.mistake_tag = 8
@@ -599,7 +653,7 @@ class SplitWOAction(BaseActionView):
 
                         obj.order_status = 3
                         obj.mistake_tag = 0
-                        obj.process_tag = 3
+                        obj.process_tag = 6
                         obj.save()
 
                     else:
@@ -678,10 +732,10 @@ class SubmitIOAction(BaseActionView):
                                 n -= 1
                                 continue
                             else:
-                                deliver_order.ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
-                                invoice_num = len(deliver_order.ori_order_id.split(','))
-                                deliver_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
-                                deliver_order.save()
+                                repeat_order.ori_order_id = '%s,%s' % (repeat_order.ori_order_id, obj.invoice_id)
+                                invoice_num = len(repeat_order.ori_order_id.split(','))
+                                repeat_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
+                                repeat_order.save()
                                 obj.order_status = 2
                                 obj.mistake_tag = 0
                                 obj.save()
@@ -857,7 +911,7 @@ class WOApplyAdmin(object):
     actions = [ConfirmWOAction, RejectSelectedAction, ]
 
     search_fields = ['order_id']
-    list_filter = ['company__company_name', 'process_tag', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount']
+    list_filter = ['company__company_name', 'creator', 'process_tag', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount']
 
     list_editable = ['company', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark',
                      'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'is_deliver',
@@ -933,7 +987,7 @@ class WOApplyAdmin(object):
 
         if '.' in _file.name and _file.name.rsplit('.')[-1] in ALLOWED_EXTENSIONS:
             with pd.ExcelFile(_file) as xls:
-                df = pd.read_excel(xls, sheet_name=0)
+                df = pd.read_excel(xls, sheet_name=0, converters={u'货品编码': str})
                 FILTER_FIELDS = ['店铺', '收款开票公司', '源单号', '发票类型', '发票抬头', '纳税人识别号', '联系电话', '银行名称',
                                  '银行账户', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
                                  '是否发顺丰', '工单留言', '货品编码', '货品名称', '数量', '含税单价','用户昵称']
@@ -1011,14 +1065,14 @@ class WOApplyAdmin(object):
 
         work_order = WorkOrder()
 
-        if not re.match(r'^[0-9A-Z]+$', resource[0]['order_id']):
+        if not re.match(r'^[0-9A-Z]+$', str(resource[0]['order_id'])):
             error = '源单号%s非法，请使用正确的源单号格式（只支持英文字母和数字组合）' % resource[0]['order_id']
             report_dic['error'].append(error)
             return report_dic
         else:
             work_order.order_id = resource[0]['order_id']
 
-        _q_work_order = WorkOrder.objects.filter(order_id=resource[0]['order_id'])
+        _q_work_order = WorkOrder.objects.filter(order_id=str(resource[0]['order_id']))
         if not _q_work_order.exists():
             # 开始导入数据
             check_list = ['title', 'tax_id',  'sent_consignee', 'sent_smartphone', 'sent_district', 'sent_address',
@@ -1053,7 +1107,7 @@ class WOApplyAdmin(object):
 
 
 
-            _q_city = CityInfo.objects.filter(city=resource[0]['sent_city'])
+            _q_city = CityInfo.objects.filter(city=str(resource[0]['sent_city']))
             if _q_city.exists():
                 work_order.sent_city = _q_city[0]
             else:
@@ -1214,10 +1268,10 @@ class WOUnhandleAdmin(object):
                     'order_status', 'message', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account',
                     'address', 'remark', 'is_deliver', 'sent_consignee', 'sent_smartphone', 'sent_city',
                     'sent_district', 'sent_address', ]
-    actions = [SubmitWOAction, RejectSelectedAction, ]
+    actions = [SubmitWOAction, RejectSelectedAction, RejectDealerAction]
 
     search_fields = ['order_id']
-    list_filter = ['company__company_name', 'process_tag', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount']
+    list_filter = ['company__company_name', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'title', 'tax_id', 'amount']
 
     list_editable = ['company', 'order_category', 'title', 'tax_id', 'phone', 'bank', 'account', 'address', 'remark',
                      'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'is_deliver',
@@ -1273,7 +1327,7 @@ class WOUnhandleAdmin(object):
 
         if '.' in _file.name and _file.name.rsplit('.')[-1] in ALLOWED_EXTENSIONS:
             with pd.ExcelFile(_file) as xls:
-                df = pd.read_excel(xls, sheet_name=0)
+                df = pd.read_excel(xls, sheet_name=0, converters={u'货品编码': str})
                 FILTER_FIELDS = ['店铺', '收款开票公司', '源单号', '发票类型', '发票抬头', '纳税人识别号', '联系电话', '银行名称',
                                  '银行账户', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
                                  '是否发顺丰', '工单留言', '货品编码', '货品名称', '数量', '含税单价','用户昵称']
@@ -1668,7 +1722,7 @@ class GoodsDetailAdmin(object):
                        'price', 'memorandum', 'update_time']
 
     search_fields = ['invoice__order_id']
-    list_filter = ['creator', 'goods_id', 'goods_name__goods_name',]
+    list_filter = ['invoice__order_id', 'goods_id', 'creator']
 
     def queryset(self):
         queryset = super(GoodsDetailAdmin, self).queryset()
@@ -1838,6 +1892,9 @@ class InvoiceGoodsAdmin(object):
     readonly_fields = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'is_delete', 'create_time',
                        'price', 'memorandum', 'update_time']
 
+    search_fields = ['invoice__order_id']
+    list_filter = ['invoice__order_id', 'goods_id', 'creator']
+
     def queryset(self):
         queryset = super(InvoiceGoodsAdmin, self).queryset()
         queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
@@ -1992,7 +2049,6 @@ class DOCheckAdmin(object):
         return False
 
 
-
 class DeliverOrderAdmin(object):
     list_display = ['order_status', 'logistics', 'track_no', 'shop', 'ori_order_id', 'nickname', 'consignee', 'address',
                     'smartphone', 'condition_deliver', 'discounts', 'postage', 'receivable', 'goods_price', 'goods_amount',
@@ -2005,7 +2061,6 @@ class DeliverOrderAdmin(object):
 
     search_fields = ['track_no', 'ori_order_id']
     list_filter = ['logistics', 'shop', 'mistake_tag', 'order_status', 'process_tag', 'nickname', 'consignee', 'smartphone', 'province', 'city', 'district']
-
 
     def has_add_permission(self):
         # 禁用添加按钮

@@ -511,6 +511,8 @@ class GiftInTalkPenddingAdmin(object):
                         else:
                             break
 
+                file.close()
+
                 self.message_user('导入成功数据%s条' % int(result['successful']), 'success')
                 if result['false'] > 0 or result['error']:
                     self.message_user('导入失败数据%s条,主要的错误是%s' % (int(result['false']), result['error']), 'warning')

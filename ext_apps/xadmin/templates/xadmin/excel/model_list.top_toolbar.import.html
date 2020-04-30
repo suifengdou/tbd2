@@ -13,7 +13,7 @@
             var ext,idx;
             if (imgName == ''){
                 document.all.submit_upload_b.disabled=true;
-                alert("请选择需要上传的 xls 文件!");
+                alert("请选择需要上传的表格或文本文件!");
                 return;
             } else {
                 idx = imgName.lastIndexOf(".");
@@ -23,13 +23,13 @@
 {#                    alert("ext="+ext);#}
                     if (ext != 'xls' && ext != 'xlsx' && ext != 'csv' && ext != 'log'&& ext != 'txt'){
                         document.all.submit_upload_b.disabled=true;
-                        alert("只能上传 .xls .csv类型的文件!");
+                        alert("只能上传表格或文本类型的文件!");
 
                         return;
                     }
                 } else {
                     document.all.submit_upload_b.disabled=true;
-                    alert("只能上传 .xls .csv类型的文件!");
+                    alert("只能上传表格或文本类型的文件!");
                     return;
                 }
             }
@@ -43,9 +43,10 @@
               {% csrf_token %}
           <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h4 class="modal-title">导入 表格文件</h4>
+            <h4 class="modal-title">导入表格或文本文件</h4>
           </div>
           <div class="modal-body">
+              <p>浏览选择对应的表格或文本，选中对应的文件。</p>
                <input type="file" onchange="fileChange(this)" name="file" id="submit_upload">
 
           </div>

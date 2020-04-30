@@ -48,6 +48,7 @@ class WorkOrder(BaseModel):
         (13, '税号错误'),
         (14, '源单号格式错误'),
         (15, '导入货品错误'),
+        (16, '源单号格式错误'),
     )
 
     LOGICAL_DECISION = (
