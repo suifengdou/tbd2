@@ -710,9 +710,14 @@ class SubmitIOAction(BaseActionView):
                                 n -= 1
                                 continue
                             else:
-                                deliver_order.ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
-                                invoice_num = len(deliver_order.ori_order_id.split(','))
-                                deliver_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
+                                ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
+                                invoice_num = len(ori_order_id.split(','))
+                                if invoice_num < 4:
+                                    deliver_order.ori_order_id = ori_order_id
+                                    deliver_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
+                                else:
+                                    deliver_order.message = '%s%s共%s张(发票号最大显示4个，完整见UT发票订单)' % \
+                                                            (obj.sign_department.name, obj.creator, invoice_num)
                                 deliver_order.save()
                                 obj.order_status = 2
                                 obj.mistake_tag = 0
@@ -732,9 +737,15 @@ class SubmitIOAction(BaseActionView):
                                 n -= 1
                                 continue
                             else:
-                                repeat_order.ori_order_id = '%s,%s' % (repeat_order.ori_order_id, obj.invoice_id)
-                                invoice_num = len(repeat_order.ori_order_id.split(','))
-                                repeat_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
+                                ori_order_id = '%s,%s' % (repeat_order.ori_order_id, obj.invoice_id)
+                                invoice_num = len(ori_order_id.split(','))
+                                if invoice_num < 4:
+                                    repeat_order.ori_order_id = ori_order_id
+                                    repeat_order.message = '%s%s共%s张' % \
+                                                           (obj.sign_department.name, obj.creator, invoice_num)
+                                else:
+                                    repeat_order.message = '%s%s共%s张(发票号最大显示4个，完整见UT发票订单)' % \
+                                                           (obj.sign_department.name, obj.creator, invoice_num)
                                 repeat_order.save()
                                 obj.order_status = 2
                                 obj.mistake_tag = 0
