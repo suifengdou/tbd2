@@ -1899,16 +1899,19 @@ class InvoiceOrderAdmin(object):
 
 
 class InvoiceGoodsAdmin(object):
-    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator']
+    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'create_time']
     readonly_fields = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'is_delete', 'create_time',
                        'price', 'memorandum', 'update_time']
 
     search_fields = ['invoice__order_id']
-    list_filter = ['invoice__order_id', 'goods_id', 'creator']
+    list_filter = ['invoice__order_id', 'goods_id', 'creator', 'invoice__company', 'create_time']
 
     def queryset(self):
-        queryset = super(InvoiceGoodsAdmin, self).queryset()
-        queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
+        if self.request.user.category == 1:
+            queryset = super(InvoiceGoodsAdmin, self).queryset()
+        else:
+            queryset = super(InvoiceGoodsAdmin, self).queryset()
+            queryset = queryset.filter(creator=self.request.user.username, is_delete=0)
         return queryset
 
 

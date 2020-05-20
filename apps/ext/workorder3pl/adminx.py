@@ -512,7 +512,7 @@ class WorkOrder3PLProcessAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.category == 1:
+            if request.user.category == 1:
                 queryset = super(WorkOrder3PLProcessAdmin, self).queryset()
                 queryset = queryset.filter(order_status__in=[1, 2, 3, 4, 5, 6])
                 return queryset
@@ -544,7 +544,7 @@ class WorkOrder3PLAdmin(object):
         request = self.request
         if request.user.company is not None:
 
-            if request.user.company.category == 1:
+            if request.user.category == 1:
                 queryset = super(WorkOrder3PLAdmin, self).queryset()
                 return queryset
             else:
