@@ -120,6 +120,14 @@ class OriDetailTB(BaseModel):
         (0, '客服'),
         (1, '顾客'),
     )
+    LOGICAL_DECISION = (
+        (0, '否'),
+        (1, '是'),
+    )
+    MISTAKE_LIST = (
+        (0, '正常'),
+        (1, '对话格式错误'),
+    )
 
     dialog_tb = models.ForeignKey(OriDialogTB, on_delete=models.CASCADE, verbose_name='对话')
     sayer = models.CharField(max_length=150, verbose_name='讲话者', db_index=True)
@@ -127,7 +135,13 @@ class OriDetailTB(BaseModel):
     time = models.DateTimeField(verbose_name='时间', db_index=True)
     interval = models.IntegerField(verbose_name='对话间隔(秒)')
     content = models.TextField(verbose_name='内容')
+
+    index = models.IntegerField(default=0, verbose_name='对话负面指数')
+
+    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
+    sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
 
     class Meta:
         verbose_name = 'CRM-淘系对话信息-查询'
@@ -136,6 +150,27 @@ class OriDetailTB(BaseModel):
 
     def __str__(self):
         return self.sayer
+
+
+class CheckODTB(OriDetailTB):
+    class Meta:
+        verbose_name = 'CRM-淘宝对话信息-未过滤'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class ExtractODTB(OriDetailTB):
+    class Meta:
+        verbose_name = 'CRM-淘宝对话信息-未提取'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class ExceptionODTB(OriDetailTB):
+    class Meta:
+        verbose_name = 'CRM-淘宝对话信息-敏感对话'
+        verbose_name_plural = verbose_name
+        proxy = True
 
 
 class OriDialogJD(BaseModel):

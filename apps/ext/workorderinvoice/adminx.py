@@ -710,13 +710,15 @@ class SubmitIOAction(BaseActionView):
                                 n -= 1
                                 continue
                             else:
-                                ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
-                                invoice_num = len(ori_order_id.split(','))
-                                if invoice_num < 4:
+                                invoice_num = int(re.findall(r'共(\d+)张', deliver_order.message)[0])
+                                if invoice_num < 3:
+                                    invoice_num += 1
+                                    ori_order_id = '%s,%s' % (deliver_order.ori_order_id, obj.invoice_id)
                                     deliver_order.ori_order_id = ori_order_id
                                     deliver_order.message = '%s%s共%s张' % (obj.sign_department.name, obj.creator, invoice_num)
                                 else:
-                                    deliver_order.message = '%s%s共%s张(发票号最大显示4个，完整见UT发票订单)' % \
+                                    invoice_num += 1
+                                    deliver_order.message = '%s%s共%s张(发票号最大显示3个，完整见UT发票订单)' % \
                                                             (obj.sign_department.name, obj.creator, invoice_num)
                                 deliver_order.save()
                                 obj.order_status = 2
@@ -744,7 +746,7 @@ class SubmitIOAction(BaseActionView):
                                     repeat_order.message = '%s%s共%s张' % \
                                                            (obj.sign_department.name, obj.creator, invoice_num)
                                 else:
-                                    repeat_order.message = '%s%s共%s张(发票号最大显示4个，完整见UT发票订单)' % \
+                                    repeat_order.message = '%s%s共%s张(发票号最大显示3个，完整见UT发票订单)' % \
                                                            (obj.sign_department.name, obj.creator, invoice_num)
                                 repeat_order.save()
                                 obj.order_status = 2
@@ -977,7 +979,7 @@ class WOApplyAdmin(object):
             '纳税人识别号': 'tax_id',
             '联系电话': 'phone',
             '银行名称': 'bank',
-            '银行账户': 'account',
+            '银行账号': 'account',
             '地址': 'address',
             '发票备注': 'remark',
             '收件人姓名': 'sent_consignee',
@@ -1000,7 +1002,7 @@ class WOApplyAdmin(object):
             with pd.ExcelFile(_file) as xls:
                 df = pd.read_excel(xls, sheet_name=0, converters={u'货品编码': str})
                 FILTER_FIELDS = ['店铺', '收款开票公司', '源单号', '发票类型', '发票抬头', '纳税人识别号', '联系电话', '银行名称',
-                                 '银行账户', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
+                                 '银行账号', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
                                  '是否发顺丰', '工单留言', '货品编码', '货品名称', '数量', '含税单价','用户昵称']
 
                 try:
@@ -1317,7 +1319,7 @@ class WOUnhandleAdmin(object):
             '纳税人识别号': 'tax_id',
             '联系电话': 'phone',
             '银行名称': 'bank',
-            '银行账户': 'account',
+            '银行账号': 'account',
             '地址': 'address',
             '发票备注': 'remark',
             '收件人姓名': 'sent_consignee',
@@ -1340,7 +1342,7 @@ class WOUnhandleAdmin(object):
             with pd.ExcelFile(_file) as xls:
                 df = pd.read_excel(xls, sheet_name=0, converters={u'货品编码': str})
                 FILTER_FIELDS = ['店铺', '收款开票公司', '源单号', '发票类型', '发票抬头', '纳税人识别号', '联系电话', '银行名称',
-                                 '银行账户', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
+                                 '银行账号', '地址', '发票备注', '收件人姓名', '收件人手机', '收件城市', '收件区县', '收件地址',
                                  '是否发顺丰', '工单留言', '货品编码', '货品名称', '数量', '含税单价','用户昵称']
 
                 try:

@@ -22,7 +22,7 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 
-from .models import GiftInTalkPendding, GiftInTalkInfo, GiftOrderPendding, GiftOrderInfo, GiftImportInfo, GiftImportPendding, GiftInTalkRepeat
+from .models import GiftInTalkPendding, GiftInTalkInfo, GiftOrderPendding, GiftOrderInfo, GiftImportInfo, GiftImportPendding
 from apps.base.goods.models import GoodsInfo
 from apps.utils.geography.models import CityInfo, DistrictInfo
 
@@ -161,26 +161,69 @@ class SubmitGiftAction(BaseActionView):
                             obj.mistakes = 1
                             obj.save()
                             continue
-
-                    cs_info = str(obj.cs_information).replace("收货信息", "").replace("：", "").split(" ")
-                    if len(cs_info) == 3:
-                        gift_order.receiver = cs_info[0]
-                        gift_order.mobile = cs_info[1]
-                        gift_order.address = cs_info[2]
-                    elif len(cs_info) > 3:
-                        gift_order.receiver = cs_info[0]
-                        gift_order.mobile = cs_info[1]
-                        address = str(cs_info[2])
-                        for i in range(len(cs_info)):
-                            if i > 2:
-                                address = address + str(cs_info[i])
-                        gift_order.address = address
+                    if obj.platform == 2:
+                        cs_info = str(obj.cs_information).replace("收货信息", "").replace("：", "").split(" ")
+                        if len(cs_info) == 3:
+                            gift_order.receiver = cs_info[0]
+                            gift_order.mobile = cs_info[1]
+                            gift_order.address = cs_info[2]
+                        elif len(cs_info) > 3:
+                            gift_order.receiver = cs_info[0]
+                            gift_order.mobile = cs_info[1]
+                            address = str(cs_info[2])
+                            for i in range(len(cs_info)):
+                                if i > 2:
+                                    address = address + str(cs_info[i])
+                            gift_order.address = address
+                        else:
+                            self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 3
+                            obj.save()
+                            continue
+                    elif obj.platform == 1:
+                        cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：",
+                                                                                                            "").split(
+                            "\r")
+                        if len(cs_info) == 3:
+                            gift_order.receiver = cs_info[0]
+                            gift_order.mobile = cs_info[1]
+                            gift_order.address = cs_info[2]
+                        elif len(cs_info) > 3:
+                            gift_order.receiver = cs_info[1].replace('收货人', '')
+                            gift_order.mobile = cs_info[4].replace('电话', '')
+                            gift_order.address = str(cs_info[2].replace('收货地址', ''))
+                        elif len(cs_info) == 1:
+                            cs_info = cs_info[0].split("+")
+                            if len(cs_info) == 4:
+                                gift_order.receiver = cs_info[0]
+                                gift_order.address = str('%s %s' % (cs_info[1], cs_info[2])).replace(' ', '，')
+                                gift_order.mobile = cs_info[3].replace(" ", "")
+                                if not re.match(r'^[0-9]*$', gift_order.mobile):
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+                            else:
+                                self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 3
+                                obj.save()
+                                continue
+                        else:
+                            self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 3
+                            obj.save()
+                            continue
                     else:
-                        self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                        self.message_user("%s平台错误，只支持京东和淘系" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 3
+                        obj.mistakes = 7
                         obj.save()
                         continue
+
                     special_city = ['仙桃市', '天门市', '神农架林区', '潜江市', '济源市', '五家渠市', '图木舒克市', '铁门关市', '石河子市', '阿拉尔市',
                                     '嘉峪关市', '五指山市', '文昌市', '万宁市', '屯昌县', '三亚市', '三沙市', '琼中黎族苗族自治县', '琼海市',
                                     '陵水黎族自治县', '临高县', '乐东黎族自治县', '东方市', '定安县', '儋州市', '澄迈县', '昌江黎族自治县', '保亭黎族苗族自治县',
@@ -269,8 +312,10 @@ class SubmitGiftAction(BaseActionView):
                                 obj.save()
                                 continue
                     gift_order.order_category = obj.order_category
-                    gift_order.shop = obj.platform
-                    gift_order.buyer_remark = "%s %s客服%s赠送客户%s赠品%sx%s" % (PLATFORM[obj.platform], str(obj.update_time)[:11], obj.servicer, gift_order.nickname, gift_order.goods_name,gift_order.quantity)
+                    gift_order.shop = obj.shop
+                    gift_order.buyer_remark = "%s %s客服%s赠送客户%s赠品%sx%s" % \
+                                              (PLATFORM[obj.platform], str(obj.update_time)[:11], obj.servicer,
+                                               gift_order.nickname, gift_order.goods_name, gift_order.quantity)
                     gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
                     gift_order.submit_user = self.request.user.username
                     gift_order.creator = self.request.user.username
@@ -423,7 +468,7 @@ class GiftInTalkPenddingAdmin(object):
 
     ALLOWED_EXTENSIONS = ['log', 'txt']
     actions = [SubmitGiftAction, RejectSelectedAction]
-    import_data = True
+    import_data = False
 
     def post(self, request, *args, **kwargs):
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -529,30 +574,13 @@ class GiftInTalkPenddingAdmin(object):
         return queryset
 
 
-class GiftInTalkRepeatAdmin(object):
-    list_display = ['order_status', 'nickname', 'cs_information', 'goods', 'order_id', 'mistakes', 'platform',
-                    'order_category', 'servicer', 'creator']
-    list_filter = ['mistakes', 'create_time', 'creator', 'order_category']
-    list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
-    search_fields = ['nickname', 'order_id']
-
-    actions = [SubmitGiftAction, RejectSelectedAction]
-
-    def queryset(self):
-        queryset = super(GiftInTalkRepeatAdmin, self).queryset()
-        repeat_nicks = queryset.filter(mistakes__in=[1, 2], order_status=1).values('nickname')
-        nicks_lis = []
-        for i in repeat_nicks:
-            nicks_lis.append(i['nickname'])
-        queryset = queryset.filter(nickname__in=nicks_lis, order_status__in=[1, 2], platform=self.request.user.platform).order_by("-nickname")
-
-        return queryset
-
 # 对话信息查询
 class GiftInTalkAdmin(object):
-    list_display = ['platform', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
+    list_display = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information']
     list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status', 'order_category']
     search_fields = ['nickname', 'order_id']
+    readonly_fields = ['platform', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id',
+                       'cs_information', 'creator', 'is_delete', 'mistakes', 'submit_user', 'shop']
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -624,7 +652,6 @@ class GiftImportAdmin(object):
 
 
 xadmin.site.register(GiftInTalkPendding, GiftInTalkPenddingAdmin)
-# xadmin.site.register(GiftInTalkRepeat, GiftInTalkRepeatAdmin)
 xadmin.site.register(GiftInTalkInfo, GiftInTalkAdmin)
 xadmin.site.register(GiftOrderPendding, GiftOrderPenddingAdmin)
 xadmin.site.register(GiftOrderInfo, GiftOrderInfoAdmin)

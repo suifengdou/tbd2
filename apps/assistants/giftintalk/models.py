@@ -25,6 +25,7 @@ class GiftInTalkInfo(BaseModel):
         (4, '地址中，二级市出错，请使用京东系统信息'),
         (5, '网名错误'),
         (6, '系统出错，请重复提交，无法解决时联系管理员'),
+        (7, '平台出错'),
 
     )
     PLATFORM = (
@@ -53,7 +54,7 @@ class GiftInTalkInfo(BaseModel):
     shop = models.CharField(max_length=150, null=True, blank=True, verbose_name='店铺')
 
     class Meta:
-        verbose_name = 'ASS-GT-赠品订单提取查询'
+        verbose_name = 'ASS-GT-手工订单提取查询'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_oriorder'
 
@@ -61,15 +62,7 @@ class GiftInTalkInfo(BaseModel):
 class GiftInTalkPendding(GiftInTalkInfo):
 
     class Meta:
-        verbose_name = 'ASS-GT-赠品订单提取递交'
-        verbose_name_plural = verbose_name
-        proxy = True
-
-
-class GiftInTalkRepeat(GiftInTalkInfo):
-
-    class Meta:
-        verbose_name = 'ASS-GT-赠品订单提取重复订单罗列'
+        verbose_name = 'ASS-GT-手工订单提取递交'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -118,7 +111,7 @@ class GiftOrderInfo(BaseModel):
     order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
 
     class Meta:
-        verbose_name = 'ASS-GT-赠品预订单查询'
+        verbose_name = 'ASS-GT-手工预订单查询'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_order'
 
@@ -129,7 +122,7 @@ class GiftOrderInfo(BaseModel):
 class GiftOrderPendding(GiftOrderInfo):
 
     class Meta:
-        verbose_name = 'ASS-GT-赠品预订单处理'
+        verbose_name = 'ASS-GT-手工预订单处理'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -140,13 +133,8 @@ class GiftImportInfo(BaseModel):
         (1, '未处理'),
         (2, '已完成'),
     )
-    SHOP = (
-        (0, '无'),
-        (1, '小狗电器旗舰店'),
-        (2, '小狗京东自营'),
-    )
 
-    shop = models.SmallIntegerField(choices=SHOP, verbose_name='店铺名称')
+    shop = models.CharField(max_length=60, verbose_name='店铺名称')
     nickname = models.CharField(max_length=50, verbose_name='网名')
     receiver = models.CharField(max_length=50, verbose_name='收件人')
     address = models.CharField(max_length=250, verbose_name='地址')
@@ -177,7 +165,7 @@ class GiftImportInfo(BaseModel):
     erp_order_id = models.CharField(null=True, blank=True, unique=True, max_length=50, verbose_name='原始单号')
 
     class Meta:
-        verbose_name = 'ASS-GT-赠品ERP导入单据查询'
+        verbose_name = 'ASS-GT-手工ERP导入单据查询'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_erpimport'
 
@@ -187,7 +175,7 @@ class GiftImportInfo(BaseModel):
 
 class GiftImportPendding(GiftImportInfo):
     class Meta:
-        verbose_name = 'ASS-GT-赠品ERP导入单据'
+        verbose_name = 'ASS-GT-手工ERP导入单据'
         verbose_name_plural = verbose_name
         proxy = True
 

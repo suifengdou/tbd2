@@ -23,21 +23,25 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 import emoji
 
-from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo, SensitiveInfo, CheckODJD, ExtractODJD, ExceptionODJD
+from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo
+from .models import SensitiveInfo, CheckODJD, ExtractODJD, ExceptionODJD, CheckODTB, ExtractODTB, ExceptionODTB
 from apps.base.shop.models import ShopInfo
 from apps.assistants.giftintalk.models import GiftInTalkInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
 
+# 对话标签界面
 class DialogTagAdmin(object):
     list_display = ['name', 'category', 'order_status']
 
 
+# 客服信息界面
 class ServicerInfoAdmin(object):
     list_display =['name', 'platform', 'username', 'category']
 
 
+# 敏感字管理界面
 class SensitiveInfoAdmin(object):
     list_display = ['words', 'index', 'category', 'order_status']
     search_fields = ['words']
@@ -242,6 +246,225 @@ class DFAFilter(object):
         return 1
 
 
+# 对话内容敏感字检查
+class CheckAction(BaseActionView):
+    action_name = "check_dialog_content"
+    description = "过滤选中的对话敏感字"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            filter_task = DFAFilter()
+            init_sensitive = SensitiveInfo.objects.filter(is_delete=0, order_status=1)
+            if init_sensitive.exists():
+                filter_task.parse(init_sensitive)
+                success_num = 0
+                for obj in queryset:
+                    success_num += int(filter_task.filter(obj))
+            else:
+                self.message_user("没有过滤列表。", 'error')
+                return None
+            self.message_user("提交 %(count)d %(items)s。完成%(success_num)s" % { "count": n,
+                                                                                "items": model_ngettext(self.opts, n),
+                                                                                "success_num": success_num}, 'success')
+
+        return None
+
+
+# 对话详情页重置提取
+class ResetODJDExtract(BaseActionView):
+    action_name = "reset_dialog_extract"
+    description = "重置选中的对话未提取"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(extract_tag=0)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 对话详情页重置敏感字
+class ResetODJDSensitive(BaseActionView):
+        action_name = "reset_dialog_check"
+        description = "重置选中的对话过滤"
+        model_perm = 'change'
+        icon = "fa fa-check-square-o"
+
+        @filter_hook
+        def do_action(self, queryset):
+            if not self.has_change_permission():
+                raise PermissionDenied
+            n = queryset.count()
+            if n:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(sensitive_tag=0)
+                self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+            return None
+
+
+# 京东对话明细提取订单
+class ExtractODJDAction(BaseActionView):
+    action_name = "extract_dialog_content"
+    description = "提取选中的对话"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+
+
+    @filter_hook
+    def do_action(self, queryset):
+        _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
+        result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            queryset.filter(status=1).update(extract_tag=1)
+            queryset = queryset.filter(status=0)
+            for obj in queryset:
+                _check_talk_data = re.findall(r'(·客服.*{.*}[\s\S]*?收货信息.*})', str(obj.content), re.DOTALL)
+                if _check_talk_data:
+                    _rt_talk = GiftInTalkInfo()
+                    _rt_talk.platform = 2
+                    _rt_talk_data = re.findall(r'{((?:.|\n)*?)}', str(obj.content), re.DOTALL)
+
+                    if len(_rt_talk_data) == 6:
+                        _rt_talk.platform = 2
+                        _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                        for k, v in _rt_talk_dic.items():
+                            if hasattr(_rt_talk, k):
+                                setattr(_rt_talk, k, v)
+
+                    else:
+                        result['false'] += 1
+                        result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data[1])
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
+                    try:
+                        _rt_talk.shop = obj.dialog_jd.shop
+                        _rt_talk.creator = self.request.user.username
+                        _rt_talk.save()
+                        result["successful"] += 1
+                    except Exception as e:
+                        result["false"] += 1
+                        result["error"].append(e)
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
+                obj.extract_tag = 1
+                obj.save()
+            self.message_user(result)
+            self.message_user("提交 %(count)d %(items)s。" % {"count": n, "items": model_ngettext(self.opts, n)}, 'success')
+
+        return None
+
+
+# 淘宝对话明细提取订单
+class ExtractODTBAction(BaseActionView):
+    action_name = "extract_dialog_content_tb"
+    description = "提取选中的对话"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'order_id', 'cs_information']
+        result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            queryset.filter(status=1).update(extract_tag=1)
+            queryset = queryset.filter(status=0)
+            for obj in queryset:
+                if obj.extract_tag == 1:
+                    continue
+                _check_talk_data = re.findall(r'(·客服.*{.*}[\s\S]*?.*})', str(obj.content), re.DOTALL)
+                if _check_talk_data:
+                    _rt_talk = GiftInTalkInfo()
+                    _rt_talk.platform = 1
+                    _rt_talk_data = re.findall(r'{((?:.|\n)*?)}', str(obj.content), re.DOTALL)
+
+                    if len(_rt_talk_data) == 5:
+                        _rt_talk.platform = 1
+                        _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                        for k, v in _rt_talk_dic.items():
+                            if hasattr(_rt_talk, k):
+                                setattr(_rt_talk, k, v)
+
+                    else:
+                        result['false'] += 1
+                        result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data[1])
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
+                    try:
+                        _rt_talk.shop = obj.dialog_tb.shop
+                        _rt_talk.creator = self.request.user.username
+                        _rt_talk.nickname = '客户ID%s' % obj.dialog_tb.customer
+                        _rt_talk.save()
+                        result["successful"] += 1
+                    except Exception as e:
+                        result["false"] += 1
+                        result["error"].append(e)
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
+                obj.extract_tag = 1
+                obj.save()
+            self.message_user(result)
+            self.message_user("提交 %(count)d %(items)s。" % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+# 放弃对话明细订单内容提取订单
+class PassODJDAction(BaseActionView):
+    action_name = "pass_dialog_content"
+    description = "丢弃选中的对话"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(extract_tag=1)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                          'success')
+        return None
+
+
+# 淘宝对话明细内联
 class ODTBInfoInline(object):
 
     model = OriDetailTB
@@ -250,6 +473,7 @@ class ODTBInfoInline(object):
     style = 'table'
 
 
+# 淘宝对话查询界面
 class OriDialogTBAdmin(object):
     list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag']
     list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name']
@@ -279,12 +503,18 @@ class OriDialogTBAdmin(object):
             while True:
                 i += 1
                 data_line = _file.readline().decode('gbk')
+                end_tag = re.findall(r'^\s{31}(.*)\s{29}', data_line)
+                if end_tag:
+                    if str(end_tag[0]).strip() == '群聊':
+                        break
                 if not data_line:
                     break
                 if i == 1:
                     try:
-                        info = str(data_line).split(':')
-                        shop = info[0]
+                        info = str(data_line).strip().replace('\n', '').replace('\r', '')
+                        if ":" in info:
+                            info = info.split(":")[0]
+                        shop = info
                         continue
                     except Exception as e:
                         report_dic['error'].append('请使用源表进行导入，不要对表格进行处理。')
@@ -292,6 +522,9 @@ class OriDialogTBAdmin(object):
 
                 customer = re.findall(r'^-{28}(.*)-{28}', data_line)
                 if customer:
+                    if dialog_content:
+                        dialog_contents.append(dialog_content)
+                        dialog_content = []
                     if dialog_contents:
                         _q_dialog = OriDialogTB.objects.filter(shop=shop, customer=current_customer)
                         if _q_dialog.exists():
@@ -347,6 +580,7 @@ class OriDialogTBAdmin(object):
                                 dialog_detial.status = 0
                             try:
                                 dialog_detial.creator = self.request.user.username
+                                dialog_detial.content = emoji.demojize(str(dialog_detial.content))
                                 dialog_detial.save()
                             except Exception as e:
                                 report_dic['error'].append(e)
@@ -371,11 +605,16 @@ class OriDialogTBAdmin(object):
                     else:
                         try:
                             dialog_content[2] = '%s%s' % (dialog_content[2], str(data_line))
+
                         except Exception as e:
                             report_dic['error'].append(e)
 
                 if re.match(r'^={64}', str(data_line)):
+                    if dialog_content:
+                        dialog_contents.append(dialog_content)
+                        dialog_content = []
                     if dialog_contents:
+
                         _q_dialog = OriDialogTB.objects.filter(shop=shop, customer=current_customer)
                         if _q_dialog.exists():
                             dialog_order = _q_dialog[0]
@@ -424,10 +663,12 @@ class OriDialogTBAdmin(object):
                                 dialog_detial.status = 0
                             try:
                                 dialog_detial.creator = self.request.user.username
+                                dialog_detial.content = emoji.demojize(str(dialog_detial.content))
                                 dialog_detial.save()
                             except Exception as e:
                                 report_dic['error'].append(e)
                         start_tag = 0
+            return report_dic
 
 
         else:
@@ -436,6 +677,65 @@ class OriDialogTBAdmin(object):
             return report_dic
 
 
+# 淘宝过滤敏感字界面
+class CheckODTBAdmin(object):
+    list_display = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'sensitive_tag', 'order_status']
+    list_filter = ['dialog_tb__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time',
+                   'interval', 'content']
+    search_fields = ['dialog_tb__customer']
+    actions = [CheckAction]
+
+    def queryset(self):
+        queryset = super(CheckODTBAdmin, self).queryset()
+        queryset = queryset.filter(is_delete=0, sensitive_tag=0)
+        return queryset
+
+
+# 淘宝异常对话界面
+class ExceptionODTBAdmin(object):
+        list_display = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'sensitive_tag',
+                        'order_status']
+        list_filter = ['dialog_tb__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time',
+                       'interval', 'content']
+        search_fields = ['dialog_tb__customer']
+
+        def queryset(self):
+            queryset = super(ExceptionODTBAdmin, self).queryset()
+            queryset = queryset.filter(is_delete=0, sensitive_tag=1, index__gt=0)
+            return queryset
+
+
+# 淘宝对话明细订单提取界面
+class ExtractODTBAdmin(object):
+    list_display = ['dialog_tb', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'content', 'index',
+                    'sensitive_tag', 'order_status']
+    list_filter = ['dialog_tb__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time',
+                   'interval', 'content']
+    search_fields = ['dialog_tb__customer']
+    readonly_fields = ['dialog_tb', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'index', 'sensitive_tag',
+                       'order_status', 'creator', 'extract_tag']
+    list_editable = ['content']
+    actions = [ExtractODTBAction, PassODJDAction]
+
+    def queryset(self):
+        queryset = super(ExtractODTBAdmin, self).queryset()
+        queryset = queryset.filter(extract_tag=0)
+        return queryset
+
+
+# 淘宝对话明细查询界面
+class OriDetailTBAdmin(object):
+    list_display = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag',
+                    'sensitive_tag', 'order_status']
+    list_filter = ['dialog_tb__customer', 'mistake_tag', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status',
+                   'time', 'interval', 'content']
+    search_fields = ['dialog_tb__customer']
+    readonly_fields = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag',
+                       'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag']
+    actions = [ResetODJDExtract, ResetODJDSensitive]
+
+
+# 京东内联明细
 class ODJDInfoInline(object):
 
     model = OriDetailJD
@@ -444,43 +744,7 @@ class ODJDInfoInline(object):
     style = 'table'
 
 
-class OriDetailTBAdmin(object):
-    list_display = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content']
-    list_filter = ['dialog_tb__customer', 'sayer', 'status', 'time', 'interval', 'content']
-
-
-# 对话内容敏感字检查
-class CheckAction(BaseActionView):
-    action_name = "check_dialog_content"
-    description = "过滤选中的对话敏感字"
-    model_perm = 'change'
-    icon = "fa fa-check-square-o"
-
-    modify_models_batch = False
-
-    @filter_hook
-    def do_action(self, queryset):
-        if not self.has_change_permission():
-            raise PermissionDenied
-        n = queryset.count()
-        if n:
-            filter_task = DFAFilter()
-            init_sensitive = SensitiveInfo.objects.filter(is_delete=0, order_status=1)
-            if init_sensitive.exists():
-                filter_task.parse(init_sensitive)
-                success_num = 0
-                for obj in queryset:
-                    success_num += int(filter_task.filter(obj))
-            else:
-                self.message_user("没有过滤列表。", 'error')
-                return None
-            self.message_user("提交 %(count)d %(items)s。完成%(success_num)s" % { "count": n,
-                                                                                "items": model_ngettext(self.opts, n),
-                                                                                "success_num": success_num}, 'success')
-
-        return None
-
-
+# 京东对话查询界面
 class OriDialogJDAdmin(object):
     list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag']
     list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name']
@@ -602,6 +866,7 @@ class OriDialogJDAdmin(object):
                         if _q_dialog_detial.exists():
                             dialog_detial = _q_dialog_detial[0]
                             dialog_detial.content = '%s%s' % (dialog_detial.content, dialog_content[2])
+                            dialog_detial.content = emoji.demojize(str(dialog_detial.content))
                             dialog_detial.save()
                             continue
                         dialog_detial = OriDetailJD()
@@ -642,7 +907,7 @@ class OriDialogJDAdmin(object):
                             dialog_content = []
                         dialog_content.append(dialog[0][0])
                         dialog_content.append(dialog[0][1])
-                        if i < 5:
+                        if i < 7:
                             if re.match(r'^小狗.*', dialog[0][0]):
                                 _shop_word = dialog[0][0][:4]
                                 _shop_list = {
@@ -659,8 +924,6 @@ class OriDialogJDAdmin(object):
             error = "只支持文本文件格式！"
             report_dic["error"].append(error)
             return report_dic
-
-
 
 
 # 过滤敏感字
@@ -691,87 +954,6 @@ class ExceptionODJDAdmin(object):
         return queryset
 
 
-# 提取订单
-class ExtractODJDAction(BaseActionView):
-    action_name = "extract_dialog_content"
-    description = "提取选中的对话"
-    model_perm = 'change'
-    icon = "fa fa-check-square-o"
-
-    modify_models_batch = False
-
-
-
-    @filter_hook
-    def do_action(self, queryset):
-        _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
-        result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
-        if not self.has_change_permission():
-            raise PermissionDenied
-        n = queryset.count()
-        if n:
-            queryset.filter(status=1).update(extract_tag=1)
-            queryset = queryset.filter(status=0)
-            for obj in queryset:
-                _check_talk_data = re.findall(r'(·客服.*{.*}[\s\S]*?收货信息.*})', str(obj.content), re.DOTALL)
-                if _check_talk_data:
-                    _rt_talk = GiftInTalkInfo()
-                    _rt_talk.platform = 2
-                    _rt_talk_data = re.findall(r'{((?:.|\n)*?)}', str(obj.content), re.DOTALL)
-
-                    if len(_rt_talk_data) == 6:
-                        _rt_talk.platform = 2
-                        _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
-                        for k, v in _rt_talk_dic.items():
-                            if hasattr(_rt_talk, k):
-                                setattr(_rt_talk, k, v)
-
-                    else:
-                        result['false'] += 1
-                        result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data[1])
-                        obj.mistake_tag = 1
-                        obj.save()
-                        continue
-                    try:
-                        _rt_talk.shop = obj.dialog_jd.shop
-                        _rt_talk.creator = self.request.user.username
-                        _rt_talk.save()
-                        result["successful"] += 1
-                    except Exception as e:
-                        result["false"] += 1
-                        result["error"].append(e)
-                        obj.mistake_tag = 1
-                        obj.save()
-                        continue
-                obj.extract_tag = 1
-                obj.save()
-            self.message_user(result)
-            self.message_user("提交 %(count)d %(items)s。" % {"count": n, "items": model_ngettext(self.opts, n)}, 'success')
-
-        return None
-
-
-class PassODJDAction(BaseActionView):
-    action_name = "pass_dialog_content"
-    description = "丢弃选中的对话"
-    model_perm = 'change'
-    icon = "fa fa-check-square-o"
-
-    @filter_hook
-    def do_action(self, queryset):
-        if not self.has_change_permission():
-            raise PermissionDenied
-        n = queryset.count()
-        if n:
-
-            self.log('change',
-                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-            queryset.update(extract_tag=1)
-            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
-                          'success')
-        return None
-
-
 # 订单提取界面
 class ExtractODJDAdmin(object):
     list_display = ['dialog_jd', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'sensitive_tag', 'order_status']
@@ -788,46 +970,6 @@ class ExtractODJDAdmin(object):
         return queryset
 
 
-class ResetODJDExtract(BaseActionView):
-    action_name = "reset_dialog_extract"
-    description = "重置选中的对话未提取"
-    model_perm = 'change'
-    icon = "fa fa-check-square-o"
-
-    @filter_hook
-    def do_action(self, queryset):
-        if not self.has_change_permission():
-            raise PermissionDenied
-        n = queryset.count()
-        if n:
-            self.log('change',
-                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-            queryset.update(extract_tag=0)
-            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
-                              'success')
-        return None
-
-
-class ResetODJDSensitive(BaseActionView):
-        action_name = "reset_dialog_check"
-        description = "重置选中的对话过滤"
-        model_perm = 'change'
-        icon = "fa fa-check-square-o"
-
-        @filter_hook
-        def do_action(self, queryset):
-            if not self.has_change_permission():
-                raise PermissionDenied
-            n = queryset.count()
-            if n:
-                self.log('change',
-                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
-                queryset.update(sensitive_tag=0)
-                self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
-                                  'success')
-            return None
-
-
 # 京东对话明细
 class OriDetailJDAdmin(object):
     list_display = ['dialog_jd', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag', 'sensitive_tag', 'order_status']
@@ -842,6 +984,11 @@ xadmin.site.register(SensitiveInfo, SensitiveInfoAdmin)
 xadmin.site.register(ServicerInfo, ServicerInfoAdmin)
 xadmin.site.register(OriDialogTB, OriDialogTBAdmin)
 xadmin.site.register(OriDetailTB, OriDetailTBAdmin)
+
+xadmin.site.register(CheckODTB, CheckODTBAdmin)
+xadmin.site.register(ExceptionODTB, ExceptionODTBAdmin)
+xadmin.site.register(ExtractODTB, ExtractODTBAdmin)
+
 xadmin.site.register(OriDialogJD, OriDialogJDAdmin)
 xadmin.site.register(CheckODJD, CheckODJDAdmin)
 xadmin.site.register(ExceptionODJD, ExceptionODJDAdmin)

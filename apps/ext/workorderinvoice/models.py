@@ -69,7 +69,7 @@ class WorkOrder(BaseModel):
     tax_id = models.CharField(max_length=60, verbose_name='纳税人识别号')
     phone = models.CharField(null=True, blank=True, max_length=60, verbose_name='联系电话')
     bank = models.CharField(null=True, blank=True, max_length=100, verbose_name='银行名称')
-    account = models.CharField(null=True, blank=True, max_length=60, verbose_name='银行账户')
+    account = models.CharField(null=True, blank=True, max_length=60, verbose_name='银行账号')
     address = models.CharField(null=True, blank=True, max_length=200, verbose_name='地址')
     remark = models.CharField(null=True, blank=True, max_length=230, verbose_name='发票备注')
 
@@ -207,7 +207,7 @@ class InvoiceOrder(BaseModel):
     tax_id = models.CharField(max_length=60, verbose_name='纳税人识别号')
     phone = models.CharField(null=True, blank=True, max_length=60, verbose_name='联系电话')
     bank = models.CharField(null=True, blank=True, max_length=100, verbose_name='银行名称')
-    account = models.CharField(null=True, blank=True, max_length=60, verbose_name='银行账户')
+    account = models.CharField(null=True, blank=True, max_length=60, verbose_name='银行账号')
     address = models.CharField(null=True, blank=True, max_length=200, verbose_name='地址')
     remark = models.CharField(null=True, blank=True, max_length=230, verbose_name='发票备注')
 

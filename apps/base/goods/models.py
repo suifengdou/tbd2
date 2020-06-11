@@ -35,6 +35,7 @@ class GoodsInfo(BaseModel):
         (2, "礼品"),
     )
 
+
     goods_id = models.CharField(unique=True, max_length=30, verbose_name='货品编码', db_index=True)
     goods_name = models.CharField(unique=True, max_length=60, verbose_name='货品名称', db_index=True)
     category = models.CharField(choices=ATTRIBUTE, default="OTH", max_length=10, verbose_name='货品类别')
@@ -55,7 +56,12 @@ class GoodsInfo(BaseModel):
         return self.goods_name
 
 
+
+
+
 class PartInfo(GoodsInfo):
+    VERIFY_FIELD = ['goods_id', 'goods_name']
+
     class Meta:
         verbose_name = 'BASE-配件信息表'
         verbose_name_plural = verbose_name
@@ -63,6 +69,15 @@ class PartInfo(GoodsInfo):
 
     def __str__(self):
         return self.goods_name
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+
+        for i in cls.VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
 
 
 class MachineInfo(GoodsInfo):
