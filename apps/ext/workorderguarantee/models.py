@@ -34,12 +34,10 @@ class WorkOrder(BaseModel):
 
     ORDER_STATUS = (
         (0, '已被取消'),
-        (1, '技术未递'),
-        (2, '正向未递'),
-        (3, '客服在理'),
-        (4, '技术未理'),
-        (5, '终审未理'),
-        (6, '工单完结'),
+        (1, '未递交'),
+        (2, '工单在理'),
+        (3, '终审未理'),
+        (4, '工单完结'),
     )
 
     WO_CATEGORY = (
@@ -64,11 +62,10 @@ class WorkOrder(BaseModel):
     )
     MISTAKE_LIST = (
         (0, '正常'),
-        (1, '无发票号'),
-        (2, '快递单错误'),
-        (3, '快递未发货'),
-        (4, '驳回出错'),
-
+        (1, '物流单号错误'),
+        (2, '单据类型错误'),
+        (3, '反馈信息为空'),
+        (4, '驳回'),
     )
 
     express_id = models.CharField(unique=True, max_length=100, verbose_name='快递单号', db_index=True)
@@ -88,7 +85,7 @@ class WorkOrder(BaseModel):
 
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='工单状态')
     category = models.ForeignKey(WOCategory, on_delete=models.CASCADE, verbose_name='工单事项类型')
-    wo_category = models.SmallIntegerField(choices=WO_CATEGORY, default=0, verbose_name='工单类型')
+    wo_category = models.SmallIntegerField(choices=WO_CATEGORY, default=1, verbose_name='工单类型')
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='异常原因')
 
@@ -129,11 +126,15 @@ class WORCheck(WorkOrder):
         proxy = True
 
 
-class WOFinish(WorkOrder):
+class WORFinish(WorkOrder):
     class Meta:
-        verbose_name = 'EXT-技术工单-终审确认'
+        verbose_name = 'EXT-技术工单-技术终审'
         verbose_name_plural = verbose_name
         proxy = True
 
 
-
+class WOPFinish(WorkOrder):
+    class Meta:
+        verbose_name = 'EXT-技术工单-客服终审'
+        verbose_name_plural = verbose_name
+        proxy = True

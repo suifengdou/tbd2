@@ -100,6 +100,39 @@ class RejectSelectedAction(BaseActionView):
         return TemplateResponse(self.request, self.delete_selected_confirmation_template or
                                 self.get_template_list('views/model_reject_selected_confirm.html'), context)
 
+# 礼品订单查重
+class CheckRAction(BaseActionView):
+    action_name = "check_repeat_wo"
+    description = "检查同名订单"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status=2)
+            else:
+                for obj in queryset:
+                    _q_repeat = queryset.filter(nickname=obj.nickname)
+                    if len(_q_repeat) > 1:
+                        obj.mistakes = 8
+                        obj.save()
+                        self.log('change', '', obj)
+                    else:
+                        n -= 1
+            self.message_user("成功标记了 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
 
 # 提交赠品信息到订单
 class SubmitGiftAction(BaseActionView):
@@ -182,19 +215,17 @@ class SubmitGiftAction(BaseActionView):
                             obj.save()
                             continue
                     elif obj.platform == 1:
-                        cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：",
-                                                                                                            "").split(
-                            "\r")
+                        cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：","").replace("＋", "+").split("\r")
                         if len(cs_info) == 3:
                             gift_order.receiver = cs_info[0]
                             gift_order.mobile = cs_info[1]
                             gift_order.address = cs_info[2]
-                        elif len(cs_info) > 3:
+                        elif len(cs_info) > 4:
                             gift_order.receiver = cs_info[1].replace('收货人', '')
                             gift_order.mobile = cs_info[4].replace('电话', '')
                             gift_order.address = str(cs_info[2].replace('收货地址', ''))
-                        elif len(cs_info) == 1:
-                            cs_info = cs_info[0].split("+")
+                        elif len(cs_info) < 3:
+                            cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：","").replace("＋", "+").replace('\r', '').replace('\n', '').split("+")
                             if len(cs_info) == 4:
                                 gift_order.receiver = cs_info[0]
                                 gift_order.address = str('%s %s' % (cs_info[1], cs_info[2])).replace(' ', '，')
@@ -205,6 +236,39 @@ class SubmitGiftAction(BaseActionView):
                                     obj.mistakes = 3
                                     obj.save()
                                     continue
+                            elif len(cs_info) == 1:
+                                cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '')
+
+                                _q_receiver = re.findall(r'收货人：(.*)收货地址', cs_info)
+                                if _q_receiver:
+                                    gift_order.receiver = str(_q_receiver[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+
+                                _q_address =re.findall(r'收货地址：(.*)邮编', cs_info)
+                                if _q_address:
+                                    gift_order.address = str(_q_address[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+                                _q_mobile = re.findall(r'电话：(.*)', cs_info)
+                                if _q_mobile:
+                                    gift_order.mobile = str(_q_mobile[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+
+
                             else:
                                 self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
                                 n -= 1
@@ -311,6 +375,12 @@ class SubmitGiftAction(BaseActionView):
                                 obj.mistakes = 4
                                 obj.save()
                                 continue
+                        else:
+                            self.message_user("%s地址不是淘宝默认地址，请修正成淘宝默认格式后提交" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 4
+                            obj.save()
+                            continue
                     gift_order.order_category = obj.order_category
                     gift_order.shop = obj.shop
                     gift_order.buyer_remark = "%s %s客服%s赠送客户%s赠品%sx%s" % \
@@ -319,6 +389,19 @@ class SubmitGiftAction(BaseActionView):
                     gift_order.cs_memoranda = "%sx%s" % (gift_order.goods_name, gift_order.quantity)
                     gift_order.submit_user = self.request.user.username
                     gift_order.creator = self.request.user.username
+                    if re.match(r'^1', gift_order.mobile):
+                        if len(gift_order.mobile) != 11:
+                            self.message_user("%s手机出错" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 9
+                            obj.save()
+                            continue
+                    if '集运' in str(gift_order.address):
+                        self.message_user("%s地址是集运仓" % obj.order_id, "error")
+                        n -= 1
+                        obj.mistakes = 9
+                        obj.save()
+                        continue
                     try:
                         gift_order.save()
                     except Exception as e:
@@ -467,7 +550,7 @@ class GiftInTalkPenddingAdmin(object):
     search_fields = ['nickname', 'order_id']
 
     ALLOWED_EXTENSIONS = ['log', 'txt']
-    actions = [SubmitGiftAction, RejectSelectedAction]
+    actions = [SubmitGiftAction, CheckRAction, RejectSelectedAction]
     import_data = False
 
     def post(self, request, *args, **kwargs):
@@ -643,7 +726,7 @@ class GiftImportAdmin(object):
     list_display = ['erp_order_id', 'shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['creator', 'update_time']
+    list_filter = ['creator', 'update_time', 'shop']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):

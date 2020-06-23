@@ -9,6 +9,7 @@ from django.db import models
 import django.utils.timezone as timezone
 
 from db.base_model import BaseModel
+from apps.crm.dialog.models import OriDetailJD, OriDetailTB
 
 
 class GiftInTalkInfo(BaseModel):
@@ -26,14 +27,15 @@ class GiftInTalkInfo(BaseModel):
         (5, '网名错误'),
         (6, '系统出错，请重复提交，无法解决时联系管理员'),
         (7, '平台出错'),
+        (8, '同名订单'),
+        (9, '手机错误'),
+        (10, '集运仓地址'),
 
     )
     PLATFORM = (
         (0, '无'),
         (1, '淘系'),
         (2, '京东'),
-        (3, '官方商城'),
-        (4, '售后'),
     )
     ORDER_CATEGORY = (
         (1, '质量问题'),
@@ -42,7 +44,7 @@ class GiftInTalkInfo(BaseModel):
     )
 
     cs_information = models.CharField(max_length=300, verbose_name='收件信息')
-    goods = models.CharField(max_length=50, verbose_name='赠品信息')
+    goods = models.CharField(max_length=250, verbose_name='赠品信息')
     servicer = models.CharField(max_length=50, verbose_name='客服')
     nickname = models.CharField(max_length=50, verbose_name='用户网名', db_index=True)
     order_id = models.CharField(max_length=50, null=True, blank=True, verbose_name='订单号')
@@ -181,3 +183,26 @@ class GiftImportPendding(GiftImportInfo):
 
     def __str__(self):
         return self.order_id
+
+
+class OrderTBList(BaseModel):
+    gift_order = models.OneToOneField(GiftInTalkInfo, on_delete=models.CASCADE, related_name='gift_tb', verbose_name='提取单据')
+    talk_tb = models.OneToOneField(OriDetailTB, on_delete=models.CASCADE, verbose_name='淘宝对话')
+
+    class Meta:
+        verbose_name = '淘宝订单来源'
+        verbose_name_plural = verbose_name
+        db_table = 'ass_gt_order_tb'
+
+
+class OrderJDList(BaseModel):
+    gift_order = models.OneToOneField(GiftInTalkInfo, on_delete=models.CASCADE, related_name='gift_jd', verbose_name='提取单据')
+    talk_jd = models.OneToOneField(OriDetailJD, on_delete=models.CASCADE, verbose_name='京东对话')
+
+    class Meta:
+        verbose_name = '京东订单来源'
+        verbose_name_plural = verbose_name
+        db_table = 'ass_gt_order_jd'
+
+
+

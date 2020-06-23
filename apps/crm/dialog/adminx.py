@@ -26,7 +26,7 @@ import emoji
 from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo
 from .models import SensitiveInfo, CheckODJD, ExtractODJD, ExceptionODJD, CheckODTB, ExtractODTB, ExceptionODTB
 from apps.base.shop.models import ShopInfo
-from apps.assistants.giftintalk.models import GiftInTalkInfo
+from apps.assistants.giftintalk.models import GiftInTalkInfo, OrderTBList, OrderJDList
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -342,6 +342,13 @@ class ExtractODJDAction(BaseActionView):
             queryset.filter(status=1).update(extract_tag=1)
             queryset = queryset.filter(status=0)
             for obj in queryset:
+                if OrderJDList.objects.filter(talk_jd=obj).exists():
+                    result["discard"] += 1
+                    obj.mistake_tag = 2
+                    obj.save()
+                    continue
+                else:
+                    order_list_jd = OrderJDList()
                 _check_talk_data = re.findall(r'(·客服.*{.*}[\s\S]*?收货信息.*})', str(obj.content), re.DOTALL)
                 if _check_talk_data:
                     _rt_talk = GiftInTalkInfo()
@@ -365,11 +372,17 @@ class ExtractODJDAction(BaseActionView):
                         _rt_talk.shop = obj.dialog_jd.shop
                         _rt_talk.creator = self.request.user.username
                         _rt_talk.save()
+                        order_list_jd.gift_order = _rt_talk
+                        order_list_jd.talk_jd = obj
+                        order_list_jd.creator = self.request.user.username
+                        order_list_jd.save()
                         result["successful"] += 1
+                        obj.category = 1
                     except Exception as e:
                         result["false"] += 1
                         result["error"].append(e)
                         obj.mistake_tag = 1
+                        obj.category = 1
                         obj.save()
                         continue
                 obj.extract_tag = 1
@@ -400,8 +413,13 @@ class ExtractODTBAction(BaseActionView):
             queryset.filter(status=1).update(extract_tag=1)
             queryset = queryset.filter(status=0)
             for obj in queryset:
-                if obj.extract_tag == 1:
+                if OrderTBList.objects.filter(talk_tb=obj).exists():
+                    result["discard"] += 1
+                    obj.mistake_tag = 2
+                    obj.save()
                     continue
+                else:
+                    order_list_tb = OrderTBList()
                 _check_talk_data = re.findall(r'(·客服.*{.*}[\s\S]*?.*})', str(obj.content), re.DOTALL)
                 if _check_talk_data:
                     _rt_talk = GiftInTalkInfo()
@@ -426,11 +444,17 @@ class ExtractODTBAction(BaseActionView):
                         _rt_talk.creator = self.request.user.username
                         _rt_talk.nickname = '客户ID%s' % obj.dialog_tb.customer
                         _rt_talk.save()
+                        order_list_tb.gift_order = _rt_talk
+                        order_list_tb.talk_tb = obj
+                        order_list_tb.creator = self.request.user.username
+                        order_list_tb.save()
+                        obj.category = 1
                         result["successful"] += 1
                     except Exception as e:
                         result["false"] += 1
                         result["error"].append(e)
                         obj.mistake_tag = 1
+                        obj.category = 1
                         obj.save()
                         continue
                 obj.extract_tag = 1
@@ -502,7 +526,10 @@ class OriDialogTBAdmin(object):
             i = 0
             while True:
                 i += 1
-                data_line = _file.readline().decode('gbk')
+                try:
+                    data_line = _file.readline().decode('gbk')
+                except Exception as e:
+                    continue
                 end_tag = re.findall(r'^\s{31}(.*)\s{29}', data_line)
                 if end_tag:
                     if str(end_tag[0]).strip() == '群聊':
@@ -515,6 +542,9 @@ class OriDialogTBAdmin(object):
                         if ":" in info:
                             info = info.split(":")[0]
                         shop = info
+                        if not shop:
+                            report_dic['error'].append('请使用源表进行导入，不要对表格进行处理。')
+                            break
                         continue
                     except Exception as e:
                         report_dic['error'].append('请使用源表进行导入，不要对表格进行处理。')
@@ -727,11 +757,11 @@ class ExtractODTBAdmin(object):
 class OriDetailTBAdmin(object):
     list_display = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag',
                     'sensitive_tag', 'order_status']
-    list_filter = ['dialog_tb__customer', 'mistake_tag', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status',
+    list_filter = ['dialog_tb__customer', 'mistake_tag', 'category', 'create_time', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status',
                    'time', 'interval', 'content']
     search_fields = ['dialog_tb__customer']
     readonly_fields = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag',
-                       'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag']
+                       'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag', 'category',]
     actions = [ResetODJDExtract, ResetODJDSensitive]
 
 
@@ -973,9 +1003,9 @@ class ExtractODJDAdmin(object):
 # 京东对话明细
 class OriDetailJDAdmin(object):
     list_display = ['dialog_jd', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag', 'sensitive_tag', 'order_status']
-    list_filter = ['dialog_jd__customer', 'mistake_tag', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time', 'interval', 'content']
+    list_filter = ['dialog_jd__customer', 'mistake_tag', 'category', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time', 'interval', 'content']
     search_fields = ['dialog_jd__customer']
-    readonly_fields = ['dialog_jd', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag', 'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag']
+    readonly_fields = ['dialog_jd', 'sayer', 'category', 'create_time', 'status', 'time', 'interval', 'content', 'index', 'extract_tag', 'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag']
     actions = [ResetODJDExtract, ResetODJDSensitive]
 
 

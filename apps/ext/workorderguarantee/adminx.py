@@ -23,7 +23,7 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
-from .models import WorkOrder, WOCategory, WORCreate, WOPCreate, WORCheck, WOSCheck, WOFinish
+from .models import WorkOrder, WOCategory, WORCreate, WOPCreate, WORCheck, WOSCheck, WORFinish, WOPFinish
 
 
 ACTION_CHECKBOX_NAME = '_selected_action'
@@ -33,7 +33,7 @@ ACTION_CHECKBOX_NAME = '_selected_action'
 class RejectSelectedAction(BaseActionView):
 
     action_name = "reject_selected"
-    description = '驳回选中的工单'
+    description = '驳回工单'
 
     delete_confirmation_template = None
     delete_selected_confirmation_template = None
@@ -48,22 +48,13 @@ class RejectSelectedAction(BaseActionView):
         n = queryset.count()
         if n:
             for obj in queryset:
-                if obj.order_status == 3:
-                    obj.order_status -= 3
-                    obj.save()
+                obj.order_status -= 1
+                obj.mistake_tag = 4
+                obj.save()
+                if obj.order_status == 0:
                     self.message_user("%s 取消成功" % obj.express_id, "success")
-                elif obj.order_status in [1, 2, 4, 5, 6, 7]:
-                    if obj.wo_category == 1 and obj.order_status == 4:
-                        obj.order_status -= 2
-                        obj.save()
-                        self.message_user("%s 驳回上一级成功" % obj.express_id, "success")
-                    else:
-                        obj.order_status -= 1
-                        obj.save()
-                        if obj.order_status == 0:
-                            self.message_user("%s 取消成功" % obj.express_id, "success")
-                        else:
-                            self.message_user("%s 驳回上一级成功" % obj.express_id, "success")
+                else:
+                    self.message_user("%s 驳回上一级成功" % obj.express_id, "success")
             self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None
@@ -118,19 +109,203 @@ class RejectSelectedAction(BaseActionView):
                                 self.get_template_list('views/model_reject_selected_confirm.html'), context)
 
 
-# 创建维修工单类型界面
+# 递交
+class SubmitWOAction(BaseActionView):
+        action_name = "submit_wo"
+        description = "提交工单"
+        model_perm = 'change'
+        icon = "fa fa-check-square-o"
+
+        modify_models_batch = False
+
+        @filter_hook
+        def do_action(self, queryset):
+            if not self.has_change_permission():
+                raise PermissionDenied
+            n = queryset.count()
+            if n:
+                if self.modify_models_batch:
+                    self.log('change',
+                             '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                    queryset.update(status=5)
+                else:
+                    for obj in queryset:
+                        self.log('change', '', obj)
+                        if re.match(r'^[A-Za-z0-9]+$', obj.express_id):
+                            obj.order_status = 2
+                            obj.mistake_tag = 0
+                            if not obj.submit_time:
+                                obj.submit_time = datetime.datetime.now()
+                            obj.save()
+                        else:
+                            self.message_user("%s 物流单号错误" % obj.express_id, "error")
+                            n -= 1
+                            obj.mistake_tag = 1
+                            obj.save()
+
+                self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                                  'success')
+
+            return None
+
+
+# 审核
+class CheckWOAction(BaseActionView):
+    action_name = "check_wo"
+    description = "审核工单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status=5)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+                    if obj.wo_category == 1:
+                        if obj.feedback:
+                            obj.order_status = 3
+                            obj.mistake_tag = 0
+                            obj.handle_time = datetime.datetime.now()
+                            obj.handler = self.request.user.username
+                            start_time = datetime.datetime.strptime(str(obj.submit_time).split(".")[0],
+                                                                    "%Y-%m-%d %H:%M:%S")
+                            end_time = datetime.datetime.strptime(str(obj.handle_time).split(".")[0],
+                                                                  "%Y-%m-%d %H:%M:%S")
+                            d_value = end_time - start_time
+                            days_seconds = d_value.days * 3600
+                            total_seconds = days_seconds + d_value.seconds
+                            obj.process_interval = math.floor(total_seconds / 60)
+                            obj.save()
+                        else:
+                            self.message_user("%s 反馈信息为空" % obj.express_id, "error")
+                            n -= 1
+                            obj.mistake_tag = 3
+                            obj.save()
+                            continue
+
+                    elif obj.wo_category == 0:
+                        if obj.servicer_feedback:
+                            obj.order_status = 3
+                            obj.mistake_tag = 0
+                            obj.handle_time = datetime.datetime.now()
+                            obj.servicer = self.request.user.username
+                            start_time = datetime.datetime.strptime(str(obj.submit_time).split(".")[0],
+                                                                    "%Y-%m-%d %H:%M:%S")
+                            end_time = datetime.datetime.strptime(str(obj.handle_time).split(".")[0],
+                                                                  "%Y-%m-%d %H:%M:%S")
+                            d_value = end_time - start_time
+                            days_seconds = d_value.days * 3600
+                            total_seconds = days_seconds + d_value.seconds
+                            obj.services_interval = math.floor(total_seconds / 60)
+                            obj.save()
+                        else:
+                            self.message_user("%s 反馈信息为空" % obj.express_id, "error")
+                            n -= 1
+                            obj.mistake_tag = 3
+                            obj.save()
+                            continue
+                    else:
+                        self.message_user("%s 单据类型错误" % obj.express_id, "error")
+                        n -= 1
+                        obj.mistake_tag = 2
+                        obj.save()
+                        continue
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+# 终审
+class FinishWOAction(BaseActionView):
+    action_name = "finish_wo"
+    description = "终审工单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(status=5)
+            else:
+                for obj in queryset:
+                    self.log('change', '', obj)
+                    if obj.wo_category == 1:
+                        if obj.servicer_feedback:
+                            obj.order_status = 4
+                            obj.mistake_tag = 0
+                            obj.save()
+                        else:
+                            self.message_user("%s 反馈信息为空" % obj.express_id, "error")
+                            n -= 1
+                            obj.mistake_tag = 3
+                            obj.save()
+                            continue
+
+                    elif obj.wo_category == 0:
+                        if obj.feedback:
+                            obj.order_status = 4
+                            obj.mistake_tag = 0
+                            obj.save()
+                        else:
+                            self.message_user("%s 终审反馈信息为空" % obj.express_id, "error")
+                            n -= 1
+                            obj.mistake_tag = 3
+                            obj.save()
+                            continue
+                    else:
+                        self.message_user("%s 单据类型错误" % obj.express_id, "error")
+                        n -= 1
+                        obj.mistake_tag = 2
+                        obj.save()
+                        continue
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+# 维修工单类型界面
 class WOCategoryAdmin(object):
     list_display = ['order_status', 'name']
     list_filter = []
     search_fields = []
 
-
+    def save_models(self):
+        obj = self.new_obj
+        request = self.request
+        if not obj.creator:
+            obj.creator = request.user.username
+            obj.save()
+        super().save_models()
 
 
 # 逆向创建维修工单界面
 class WORCreateAdmin(object):
-    list_display = ['order_status', 'category', 'express_id', 'goods_name', 'information', 'creator',
-                    'memo', 'process_tag', 'mistake_tag', 'wo_category', ]
+    list_display = ['category', 'mistake_tag', 'express_id', 'goods_name', 'information', 'creator',
+                    'memo', 'process_tag', ]
+
+    actions = [SubmitWOAction, RejectSelectedAction]
 
     form_layout = [
             Fieldset('关键信息',
@@ -141,32 +316,161 @@ class WORCreateAdmin(object):
             Fieldset(None,
                      'mistake_tag', 'submit_time', 'servicer', 'servicer_feedback', 'handler', 'services_interval',
                      'handle_time', 'process_interval', 'feedback', 'memo', 'order_status',
-                     'creator', 'wo_category', 'process_tag', **{"style": "display:None"})]
+                     'creator', 'wo_category', 'process_tag', 'is_delete', **{"style": "display:None"})]
+
+    def save_models(self):
+        obj = self.new_obj
+        request = self.request
+
+        obj.creator = request.user.username
+        obj.save()
+        super().save_models()
+
+    def queryset(self):
+        queryset = super(WORCreateAdmin, self).queryset()
+        queryset = queryset.filter(order_status=1, is_delete=0, wo_category=1)
+        return queryset
 
 
 # 正向创建维修工单界面
 class WOPCreateAdmin(object):
-    list_display = []
+    list_display = ['category', 'mistake_tag', 'express_id', 'goods_name', 'information', 'creator',
+                    'memo', 'process_tag', ]
+
+    actions = [SubmitWOAction, RejectSelectedAction]
+
+    form_layout = [
+            Fieldset('关键信息',
+                     Row('express_id', 'goods_name'),
+                     Row('category',),),
+            Fieldset('必填内容',
+                     'information'),
+            Fieldset(None,
+                     'mistake_tag', 'submit_time', 'servicer', 'servicer_feedback', 'handler', 'services_interval',
+                     'handle_time', 'process_interval', 'feedback', 'memo', 'order_status',
+                     'creator', 'wo_category', 'process_tag', 'is_delete', **{"style": "display:None"})]
+
+    def save_models(self):
+        obj = self.new_obj
+        request = self.request
+
+        obj.creator = request.user.username
+        obj.wo_category = 0
+        obj.save()
+        super().save_models()
+
+    def queryset(self):
+        queryset = super(WOPCreateAdmin, self).queryset()
+        queryset = queryset.filter(order_status=1, is_delete=0, wo_category=0)
+        return queryset
 
 
 # 客服审核维修工单界面
 class WOSCheckAdmin(object):
-    list_display = []
+    list_display = ['category', 'mistake_tag', 'express_id', 'goods_name', 'information', 'feedback',
+                    'servicer_feedback', 'creator', 'memo', 'process_tag']
+    list_editable = ['feedback', 'memo']
+    readonly_fields = ['express_id', 'goods_name', 'information', 'submit_time', 'servicer', 'services_interval',
+                       'servicer_feedback', 'handler', 'handle_time', 'process_interval',
+                       'order_status', 'category', 'wo_category', 'process_tag', 'mistake_tag', 'creator',
+                       'create_time', 'update_time', 'is_delete']
+    search_fields = ['express_id', 'creator']
+    actions = [CheckWOAction, RejectSelectedAction]
+
+    def queryset(self):
+        queryset = super(WOSCheckAdmin, self).queryset()
+        queryset = queryset.filter(order_status=2, is_delete=0, wo_category=1)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 # 技术审核维修工单界面
 class WORCheckAdmin(object):
-    list_display = []
+    list_display = ['category', 'mistake_tag', 'express_id', 'goods_name', 'information', 'servicer_feedback',
+                    'feedback', 'creator', 'memo', 'process_tag', ]
+    list_editable = ['servicer_feedback', 'memo']
+    readonly_fields = ['express_id', 'goods_name', 'information', 'submit_time', 'servicer', 'services_interval',
+                       'handler', 'handle_time', 'process_interval', 'feedback',
+                       'order_status', 'category', 'wo_category', 'process_tag', 'mistake_tag', 'creator',
+                       'create_time', 'update_time', 'is_delete']
+    search_fields = ['express_id', 'creator']
+    actions = [CheckWOAction, RejectSelectedAction]
+
+    def queryset(self):
+        queryset = super(WORCheckAdmin, self).queryset()
+        queryset = queryset.filter(order_status=2, is_delete=0, wo_category=0)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
-# 维修工单终审界面
-class WOFinishAdmin(object):
-    list_display = []
+# 技术终审界面
+class WORFinishAdmin(object):
+    list_display = ['category', 'mistake_tag', 'express_id', 'goods_name', 'information', 'feedback',
+                     'servicer_feedback', 'creator', 'memo', 'process_tag', ]
+    list_editable = ['servicer_feedback', 'memo']
+    list_filter = ['category', 'mistake_tag', 'goods_name__goods_name']
+    readonly_fields = ['express_id', 'goods_name', 'information', 'submit_time', 'servicer', 'services_interval',
+                       'handler', 'handle_time', 'process_interval', 'feedback',
+                       'order_status', 'category', 'wo_category', 'process_tag', 'mistake_tag', 'creator',
+                       'create_time', 'update_time', 'is_delete']
+    search_fields = ['express_id', 'creator']
+    actions = [FinishWOAction, RejectSelectedAction]
+
+    def queryset(self):
+        queryset = super(WORFinishAdmin, self).queryset()
+        queryset = queryset.filter(order_status=3, is_delete=0, wo_category=1)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
+# 客服终审界面
+class WOPFinishAdmin(object):
+    list_display = ['category', 'mistake_tag', 'express_id', 'goods_name', 'information', 'servicer_feedback',
+                    'feedback', 'creator', 'memo', 'process_tag', ]
+    list_editable = ['feedback', 'memo']
+    readonly_fields = ['express_id', 'goods_name', 'information', 'submit_time', 'servicer', 'services_interval',
+                       'servicer_feedback', 'handler', 'handle_time', 'process_interval',
+                       'order_status', 'category', 'wo_category', 'process_tag', 'mistake_tag', 'creator',
+                       'create_time', 'update_time', 'is_delete']
+    list_filter = ['category', 'mistake_tag', 'goods_name__goods_name']
+    search_fields = ['express_id', 'creator']
+    actions = [FinishWOAction, RejectSelectedAction]
+
+    def queryset(self):
+        queryset = super(WOPFinishAdmin, self).queryset()
+        queryset = queryset.filter(order_status=3, is_delete=0, wo_category=0)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 # 维修工单查询
 class WorkOrderAdmin(object):
-    list_display = []
+    list_display = ['order_status', 'category', 'express_id', 'goods_name', 'information', 'creator',
+                    'servicer_feedback', 'feedback', 'memo', 'process_tag', 'mistake_tag', 'wo_category']
+
+    readonly_fields = ['express_id', 'goods_name', 'information', 'submit_time', 'servicer', 'services_interval',
+                       'servicer_feedback', 'handler', 'handle_time', 'process_interval', 'feedback', 'memo',
+                       'order_status', 'category', 'wo_category', 'process_tag', 'mistake_tag', 'creator',
+                       'create_time', 'update_time', 'is_delete']
+    list_filter = ['goods_name__goods_name', 'information', 'create_time', 'submit_time', 'handle_time', 'creator',
+                   'order_status', 'category', 'wo_category',]
+    search_fields = ['express_id']
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 xadmin.site.register(WOCategory, WOCategoryAdmin)
@@ -174,6 +478,7 @@ xadmin.site.register(WORCreate, WORCreateAdmin)
 xadmin.site.register(WOPCreate, WOPCreateAdmin)
 xadmin.site.register(WORCheck, WORCheckAdmin)
 xadmin.site.register(WOSCheck, WOSCheckAdmin)
-xadmin.site.register(WOFinish, WOFinishAdmin)
+xadmin.site.register(WORFinish, WORFinishAdmin)
+xadmin.site.register(WOPFinish, WOPFinishAdmin)
 xadmin.site.register(WorkOrder, WorkOrderAdmin)
 

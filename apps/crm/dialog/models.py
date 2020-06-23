@@ -127,6 +127,11 @@ class OriDetailTB(BaseModel):
     MISTAKE_LIST = (
         (0, '正常'),
         (1, '对话格式错误'),
+        (2, '重复导入'),
+    )
+    CATEGORY = (
+        (0, '常规'),
+        (1, '订单'),
     )
 
     dialog_tb = models.ForeignKey(OriDialogTB, on_delete=models.CASCADE, verbose_name='对话')
@@ -138,6 +143,7 @@ class OriDetailTB(BaseModel):
 
     index = models.IntegerField(default=0, verbose_name='对话负面指数')
 
+    category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
     extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
     sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
@@ -219,6 +225,10 @@ class OriDetailJD(BaseModel):
         (0, '正常'),
         (1, '对话格式错误'),
     )
+    CATEGORY = (
+        (0, '常规'),
+        (1, '订单'),
+    )
 
     dialog_jd = models.ForeignKey(OriDialogJD, on_delete=models.CASCADE, verbose_name='对话')
     sayer = models.CharField(max_length=150, verbose_name='讲话者', db_index=True)
@@ -228,6 +238,8 @@ class OriDetailJD(BaseModel):
     content = models.TextField(verbose_name='内容')
 
     index = models.IntegerField(default=0, verbose_name='对话负面指数')
+
+    category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
 
     extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
     sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
