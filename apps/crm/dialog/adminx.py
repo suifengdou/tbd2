@@ -23,7 +23,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset
 import emoji
 
-from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo
+from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo, MyExtractODTB
 from .models import SensitiveInfo, CheckODJD, ExtractODJD, ExceptionODJD, CheckODTB, ExtractODTB, ExceptionODTB
 from apps.base.shop.models import ShopInfo
 from apps.assistants.giftintalk.models import GiftInTalkInfo, OrderTBList, OrderJDList
@@ -753,6 +753,24 @@ class ExtractODTBAdmin(object):
         return queryset
 
 
+# 淘宝对话明细订单提取界面
+class MyExtractODTBAdmin(object):
+    list_display = ['dialog_tb', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'content', 'index',
+                    'sensitive_tag', 'order_status']
+    list_filter = ['dialog_tb__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time',
+                   'interval', 'content']
+    search_fields = ['dialog_tb__customer']
+    readonly_fields = ['dialog_tb', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'index', 'sensitive_tag',
+                       'order_status', 'creator', 'extract_tag']
+    list_editable = ['content']
+    actions = [ExtractODTBAction, PassODJDAction]
+
+    def queryset(self):
+        queryset = super(MyExtractODTBAdmin, self).queryset()
+        queryset = queryset.filter(extract_tag=0, creator=self.request.user.username)
+        return queryset
+
+
 # 淘宝对话明细查询界面
 class OriDetailTBAdmin(object):
     list_display = ['dialog_tb', 'sayer', 'status', 'time', 'interval', 'content', 'index', 'extract_tag',
@@ -1018,6 +1036,7 @@ xadmin.site.register(OriDetailTB, OriDetailTBAdmin)
 xadmin.site.register(CheckODTB, CheckODTBAdmin)
 xadmin.site.register(ExceptionODTB, ExceptionODTBAdmin)
 xadmin.site.register(ExtractODTB, ExtractODTBAdmin)
+xadmin.site.register(MyExtractODTB, MyExtractODTBAdmin)
 
 xadmin.site.register(OriDialogJD, OriDialogJDAdmin)
 xadmin.site.register(CheckODJD, CheckODJDAdmin)

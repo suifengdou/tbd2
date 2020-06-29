@@ -59,7 +59,7 @@ class PartInfoAdmin(object):
     def handle_upload_file(self, request, _file):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
-            df = pd.read_excel(_file, sheet_name=0)
+            df = pd.read_excel(_file, sheet_name=0, dtype={"商家编码": str})
 
             # 获取表头，对表头进行转换成数据库字段名
             columns_key = df.columns.values.tolist()
@@ -141,7 +141,7 @@ class PartInfoAdmin(object):
 
         # 开始导入数据
         for row in resource:
-            if not re.match(r'^[0-9]*$', row['goods_id']):
+            if not re.match(r'^[0-9]*$', str(row['goods_id'])):
                 report_dic['discard'] += 1
                 continue
             _q_goods_order = PartInfo.objects.filter(goods_id=row['goods_id'])

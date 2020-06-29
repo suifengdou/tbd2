@@ -172,6 +172,13 @@ class ExtractODTB(OriDetailTB):
         proxy = True
 
 
+class MyExtractODTB(OriDetailTB):
+    class Meta:
+        verbose_name = 'CRM-淘宝对话信息-未提取个人'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
 class ExceptionODTB(OriDetailTB):
     class Meta:
         verbose_name = 'CRM-淘宝对话信息-敏感对话'
