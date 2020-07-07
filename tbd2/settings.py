@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'apps.ext.workorderinvoice.apps.WorkorderinvoiceConfig',
     'apps.ext.workorderguarantee.apps.WorkorderguaranteeConfig',
     'apps.ext.workorderemergency.apps.WorkorderemergencyConfig',
+    'apps.ext.tailsale.apps.TailsaleConfig',
     'apps.crm.maintenance.apps.MaintenanceConfig',
     'apps.crm.refurbishment.apps.RefurbishmentConfig',
     'apps.crm.dialog.apps.DialogConfig',

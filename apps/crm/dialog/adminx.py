@@ -739,8 +739,8 @@ class ExceptionODTBAdmin(object):
 class ExtractODTBAdmin(object):
     list_display = ['dialog_tb', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'content', 'index',
                     'sensitive_tag', 'order_status']
-    list_filter = ['dialog_tb__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status', 'time',
-                   'interval', 'content']
+    list_filter = ['dialog_tb__customer', 'mistake_tag', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'status',
+                   'time', 'interval', 'content']
     search_fields = ['dialog_tb__customer']
     readonly_fields = ['dialog_tb', 'mistake_tag', 'sayer', 'status', 'time', 'interval', 'index', 'sensitive_tag',
                        'order_status', 'creator', 'extract_tag']
@@ -908,6 +908,11 @@ class OriDialogJDAdmin(object):
                         continue
                     previous_time = datetime.datetime.strptime(str(dialog_contents[0][1]), '%Y-%m-%d %H:%M:%S')
                     for dialog_content in dialog_contents:
+                        # 屏蔽机器人对话
+                        servicer = str(dialog_content[0])
+                        _q_servicer = ServicerInfo.objects.filter(name=servicer)
+                        if _q_servicer.exists():
+                            continue
                         _q_dialog_detial = OriDetailJD.objects.filter(sayer=dialog_content[0],
                                                                       time=datetime.datetime.strptime
                                                                       (str(dialog_content[1]), '%Y-%m-%d %H:%M:%S'))

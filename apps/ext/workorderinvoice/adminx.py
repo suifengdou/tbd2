@@ -215,7 +215,7 @@ class RejectDealerAction(BaseActionView):
             return None
 
 
-# 工单提交
+# 工单确认
 class ConfirmWOAction(BaseActionView):
     action_name = "confirm_r_wo"
     description = "确认选中的工单"
@@ -281,7 +281,7 @@ class ConfirmWOAction(BaseActionView):
                         n -= 1
                         continue
 
-                    if not re.match(r"^[0-9A-Z-,]+$", obj.order_id):
+                    if not re.match(r"^[0-9A-Z,]+$", obj.order_id):
                         self.message_user("%s 源单号错误，只支持大写字母和数字以及英文逗号" % obj.order_id, "error")
                         obj.mistake_tag = 16
                         obj.save()
@@ -366,7 +366,7 @@ class SubmitWOAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
-                    if not re.match(r"^[0-9A-Z-,]+$", obj.order_id):
+                    if not re.match(r"^[0-9A-Z,]+$", obj.order_id):
                         self.message_user("%s 源单号错误，只支持大写字母和数字以及英文逗号" % obj.order_id, "error")
                         obj.mistake_tag = 16
                         obj.save()
