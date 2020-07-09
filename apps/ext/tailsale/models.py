@@ -30,6 +30,7 @@ class OriTailOrder(BaseModel):
         (3, '待清账'),
         (4, '已处理'),
         (5, '驳回'),
+        (6, '物流订单'),
     )
     MISTAKE_LIST = (
         (0, '正常'),
@@ -37,6 +38,9 @@ class OriTailOrder(BaseModel):
         (2, '货品金额是零'),
         (3, '收件人手机错误'),
         (4, '单号不符合规则'),
+        (5, '需要选择拆弹发货'),
+        (6, '递交订单出错'),
+        (7, '生成订单货品出错'),
     )
 
     LOGICAL_DECISION = (
@@ -283,8 +287,10 @@ class TOGoods(BaseModel):
     goods_name = models.ForeignKey(MachineInfo, verbose_name='货品名称')
     goods_nickname = models.CharField(max_length=100, null=True, blank=True, verbose_name='货品简称')
     quantity = models.IntegerField(verbose_name='数量')
-    price = models.FloatField(verbose_name='含税单价')
-    amount = models.FloatField(verbose_name='货品总价')
+    price = models.FloatField(verbose_name='单价')
+    amount = models.FloatField(verbose_name='总价')
+    settlement_price = models.FloatField(null=True, blank=True, verbose_name='结算单价')
+    settlement_amount = models.FloatField(null=True, blank=True, verbose_name='结算总价')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
 
     class Meta:

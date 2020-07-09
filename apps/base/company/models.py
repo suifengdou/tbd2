@@ -34,6 +34,7 @@ class CompanyInfo(BaseModel):
     category = models.IntegerField(choices=CATEGORY, default=1, verbose_name='公司类型')
     spain_invoice = models.FloatField(null=True, blank=True, verbose_name='普票限额')
     special_invoice = models.FloatField(null=True, blank=True, verbose_name='专票限额')
+    discount_rate = models.FloatField(default=1.0, verbose_name='折扣率')
 
     class Meta:
         verbose_name = 'BASE-公司-公司管理'

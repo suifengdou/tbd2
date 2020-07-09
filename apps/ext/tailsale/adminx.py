@@ -238,9 +238,33 @@ class SubmitOTOAction(BaseActionView):
 
 
 # 审核不用拆单工单
+class SetOTOAction(BaseActionView):
+    action_name = "set_logistics_oto"
+    description = "设置订单为物流发货"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(process_tag=6)
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+# 审核不用拆单工单
 class CheckOTOAction(BaseActionView):
-    action_name = "submit_single_wo"
-    description = "提交未超限工单"
+    action_name = "submit_single_oto"
+    description = "提交不拆单的订单"
     model_perm = 'change'
     icon = "fa fa-check-square-o"
 
@@ -259,64 +283,58 @@ class CheckOTOAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
-                    if obj.order_category == 1:
-                        if int(obj.amount) > int(obj.company.special_invoice):
-                            self.message_user("%s 需要拆单的发票，用拆单递交" % obj.order_id, "error")
-                            obj.mistake_tag = 5
-                            obj.save()
-                            n -= 1
-                            continue
-                    else:
-                        if int(obj.amount) > int(obj.company.spain_invoice):
-                            self.message_user("%s 超限额的发票，用拆单递交" % obj.order_id, "error")
-                            obj.mistake_tag = 5
-                            obj.save()
-                            n -= 1
-                            continue
+                    if int(obj.quantity) > 1 and obj.process_tag != 6:
+                        self.message_user("%s 需要拆单的订单，用拆单递交，如发物流设置标记物流订单" % obj.order_id, "error")
+                        obj.mistake_tag = 5
+                        obj.save()
+                        n -= 1
+                        continue
 
-                    invoice_order = IOhandle()
-                    copy_fields_order = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone',
-                                         'bank', 'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
-                                         'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver',
+                    tail_order = TailOrder()
+                    copy_fields_order = ['shop', 'order_id', 'order_category', 'sent_consignee', 'sent_smartphone',
+                                         'sent_city', 'sent_district', 'sent_address', 'amount',
                                          'message', 'creator', 'sign_company', 'sign_department']
 
                     for key in copy_fields_order:
                         value = getattr(obj, key, None)
-                        setattr(invoice_order, key, value)
+                        setattr(tail_order, key, value)
 
-                    invoice_order.sent_province = obj.sent_city.province
-                    invoice_order.creator = obj.creator
-                    invoice_order.ori_amount = obj.amount
-                    invoice_order.work_order = obj
+                    tail_order.sent_province = obj.sent_city.province
+                    tail_order.creator = obj.creator
+                    tail_order.ori_amount = obj.amount
+                    tail_order.work_order = obj
                     try:
-                        invoice_order.save()
+                        tail_order.save()
                     except Exception as e:
-                        self.message_user("%s 递交发票出错 %s" % (obj.order_id, e), "error")
+                        self.message_user("%s 递交订单出错 %s" % (obj.order_id, e), "error")
                         obj.mistake_tag = 6
                         obj.save()
                         n -= 1
                         continue
-                    _q_goods = obj.goodsdetail_set.all()
+                    _q_goods = obj.otogoods_set.all()
                     for good in _q_goods:
-                        invoice_good = InvoiceGoods()
-                        invoice_good.invoice = invoice_order
-                        invoice_good.goods_nickname = good.goods_name.goods_name
-                        copy_fields_goods = ['goods_id', 'goods_name', 'quantity', 'price', 'sign_company', 'sing_department', 'nickname', 'memorandum']
+                        to_good = TOGoods()
+                        to_good.tail_order = tail_order
+                        to_good.goods_nickname = good.goods_name.goods_name
+                        copy_fields_goods = ['goods_id', 'goods_name', 'quantity', 'price', 'memorandum']
                         for key in copy_fields_goods:
                             value = getattr(good, key, None)
-                            setattr(invoice_good, key, value)
+                            setattr(to_good, key, value)
                         try:
-                            invoice_good.creator = obj.creator
-                            invoice_good.save()
+                            to_good.amount = to_good.quantity * to_good.price
+                            to_good.settlement_price = to_good.price * obj.sign_company.discount_rate
+                            to_good.settlement_amount = to_good.settlement_price * to_good.quantity
+                            to_good.creator = obj.creator
+                            to_good.save()
                         except Exception as e:
-                            self.message_user("%s 生成发票货品出错 %s" % (obj.order_id, e), "error")
+                            self.message_user("%s 生成订单货品出错 %s" % (obj.order_id, e), "error")
                             obj.mistake_tag = 7
                             obj.save()
                             continue
 
                     obj.order_status = 3
                     obj.mistake_tag = 0
-                    obj.process_tag = 6
+                    obj.process_tag = 2
 
                     obj.save()
 
@@ -767,7 +785,7 @@ class OTOGoodsInline(object):
     style = 'table'
 
 
-# 发票工单创建并提交界面
+# 原始尾货订单创建并提交界面
 class OTOUnhandleAdmin(object):
     list_display = ['shop', 'order_id', 'amount', 'order_category', 'mode_warehouse', 'sent_consignee', 'sent_smartphone',
                     'sent_city', 'sent_district', 'sent_address', 'submit_time', 'handle_time', 'handle_interval',
@@ -1107,7 +1125,7 @@ class OTOCheckAdmin(object):
                     'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'submit_time', 'handle_time',
                     'handle_interval', 'message',  'sign_company', 'sign_department', 'process_tag', 'mistake_tag',
                     'order_status']
-    actions = [RejectSelectedAction,]
+    actions = [SetOTOAction, CheckOTOAction, RejectSelectedAction,]
 
     search_fields = ['order_id']
     list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
@@ -1142,6 +1160,10 @@ class OTOCheckAdmin(object):
         queryset = queryset.filter(order_status=2, is_delete=0)
         return queryset
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class OriTailOrderAdmin(object):
     list_display = ['shop', 'order_id', 'amount', 'order_category', 'mode_warehouse', 'feedback', 'sent_consignee',
@@ -1175,6 +1197,10 @@ class OriTailOrderAdmin(object):
                  'sign_department', **{"style": "display:None"}),
     ]
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class OTOGoodsAdmin(object):
     list_display = ['order_status', 'ori_tail_order', 'sent_consignee', 'sent_smartphone', 'sent_address', 'shop',
@@ -1184,8 +1210,82 @@ class OTOGoodsAdmin(object):
                    'goods_name', 'quantity', 'price', 'create_time', 'creator']
     search_fields = ['ori_tail_order__order_id']
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
+class TOGoodsInline(object):
+    model = TOGoods
+    exclude = ['creator', 'goods_id', 'is_delete', 'order_id']
+
+    extra = 1
+    style = 'table'
+
+
+class TOhandleAdmin(object):
+    list_display = ['shop', 'order_id', 'amount', 'order_category', 'mode_warehouse', 'feedback', 'sent_consignee',
+                    'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'submit_time', 'handle_time',
+                    'handle_interval', 'message',  'sign_company', 'sign_department', 'process_tag', 'mistake_tag',
+                    'order_status']
+    actions = [RejectSelectedAction,]
+
+    search_fields = ['order_id']
+    list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
+                   'submit_time', 'create_time']
+
+    list_editable = ['feedback']
+    readonly_fields = ['shop', 'sign_company', 'order_id', 'sent_city', 'sent_district', 'sent_address', 'message',
+                       'sent_consignee', 'order_category', 'sent_smartphone', 'mode_warehouse',]
+
+    inlines = [OTOGoodsInline]
+    import_data = True
+
+    form_layout = [
+        Fieldset('可编辑信息',
+                 'feedback', ),
+        Fieldset('基本信息',
+                 Row('shop', 'sign_company'),
+                 'order_id',
+                 'order_category', ),
+        Fieldset('发货相关信息',
+                 Row('sent_consignee', 'sent_smartphone'),
+                 Row('sent_city', 'sent_district'),
+                 'sent_address'),
+        Fieldset(None,
+                 'submit_time', 'handle_time', 'handle_interval', 'process_tag', 'amount',
+                 'mistake_tag', 'order_status', 'is_delete', 'creator', 'sign_company', 'sign_department',
+                 **{"style": "display:None"}),
+    ]
+
+    def queryset(self):
+        queryset = super(TOhandleAdmin, self).queryset()
+        queryset = queryset.filter(order_status=2, is_delete=0)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
+class TOSpecialhandleAdmin(object):
+    pass
+
+
+class TOCheckAdmin(object):
+    pass
+
+
+class TailOrderAdmin(object):
+    pass
+
+
+class TOGoodsAdmin(object):
+    pass
+
 
 xadmin.site.register(OTOUnhandle, OTOUnhandleAdmin)
 xadmin.site.register(OTOCheck, OTOCheckAdmin)
 xadmin.site.register(OriTailOrder, OriTailOrderAdmin)
 xadmin.site.register(OTOGoods, OTOGoodsAdmin)
+xadmin.site.register(TOhandle, TOhandleAdmin)
