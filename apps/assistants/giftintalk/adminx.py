@@ -195,25 +195,70 @@ class SubmitGiftAction(BaseActionView):
                             obj.save()
                             continue
                     if obj.platform == 2:
-                        cs_info = str(obj.cs_information).replace("收货信息", "").replace("：", "").split(" ")
-                        if len(cs_info) == 3:
-                            gift_order.receiver = cs_info[0]
-                            gift_order.mobile = cs_info[1]
-                            gift_order.address = cs_info[2]
-                        elif len(cs_info) > 3:
-                            gift_order.receiver = cs_info[0]
-                            gift_order.mobile = cs_info[1]
-                            address = str(cs_info[2])
-                            for i in range(len(cs_info)):
-                                if i > 2:
-                                    address = address + str(cs_info[i])
-                            gift_order.address = address
+                        cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：","").replace("＋", "+").replace('\r', '').replace('\n', '').replace('  ', ' ')
+                        if '+' in cs_info:
+                            cs_info = cs_info.split("+")
+                            if len(cs_info) == 4:
+                                gift_order.receiver = cs_info[0]
+                                gift_order.address = str('%s %s' % (cs_info[1], cs_info[2])).replace(' ', ',')
+                                gift_order.mobile = cs_info[3].replace(" ", "")
+                                if not re.match(r'^[0-9]*$', gift_order.mobile):
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+                            elif len(cs_info) == 1:
+                                cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '')
+
+                                _q_receiver = re.findall(r'收货人：(.*)收货地址', cs_info)
+                                if _q_receiver:
+                                    gift_order.receiver = str(_q_receiver[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+
+                                _q_address = re.findall(r'收货地址：(.*)邮编', cs_info)
+                                if _q_address:
+                                    gift_order.address = str(_q_address[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+                                _q_mobile = re.findall(r'电话：(.*)', cs_info)
+                                if _q_mobile:
+                                    gift_order.mobile = str(_q_mobile[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
                         else:
-                            self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
-                            n -= 1
-                            obj.mistakes = 3
-                            obj.save()
-                            continue
+                            cs_info = cs_info.split(" ")
+                            if len(cs_info) == 3:
+                                gift_order.receiver = cs_info[0]
+                                gift_order.mobile = cs_info[1]
+                                gift_order.address = cs_info[2]
+                            elif len(cs_info) > 3:
+                                gift_order.receiver = cs_info[0]
+                                gift_order.mobile = cs_info[1]
+                                address = str(cs_info[2])
+                                for i in range(len(cs_info)):
+                                    if i > 2:
+                                        address = address + str(cs_info[i])
+                                gift_order.address = address
+                            else:
+                                self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 3
+                                obj.save()
+                                continue
                     elif obj.platform == 1:
                         cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：","").replace("＋", "+").split("\r")
                         if len(cs_info) == 3:
@@ -225,7 +270,7 @@ class SubmitGiftAction(BaseActionView):
                             gift_order.mobile = cs_info[4].replace('电话', '')
                             gift_order.address = str(cs_info[2].replace('收货地址', ''))
                         elif len(cs_info) < 3:
-                            cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：","").replace("＋", "+").replace('\r', '').replace('\n', '').split("+")
+                            cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：","").replace("＋", "+").replace('\r', '').replace('\n', '').replace('  ', ' ').split("+")
                             if len(cs_info) == 4:
                                 gift_order.receiver = cs_info[0]
                                 gift_order.address = str('%s %s' % (cs_info[1], cs_info[2])).replace(' ', '，')
@@ -294,65 +339,94 @@ class SubmitGiftAction(BaseActionView):
                                     '白沙黎族自治县', '中山市', '东莞市']
                     # 京东地址处理逻辑
                     if obj.platform == 2:
-                        _province_key = gift_order.address[:2]
-                        if _province_key in ['内蒙', '黑龙']:
-                            _province_key = gift_order.address[:3]
-
-                        if _province_key in ['北京', '天津', '上海', '重庆']:
-                            _city_key = _province_key + "市"
-                        elif "州" in gift_order.address:
-                            _city_key = gift_order.address[len(_province_key):len(_province_key) + 2]
+                        if ',' in gift_order.address:
+                            keywords = gift_order.address.split(',')
+                            if len(keywords) > 2:
+                                _city_key = keywords[1]
+                                _rt_city = CityInfo.objects.filter(city__contains=_city_key)
+                                if _rt_city.exists():
+                                    gift_order.province = _rt_city[0].province.province
+                                    gift_order.city = _rt_city[0].city
+                                    if _city_key not in special_city:
+                                        _district_key = keywords[2][:2]
+                                        _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                    district__contains=_district_key)
+                                        if _rt_districts.exists():
+                                            gift_order.district = _rt_districts[0].district
+                                        else:
+                                            gift_order.district = '其他区'
+                                else:
+                                    self.message_user("%s地址不是标准格式地址，请修正成标准格式后提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 4
+                                    obj.save()
+                                    continue
+                            else:
+                                self.message_user("%s地址不是标准格式地址，请修正成标准格式后提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 4
+                                obj.save()
+                                continue
                         else:
-                            _city_key = gift_order.address[len(_province_key):len(_province_key) + 3]
-
-                        _rt_city = CityInfo.objects.filter(city__contains=_city_key)
-                        if _rt_city.exists():
-                            gift_order.province = _rt_city[0].province.province
-                            gift_order.city = _rt_city[0].city
+                            _province_key = gift_order.address[:2]
+                            if _province_key in ['内蒙', '黑龙']:
+                                _province_key = gift_order.address[:3]
 
                             if _province_key in ['北京', '天津', '上海', '重庆']:
-                                _district_key = gift_order.address[len(_province_key):len(_province_key) + 2]
-                                _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
-                                                                            district__contains=_district_key)
-                                if _rt_districts.exists():
-                                    gift_order.district = _rt_districts[0].district
-                                else:
-                                    gift_order.district = '其他区'
+                                _city_key = _province_key + "市"
+                            elif "州" in gift_order.address:
+                                _city_key = gift_order.address[len(_province_key):len(_province_key) + 2]
+                            else:
+                                _city_key = gift_order.address[len(_province_key):len(_province_key) + 3]
 
-                            elif "州" in gift_order.city and '州市' not in gift_order.city:
-                                # 判断是否是二级州，如果是二级州则用州做结尾，然后向后截取两个字符提取三级。
-                                tag_position = gift_order.address.index("州", 3)
-                                _district_key = gift_order.address[tag_position + 1:tag_position + 3]
-                                _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
-                                                                            district__contains=_district_key)
-                                if _rt_districts.exists():
-                                    gift_order.district = _rt_districts[0].district
-                                else:
-                                    tag_position = gift_order.address.index("市", 4)
-                                    _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                            _rt_city = CityInfo.objects.filter(city__contains=_city_key)
+                            if _rt_city.exists():
+                                gift_order.province = _rt_city[0].province.province
+                                gift_order.city = _rt_city[0].city
+
+                                if _province_key in ['北京', '天津', '上海', '重庆']:
+                                    _district_key = gift_order.address[len(_province_key):len(_province_key) + 2]
                                     _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
                                                                                 district__contains=_district_key)
                                     if _rt_districts.exists():
                                         gift_order.district = _rt_districts[0].district
                                     else:
                                         gift_order.district = '其他区'
-                            elif gift_order.city not in special_city:
-                                _district_key = gift_order.address[
-                                                len(_province_key) + len(_rt_city[0].city):len(_province_key) + len(
-                                                    _rt_city[0].city) + 2]
-                                _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
-                                                                            district__contains=_district_key)
 
-                                if _rt_districts.exists():
-                                    gift_order.district = _rt_districts[0].district
-                                else:
-                                    gift_order.district = '其他区'
-                        else:
-                            self.message_user("%s地址中二级城市出错，请修正后提交" % obj.order_id, "error")
-                            n -= 1
-                            obj.mistakes = 4
-                            obj.save()
-                            continue
+                                elif "州" in gift_order.city and '州市' not in gift_order.city:
+                                    # 判断是否是二级州，如果是二级州则用州做结尾，然后向后截取两个字符提取三级。
+                                    tag_position = gift_order.address.index("州", 3)
+                                    _district_key = gift_order.address[tag_position + 1:tag_position + 3]
+                                    _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                district__contains=_district_key)
+                                    if _rt_districts.exists():
+                                        gift_order.district = _rt_districts[0].district
+                                    else:
+                                        tag_position = gift_order.address.index("市", 4)
+                                        _district_key = gift_order.address[tag_position + 1:tag_position + 2]
+                                        _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                    district__contains=_district_key)
+                                        if _rt_districts.exists():
+                                            gift_order.district = _rt_districts[0].district
+                                        else:
+                                            gift_order.district = '其他区'
+                                elif gift_order.city not in special_city:
+                                    _district_key = gift_order.address[
+                                                    len(_province_key) + len(_rt_city[0].city):len(_province_key) + len(
+                                                        _rt_city[0].city) + 2]
+                                    _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                district__contains=_district_key)
+
+                                    if _rt_districts.exists():
+                                        gift_order.district = _rt_districts[0].district
+                                    else:
+                                        gift_order.district = '其他区'
+                            else:
+                                self.message_user("%s地址中二级城市出错，请修正后提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 4
+                                obj.save()
+                                continue
                     # 淘宝地址处理逻辑
                     elif obj.platform == 1:
                         keywords = gift_order.address.split('，')
@@ -400,6 +474,12 @@ class SubmitGiftAction(BaseActionView):
                         self.message_user("%s地址是集运仓" % obj.order_id, "error")
                         n -= 1
                         obj.mistakes = 9
+                        obj.save()
+                        continue
+                    if not ((gift_order.receiver and gift_order.address) and gift_order.mobile):
+                        self.message_user("%s收货人电话地址不全" % obj.order_id, "error")
+                        n -= 1
+                        obj.mistakes = 3
                         obj.save()
                         continue
                     try:

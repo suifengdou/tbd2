@@ -82,8 +82,8 @@ class ExportPlugin(BaseAdminPlugin):
 
     def _get_datas(self, context):
         # 设置导出最多限制为1500条数据。
-        if len(context['results']) > 3500:
-            rows = context['results'][:3500]
+        if len(context['results']) > 5000:
+            rows = context['results'][:5000]
         else:
             rows = context['results']
 

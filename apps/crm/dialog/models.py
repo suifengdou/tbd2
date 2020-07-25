@@ -94,7 +94,7 @@ class OriDialogTB(BaseModel):
         (1, '正常'),
     )
     shop = models.CharField(max_length=60, verbose_name='店铺', db_index=True)
-    customer = models.CharField(max_length=150, verbose_name='客户', unique=True, db_index=True)
+    customer = models.CharField(max_length=150, verbose_name='客户', db_index=True)
     start_time = models.DateTimeField(verbose_name='开始时间')
     end_time = models.DateTimeField(verbose_name='结束时间')
     min = models.IntegerField(verbose_name='总人次')
@@ -103,6 +103,7 @@ class OriDialogTB(BaseModel):
 
     class Meta:
         verbose_name = 'CRM-淘系对话客户-查询'
+        unique_together = ('shop', 'customer')
         verbose_name_plural = verbose_name
         db_table = 'crm_dialog_oritaobao'
 
@@ -136,7 +137,7 @@ class OriDetailTB(BaseModel):
 
     dialog_tb = models.ForeignKey(OriDialogTB, on_delete=models.CASCADE, verbose_name='对话')
     sayer = models.CharField(max_length=150, verbose_name='讲话者', db_index=True)
-    status = models.SmallIntegerField(choices=STATUS, verbose_name='角色')
+    d_status = models.SmallIntegerField(choices=STATUS, verbose_name='角色')
     time = models.DateTimeField(verbose_name='时间', db_index=True)
     interval = models.IntegerField(verbose_name='对话间隔(秒)')
     content = models.TextField(verbose_name='内容')
@@ -196,7 +197,7 @@ class OriDialogJD(BaseModel):
         (1, '人工'),
     )
     shop = models.CharField(max_length=60, verbose_name='店铺', db_index=True)
-    customer = models.CharField(max_length=150, verbose_name='客户', unique=True, db_index=True)
+    customer = models.CharField(max_length=150, verbose_name='客户', db_index=True)
     start_time = models.DateTimeField(verbose_name='开始时间')
     end_time = models.DateTimeField(verbose_name='结束时间')
     min = models.IntegerField(verbose_name='总人次')
@@ -206,6 +207,7 @@ class OriDialogJD(BaseModel):
 
     class Meta:
         verbose_name = 'CRM-京东对话客户-查询'
+        unique_together = ('shop', 'customer')
         verbose_name_plural = verbose_name
         db_table = 'crm_dialog_orijingdong'
 
@@ -231,6 +233,7 @@ class OriDetailJD(BaseModel):
     MISTAKE_LIST = (
         (0, '正常'),
         (1, '对话格式错误'),
+        (2, '重复导入'),
     )
     CATEGORY = (
         (0, '常规'),
@@ -239,7 +242,7 @@ class OriDetailJD(BaseModel):
 
     dialog_jd = models.ForeignKey(OriDialogJD, on_delete=models.CASCADE, verbose_name='对话')
     sayer = models.CharField(max_length=150, verbose_name='讲话者', db_index=True)
-    status = models.SmallIntegerField(choices=STATUS, verbose_name='角色')
+    d_status = models.SmallIntegerField(choices=STATUS, verbose_name='角色')
     time = models.DateTimeField(verbose_name='时间', db_index=True)
     interval = models.IntegerField(verbose_name='对话间隔(秒)')
     content = models.TextField(verbose_name='内容')

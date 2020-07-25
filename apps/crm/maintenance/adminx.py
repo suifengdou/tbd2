@@ -555,7 +555,8 @@ class MaintenanceHandlingInfoAdmin(object):
                     'shop', 'finish_time', 'buyer_nick', 'sender_name', 'sender_mobile', 'sender_area', 'goods_name',
                     'is_guarantee', 'province', 'city', 'district', 'handling_status', 'repeat_tag', 'goods_type']
     search_fields = ['maintenance_order_id', 'sender_mobile', 'machine_sn']
-    list_filter = ['shop', 'goods_type', 'finish_time', 'repeat_tag', 'handling_status']
+    list_filter = ['shop', 'appraisal', 'fault_type', 'buyer_nick', 'goods_type', 'finish_time', 'repeat_tag',
+                   'is_guarantee', 'handling_status']
 
 
 class MaintenanceSummaryAdmin(object):
