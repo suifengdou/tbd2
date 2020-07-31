@@ -49,6 +49,8 @@ class OriTailOrder(BaseModel):
         (10, '重复生成订单，联系管理员'),
         (11, '生成订单货品出错，联系管理员'),
         (12, '发货仓库和单据类型不符'),
+        (13, '订单货品导入出错'),
+        (14, '导入货品编码错误'),
     )
 
     LOGICAL_DECISION = (
@@ -104,8 +106,9 @@ class OriTailOrder(BaseModel):
 
     @classmethod
     def verify_mandatory(cls, columns_key):
-        VERIFY_FIELD = ['order_id', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',
-                        'is_deliver', 'message', 'goods_id', 'goods_name', 'quantity', 'price']
+        VERIFY_FIELD = ['shop', 'order_id', 'order_category', 'mode_warehouse', 'sent_consignee',
+                        'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',
+                        'message', 'goods_id', 'quantity', 'price']
 
         for i in VERIFY_FIELD:
             if i not in columns_key:
@@ -138,7 +141,7 @@ class OTOGoods(BaseModel):
     goods_id = models.CharField(max_length=50, verbose_name='货品编码', db_index=True)
     goods_name = models.ForeignKey(MachineInfo, verbose_name='货品名称')
     quantity = models.IntegerField(verbose_name='数量')
-    price = models.FloatField(verbose_name='含税单价')
+    price = models.FloatField(verbose_name='单价')
     memorandum = models.CharField(null=True, blank=True, max_length=200, verbose_name='备注')
 
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='货品状态')
@@ -306,6 +309,11 @@ class TOGoods(BaseModel):
     def __str__(self):
         return str(self.tail_order.order_id)
 
+    def track_no(self):
+        track_no = self.tail_order.track_no
+        return track_no
+    track_no.short_description = '快递信息'
+
     def sent_consignee(self):
         sent_consignee = self.tail_order.sent_consignee
         return sent_consignee
@@ -340,6 +348,13 @@ class TOGoods(BaseModel):
         sent_district = self.tail_order.sent_district
         return sent_district
     sent_district.short_description = '区县'
+
+    def mode_warehouse(self):
+        mode_warehouse = self.tail_order.mode_warehouse
+        MODE_W = {0: '回流', 1: '二手'}
+        mode_warehouse = MODE_W[mode_warehouse]
+        return mode_warehouse
+    mode_warehouse.short_description = '发货模式'
 
 
 class TOHGoods(TOGoods):
@@ -389,6 +404,7 @@ class RefundOrder(BaseModel):
         (10, '退换结算单重复'),
         (11, '生成结算单出错'),
         (12, '生成结算单货品出错'),
+        (13, '关联的订单未发货'),
 
     )
     MODE_W = (
@@ -514,7 +530,7 @@ class ROGoods(BaseModel):
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
 
     class Meta:
-        verbose_name = 'EXT-尾货订单-货品明细'
+        verbose_name = 'EXT-尾货退换单-货品明细'
         verbose_name_plural = verbose_name
         db_table = 'ext_tailorder_refund_goods'
 
@@ -575,7 +591,7 @@ class ROGoods(BaseModel):
 # 尾货退款订单待递交
 class ROGCheck(ROGoods):
     class Meta:
-        verbose_name = 'EXT-尾货订单-待收货'
+        verbose_name = 'EXT-尾货退换单-待收货'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -696,9 +712,11 @@ class ArrearsBillOrder(BaseModel):
         (2, '已审核'),
     )
     PROCESS_TAG = (
-        (0, '待打印'),
-        (1, '已打印'),
-        (2, '暂停发'),
+        (0, '未处理'),
+        (1, '待处理'),
+        (2, '已确认'),
+        (3, '待清账'),
+        (4, '已处理'),
     )
     MISTAKE_LIST = (
         (0, '正常'),
@@ -739,7 +757,6 @@ class ArrearsBillOrder(BaseModel):
                                      blank=True, verbose_name='创建公司')
     sign_department = models.ForeignKey(DepartmentInfo, on_delete=models.CASCADE, related_name='arr_tail_department',
                                         null=True, blank=True, verbose_name='创建部门')
-
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
     process_tag = models.SmallIntegerField(choices=PROCESS_TAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
@@ -798,9 +815,10 @@ class ABOGoods(BaseModel):
 class FinalStatement(BaseModel):
     ORDER_STATUS = (
         (0, '已取消'),
-        (1, '待支付'),
-        (2, '待结算'),
-        (3, '已完成'),
+        (1, '待确认'),
+        (2, '待支付'),
+        (3, '待结算'),
+        (4, '已完成'),
     )
     PROCESS_TAG = (
         (0, '未处理'),
@@ -846,12 +864,28 @@ class FinalStatement(BaseModel):
 
 
     class Meta:
-        verbose_name = 'EXT-尾货账单'
+        verbose_name = 'EXT-尾货账单-查询'
         verbose_name_plural = verbose_name
         db_table = 'ext_tailorder_final'
 
     def __str__(self):
         return str(self.order_id)
+
+
+# 应收结算单待结算
+class FSAffirm(FinalStatement):
+    class Meta:
+        verbose_name = 'EXT-尾货账单-重损待确认'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+# 应收结算单待结算
+class FSSpecialAffirm(FinalStatement):
+    class Meta:
+        verbose_name = 'EXT-尾货账单-非重损待确认'
+        verbose_name_plural = verbose_name
+        proxy = True
 
 
 # 应收结算单待结算
@@ -925,6 +959,7 @@ class AccountInfo(BaseModel):
         (0, '正常'),
         (1, '汇总出错，重新汇总'),
         (2, '汇总货品出错，联系管理员'),
+        (3, '已登记过账单，联系管理员'),
 
     )
     CATEGORY = (
@@ -1012,10 +1047,81 @@ class PBillToAccount(BaseModel):
 
 
 class ABillToAccount(BaseModel):
-    abo_order = models.OneToOneField(ArrearsBillOrder, on_delete=models.CASCADE, verbose_name='退款单货品明细')
+    abo_order = models.OneToOneField(ABOGoods, on_delete=models.CASCADE, verbose_name='退款单货品明细')
     account_order = models.ForeignKey(AccountInfo, on_delete=models.CASCADE, verbose_name='对账明细单')
 
     class Meta:
         verbose_name = 'EXT-尾货退款对账对照表'
         verbose_name_plural = verbose_name
         db_table = 'ext_tailorder_a2a'
+
+
+class TailPartsOrder(BaseModel):
+    ORDER_STATUS = (
+        (0, '已取消'),
+        (1, '未递交'),
+        (2, '已生成'),
+    )
+    PROCESSTAG = (
+        (0, '未处理'),
+        (1, '待核实'),
+        (2, '已确认'),
+        (3, '待清账'),
+        (4, '已处理'),
+        (5, '驳回'),
+    )
+    MISTAKE_LIST = (
+        (0, '正常'),
+        (1, '货品包含整机'),
+        (2, '配件名称错误或未添加'),
+        (3, '没收货人'),
+        (4, '14天内重复'),
+        (5, '14天外重复'),
+        (6, '手机号错误'),
+        (7, '地址是集运仓'),
+        (8, '收货人信息不全'),
+        (9, '城市错误'),
+        (10, '单据生成出错'),
+        (11, '店铺错误'),
+
+    )
+    ORDER_CATEGORY = (
+        (1, '质量问题'),
+        (2, '开箱即损'),
+        (3, '礼品赠品'),
+    )
+
+    order_id = models.CharField(max_length=150, null=True, blank=True, verbose_name='配件单号')
+    shop = models.ForeignKey(ShopInfo, on_delete=models.CASCADE, verbose_name='店铺')
+    sent_consignee = models.CharField(max_length=150, verbose_name='收件人姓名')
+    sent_smartphone = models.CharField(max_length=30, verbose_name='收件人手机')
+    sent_city = models.ForeignKey(CityInfo, on_delete=models.CASCADE, verbose_name='收件城市')
+    sent_district = models.CharField(null=True, blank=True, max_length=30, verbose_name='收件区县')
+    sent_address = models.CharField(max_length=200, verbose_name='收件地址')
+    sign_company = models.ForeignKey(CompanyInfo, on_delete=models.CASCADE, related_name='tailpart_company',
+                                     null=True, blank=True, verbose_name='创建公司')
+    sign_department = models.ForeignKey(DepartmentInfo, on_delete=models.CASCADE, related_name='tailpart_department',
+                                        null=True, blank=True, verbose_name='创建部门')
+    parts_info = models.CharField(max_length=300, null=True, blank=True, verbose_name='配件信息')
+    message = models.CharField(max_length=300, null=True, blank=True, verbose_name='备注')
+
+    process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
+    mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='订单状态')
+    order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
+
+    class Meta:
+        verbose_name = 'EXT-尾货配件-查询'
+        verbose_name_plural = verbose_name
+        db_table = 'ext_tailorder_part'
+
+    def __str__(self):
+        return str(self.order_id)
+
+
+# 应收结算单待结算
+class SubmitTPO(TailPartsOrder):
+    class Meta:
+        verbose_name = 'EXT-尾货配件-未提交'
+        verbose_name_plural = verbose_name
+        proxy = True
