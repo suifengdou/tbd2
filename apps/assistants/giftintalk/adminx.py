@@ -149,7 +149,7 @@ class SubmitGiftAction(BaseActionView):
         if not self.has_change_permission():
             raise PermissionDenied
 
-        PLATFORM = {2: '京东', 1: '淘系'}
+        PLATFORM = {2: '京东', 1: '淘系', 3: '官方商城'}
         if n:
             for obj in queryset:
                 goods_group = self.goods_split(obj.goods)
@@ -326,8 +326,79 @@ class SubmitGiftAction(BaseActionView):
                             obj.mistakes = 3
                             obj.save()
                             continue
+                    elif obj.platform == 3:
+                        cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：",
+                                                                                                            "").replace(
+                            "＋", "+").split("\r")
+                        if len(cs_info) == 3:
+                            gift_order.receiver = cs_info[0]
+                            gift_order.mobile = cs_info[1]
+                            gift_order.address = cs_info[2]
+                        elif len(cs_info) > 4:
+                            gift_order.receiver = cs_info[1].replace('收货人', '')
+                            gift_order.mobile = cs_info[4].replace('电话', '')
+                            gift_order.address = str(cs_info[2].replace('收货地址', ''))
+                        elif len(cs_info) < 3:
+                            cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：",
+                                                                                                                "").replace(
+                                "＋", "+").replace('\r', '').replace('\n', '').replace('  ', ' ').split("+")
+                            if len(cs_info) == 4:
+                                gift_order.receiver = cs_info[0]
+                                gift_order.address = str('%s %s' % (cs_info[1], cs_info[2])).replace(' ', '，')
+                                gift_order.mobile = cs_info[3].replace(" ", "")
+                                if not re.match(r'^[0-9]*$', gift_order.mobile):
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+                            elif len(cs_info) == 1:
+                                cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '')
+
+                                _q_receiver = re.findall(r'收货人：(.*)收货地址', cs_info)
+                                if _q_receiver:
+                                    gift_order.receiver = str(_q_receiver[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+
+                                _q_address = re.findall(r'收货地址：(.*)邮编', cs_info)
+                                if _q_address:
+                                    gift_order.address = str(_q_address[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+                                _q_mobile = re.findall(r'电话：(.*)', cs_info)
+                                if _q_mobile:
+                                    gift_order.mobile = str(_q_mobile[0]).strip()
+                                else:
+                                    self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                    n -= 1
+                                    obj.mistakes = 3
+                                    obj.save()
+                                    continue
+
+
+                            else:
+                                self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 3
+                                obj.save()
+                                continue
+                        else:
+                            self.message_user("%s收货信息错误，修正后再次重新提交，请严格按照要求提交" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 3
+                            obj.save()
+                            continue
                     else:
-                        self.message_user("%s平台错误，只支持京东和淘系" % obj.order_id, "error")
+                        self.message_user("%s平台错误，只支持京东,淘系和官方商城" % obj.order_id, "error")
                         n -= 1
                         obj.mistakes = 7
                         obj.save()
@@ -451,6 +522,34 @@ class SubmitGiftAction(BaseActionView):
                                 continue
                         else:
                             self.message_user("%s地址不是淘宝默认地址，请修正成淘宝默认格式后提交" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 4
+                            obj.save()
+                            continue
+                    elif obj.platform == 3:
+                        keywords = gift_order.address.split('，')
+                        if len(keywords) > 2:
+                            _city_key = keywords[1]
+                            _rt_city = CityInfo.objects.filter(city__contains=_city_key)
+                            if _rt_city.exists():
+                                gift_order.province = _rt_city[0].province.province
+                                gift_order.city = _rt_city[0].city
+                                if _city_key not in special_city:
+                                    _district_key = keywords[2][:2]
+                                    _rt_districts = DistrictInfo.objects.filter(city=_rt_city[0],
+                                                                                district__contains=_district_key)
+                                    if _rt_districts.exists():
+                                        gift_order.district = _rt_districts[0].district
+                                    else:
+                                        gift_order.district = '其他区'
+                            else:
+                                self.message_user("%s地址不是官方商城默认地址，请修正成官方商城默认格式后提交" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 4
+                                obj.save()
+                                continue
+                        else:
+                            self.message_user("%s地址不是官方商城要求地址格式，请修正后提交" % obj.order_id, "error")
                             n -= 1
                             obj.mistakes = 4
                             obj.save()

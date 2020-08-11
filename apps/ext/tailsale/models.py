@@ -34,6 +34,7 @@ class OriTailOrder(BaseModel):
         (7, '部分发货'),
         (8, '重损发货'),
         (9, '非重损发货'),
+        (10, '特殊发货'),
     )
     MISTAKE_LIST = (
         (0, '正常'),
@@ -51,6 +52,8 @@ class OriTailOrder(BaseModel):
         (12, '发货仓库和单据类型不符'),
         (13, '订单货品导入出错'),
         (14, '导入货品编码错误'),
+        (15, '重复订单'),
+        (16, '型号错误'),
     )
 
     LOGICAL_DECISION = (
@@ -116,6 +119,18 @@ class OriTailOrder(BaseModel):
         else:
             return None
 
+    def goods_name(self):
+        goods_name = self.otogoods_set.all()
+        if len(goods_name) == 1:
+            goods_name = goods_name[0].goods_name.goods_name
+        elif len(goods_name) > 1:
+            goods_name = '多种'
+        else:
+            goods_name = '无'
+        return goods_name
+    goods_name.short_description = '单据货品'
+
+
 
 class OTOUnhandle(OriTailOrder):
     class Meta:
@@ -155,6 +170,13 @@ class OTOGoods(BaseModel):
     def __str__(self):
         return self.ori_tail_order.order_id
 
+    ori_tail_order.short_description = '原始单号'
+
+    def nickname(self):
+        nickname = self.sent_consignee()
+        return nickname
+    nickname.short_description = '网名'
+
     def amount(self):
         try:
             amount = self.price * self.quantity
@@ -181,7 +203,7 @@ class OTOGoods(BaseModel):
     def shop(self):
         shop = self.ori_tail_order.shop
         return shop
-    shop.short_description = '店铺'
+    shop.short_description = '店铺名称'
 
 
 class TailOrder(BaseModel):
@@ -309,6 +331,26 @@ class TOGoods(BaseModel):
     def __str__(self):
         return str(self.tail_order.order_id)
 
+    def deliver_condition(self):
+        return '款到发货'
+    deliver_condition.short_description = '发货条件'
+
+    def discounts(self):
+        return 0
+    discounts.short_description = '优惠金额'
+
+    def post_fee(self):
+        return 0
+    post_fee.short_description = '邮费'
+
+    def receivable(self):
+        return self.settlement_amount
+    receivable.short_description = '应收合计'
+
+    def order_category(self):
+        return '线下零售'
+    order_category.short_description = '订单类别'
+
     def track_no(self):
         track_no = self.tail_order.track_no
         return track_no
@@ -317,12 +359,16 @@ class TOGoods(BaseModel):
     def sent_consignee(self):
         sent_consignee = self.tail_order.sent_consignee
         return sent_consignee
-    sent_consignee.short_description = '收货人'
+    sent_consignee.short_description = '收件人'
 
     def sent_smartphone(self):
         sent_smartphone = self.tail_order.sent_smartphone
         return sent_smartphone
     sent_smartphone.short_description = '手机'
+
+    def sent_phone(self):
+        return ''
+    sent_phone.short_description = '固话'
 
     def sent_address(self):
         sent_address = self.tail_order.sent_address
@@ -332,22 +378,22 @@ class TOGoods(BaseModel):
     def shop(self):
         shop = self.tail_order.shop
         return shop
-    shop.short_description = '店铺'
+    shop.short_description = '店铺名称'
 
     def sent_province(self):
         sent_province = self.tail_order.sent_province
         return sent_province
-    sent_province.short_description = '省份'
+    sent_province.short_description = '省'
 
     def sent_city(self):
         sent_city = self.tail_order.sent_city
         return sent_city
-    sent_city.short_description = '城市'
+    sent_city.short_description = '市'
 
     def sent_district(self):
         sent_district = self.tail_order.sent_district
         return sent_district
-    sent_district.short_description = '区县'
+    sent_district.short_description = '区'
 
     def mode_warehouse(self):
         mode_warehouse = self.tail_order.mode_warehouse
@@ -355,6 +401,40 @@ class TOGoods(BaseModel):
         mode_warehouse = MODE_W[mode_warehouse]
         return mode_warehouse
     mode_warehouse.short_description = '发货模式'
+
+    def message(self):
+        message = self.tail_order.message
+        return message
+    message.short_description = '买家备注'
+
+    def order_status(self):
+        order_status = self.tail_order.order_status
+        status_list = {0: '已被取消', 1: '发货处理', 2: '发货完成'}
+        return status_list[order_status]
+    order_status.short_description = '订单状态'
+
+    def submit_time(self):
+        submit_time = self.tail_order.submit_time
+        return submit_time
+    submit_time.short_description = '提交时间'
+
+    def handle_time(self):
+        handle_time = self.tail_order.handle_time
+        return handle_time
+    handle_time.short_description = '处理时间'
+
+    def handle_interval(self):
+        handle_interval = self.tail_order.handle_interval
+        return handle_interval
+    handle_interval.short_description = '处理间隔(分钟)'
+
+    def refund_status(self):
+        _q_refund_status = RefundOrder.objects.filter(tail_order=self.tail_order)
+        if _q_refund_status.exists():
+            return '是'
+        else:
+            return '否'
+    refund_status.short_description = '是否退款'
 
 
 class TOHGoods(TOGoods):
@@ -367,6 +447,13 @@ class TOHGoods(TOGoods):
 class TOSGoods(TOGoods):
     class Meta:
         verbose_name = 'EXT-尾货订单-未发非重损明细'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class TOPrivilegeGoods(TOGoods):
+    class Meta:
+        verbose_name = 'EXT-尾货订单-完整查询'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -394,7 +481,7 @@ class RefundOrder(BaseModel):
         (0, '正常'),
         (1, '退换数量超出原单数量'),
         (2, '退换金额超出原单金额'),
-        (3, '无退换原因'),
+        (3, '无退货原因'),
         (4, '无返回快递单号'),
         (5, '换货单必须要先进行标记'),
         (6, '非换货单不可以标记'),
@@ -405,6 +492,7 @@ class RefundOrder(BaseModel):
         (11, '生成结算单出错'),
         (12, '生成结算单货品出错'),
         (13, '关联的订单未发货'),
+        (14, '不是退货单不可以审核'),
 
     )
     MODE_W = (
@@ -424,7 +512,7 @@ class RefundOrder(BaseModel):
     tail_order = models.ForeignKey(TailOrder, on_delete=models.CASCADE, related_name='refund_tail_order', verbose_name='来源单号')
     shop = models.ForeignKey(ShopInfo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='店铺')
     order_id = models.CharField(unique=True, max_length=100, null=True, blank=True, verbose_name='退换单号', db_index=True)
-    order_category = models.SmallIntegerField(choices=CATEGORY, verbose_name='退款类型')
+    order_category = models.SmallIntegerField(choices=CATEGORY, default=3, verbose_name='退款类型')
     mode_warehouse = models.SmallIntegerField(choices=MODE_W, null=True, blank=True, verbose_name='发货模式')
     sent_consignee = models.CharField(null=True, blank=True, max_length=150, verbose_name='收件人姓名')
     sent_smartphone = models.CharField(null=True, blank=True, max_length=30, verbose_name='收件人手机')
@@ -462,7 +550,7 @@ class RefundOrder(BaseModel):
     fast_tag = models.SmallIntegerField(choices=LOGICAL_DEXISION, default=1, verbose_name='快捷状态')
 
     class Meta:
-        verbose_name = 'EXT-尾货退换单-查询'
+        verbose_name = 'EXT-尾货退货单-查询'
         verbose_name_plural = verbose_name
         db_table = 'ext_tailorder_refund'
 
@@ -478,11 +566,23 @@ class RefundOrder(BaseModel):
         else:
             return None
 
+    def goods_name(self):
+        goods_name = self.rogoods_set.all()
+        if len(goods_name) == 1:
+            goods_name = goods_name[0].goods_name.goods_name
+        elif len(goods_name) > 1:
+            goods_name = '多种'
+        else:
+            goods_name = '无'
+        return goods_name
+
+    goods_name.short_description = '单据货品'
+
 
 # 尾货退款订单待递交
 class ROHandle(RefundOrder):
     class Meta:
-        verbose_name = 'EXT-尾货退换单-待递交'
+        verbose_name = 'EXT-尾货退货单-待递交'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -490,7 +590,7 @@ class ROHandle(RefundOrder):
 # 尾货退款订单待递交
 class ROCheck(RefundOrder):
     class Meta:
-        verbose_name = 'EXT-尾货退换单-待处理'
+        verbose_name = 'EXT-尾货退货单-待处理'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -530,7 +630,7 @@ class ROGoods(BaseModel):
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
 
     class Meta:
-        verbose_name = 'EXT-尾货退换单-货品明细'
+        verbose_name = 'EXT-尾货退货单-货品明细'
         verbose_name_plural = verbose_name
         db_table = 'ext_tailorder_refund_goods'
 
@@ -591,7 +691,7 @@ class ROGoods(BaseModel):
 # 尾货退款订单待递交
 class ROGCheck(ROGoods):
     class Meta:
-        verbose_name = 'EXT-尾货退换单-待收货'
+        verbose_name = 'EXT-尾货退货单-待收货'
         verbose_name_plural = verbose_name
         proxy = True
 
@@ -1069,6 +1169,7 @@ class TailPartsOrder(BaseModel):
         (3, '待清账'),
         (4, '已处理'),
         (5, '驳回'),
+        (6, '特殊订单'),
     )
     MISTAKE_LIST = (
         (0, '正常'),
@@ -1083,6 +1184,7 @@ class TailPartsOrder(BaseModel):
         (9, '城市错误'),
         (10, '单据生成出错'),
         (11, '店铺错误'),
+        (12, '电话重复'),
 
     )
     ORDER_CATEGORY = (
@@ -1103,7 +1205,7 @@ class TailPartsOrder(BaseModel):
     sign_department = models.ForeignKey(DepartmentInfo, on_delete=models.CASCADE, related_name='tailpart_department',
                                         null=True, blank=True, verbose_name='创建部门')
     parts_info = models.CharField(max_length=300, null=True, blank=True, verbose_name='配件信息')
-    message = models.CharField(max_length=300, null=True, blank=True, verbose_name='备注')
+    message = models.TextField(null=True, blank=True, verbose_name='备注')
 
     process_tag = models.SmallIntegerField(choices=PROCESSTAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')

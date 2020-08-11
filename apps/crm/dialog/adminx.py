@@ -20,13 +20,14 @@ import xadmin
 from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
-from xadmin.layout import Fieldset
+from xadmin.layout import Fieldset, Main, Row, Side
 import emoji
 
 from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo, MyExtractODTB
 from .models import SensitiveInfo, CheckODJD, ExtractODJD, ExceptionODJD, CheckODTB, ExtractODTB, ExceptionODTB
+from .models import OriDialogOW, OriDetailOW, CheckODOW, ExtractODOW, MyExtractODOW, ExceptionODOW
 from apps.base.shop.models import ShopInfo
-from apps.assistants.giftintalk.models import GiftInTalkInfo, OrderTBList, OrderJDList
+from apps.assistants.giftintalk.models import GiftInTalkInfo, OrderTBList, OrderJDList, OrderOWList
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -468,6 +469,80 @@ class ExtractODTBAction(BaseActionView):
         return None
 
 
+# 官方商城对话明细提取订单
+class ExtractODOWAction(BaseActionView):
+    action_name = "extract_dialog_content_ow"
+    description = "提取选中的对话"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'order_id', 'cs_information']
+        result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            queryset.filter(d_status=1).update(extract_tag=1)
+            queryset = queryset.filter(d_status=0)
+            for obj in queryset:
+                if OrderOWList.objects.filter(talk_ow=obj).exists():
+                    result["discard"] += 1
+                    obj.mistake_tag = 2
+                    obj.save()
+                    continue
+                else:
+                    order_list_ow = OrderOWList()
+                _check_talk_data = re.findall(r'(·客服.*{.*}[\s\S]*?.*})', str(obj.content), re.DOTALL)
+                if _check_talk_data:
+                    _rt_talk = GiftInTalkInfo()
+                    _rt_talk.platform = 3
+                    _rt_talk_data = re.findall(r'{((?:.|\n)*?)}', str(obj.content), re.DOTALL)
+
+                    if len(_rt_talk_data) == 5:
+                        _rt_talk.platform = 3
+                        _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                        for k, v in _rt_talk_dic.items():
+                            if hasattr(_rt_talk, k):
+                                setattr(_rt_talk, k, v)
+
+                    else:
+                        result['false'] += 1
+                        result['error'].append("%s 对话的格式不对，导致无法提取" % _rt_talk_data[1])
+                        obj.category = 1
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
+                    try:
+                        _rt_talk.shop = obj.dialog_ow.shop
+                        _rt_talk.creator = self.request.user.username
+                        _rt_talk.nickname = '客户ID%s' % obj.dialog_ow.customer
+                        _rt_talk.save()
+                        order_list_ow.gift_order = _rt_talk
+                        order_list_ow.talk_ow = obj
+                        order_list_ow.creator = self.request.user.username
+                        order_list_ow.save()
+                        obj.category = 1
+                        result["successful"] += 1
+                    except Exception as e:
+                        result["false"] += 1
+                        result["error"].append(e)
+                        obj.mistake_tag = 1
+                        obj.category = 1
+                        obj.save()
+                        continue
+                obj.extract_tag = 1
+                obj.save()
+            self.message_user(result)
+            self.message_user("提交 %(count)d %(items)s。" % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
 # 放弃对话明细订单内容提取订单
 class PassODJDAction(BaseActionView):
     action_name = "pass_dialog_content"
@@ -651,7 +726,7 @@ class OriDialogTBAdmin(object):
                         if _q_dialog.exists():
                             dialog_order = _q_dialog[0]
                             end_time = datetime.datetime.strptime(str(dialog_contents[-1][1]), '%Y-%m-%d %H:%M:%S')
-                            if dialog_order.end_time == end_time:
+                            if dialog_order.end_time >= end_time:
                                 report_dic['discard'] += 1
                                 continue
                             dialog_order.end_time = end_time
@@ -1037,6 +1112,290 @@ class OriDetailJDAdmin(object):
     actions = [ResetODJDExtract, ResetODJDSensitive]
 
 
+
+
+
+class OriDialogOWAdmin(object):
+    list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag', 'order_status']
+    list_filter = ['customer', 'creator', 'start_time', 'end_time', 'min', 'dialog_tag', 'order_status',
+                   'creator', 'create_time']
+    search_fields = ['customer']
+
+    form_layout = [
+        Fieldset('客户信息',
+                 Row('customer', 'shop',),
+                 Row('start_time', 'end_time', 'min',),),
+        Fieldset(None,
+                 'creator', 'create_time', 'update_time', 'is_delete', **{"style": "display:None"}),
+    ]
+    readonly_fields = ['is_delete', 'shop', 'customer', 'start_time', 'min', 'dialog_tag', 'order_status',
+                       'creator', 'create_time', 'update_time']
+
+
+    ALLOWED_EXTENSIONS = ['xls', 'xlsx']
+    INIT_FIELDS_DIC = {"客户": "customer", "对话开始时间": "start_time", "对话内容": "content"}
+    import_data = True
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file', None)
+        if file:
+            result = self.handle_upload_file(request, file)
+            self.message_user('导入结果 %s' % result, 'success')
+        return super(OriDialogOWAdmin, self).post(request, *args, **kwargs)
+
+    def handle_upload_file(self, request, _file):
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
+        if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
+            df = pd.read_excel(_file, sheet_name=0)
+
+            FILTER_FIELDS = ['客户', '对话开始时间', '对话内容']
+
+            try:
+                df = df[FILTER_FIELDS]
+            except Exception as e:
+                report_dic["error"].append(e)
+                return report_dic
+
+            # 获取表头，对表头进行转换成数据库字段名
+            columns_key = df.columns.values.tolist()
+            for i in range(len(columns_key)):
+                if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                    columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+
+            # 验证一下必要的核心字段是否存在
+            _ret_verify_field = OriDialogOW.verify_mandatory(columns_key)
+            if _ret_verify_field is not None:
+                return _ret_verify_field
+
+            # 更改一下DataFrame的表名称
+            columns_key_ori = df.columns.values.tolist()
+            ret_columns_key = dict(zip(columns_key_ori, columns_key))
+            df.rename(columns=ret_columns_key, inplace=True)
+
+            # 更改一下DataFrame的表名称
+            num_end = 0
+            step = 300
+            step_num = int(len(df) / step) + 2
+            i = 1
+            while i < step_num:
+                num_start = num_end
+                num_end = step * i
+                intermediate_df = df.iloc[num_start: num_end]
+
+                # 获取导入表格的字典，每一行一个字典。这个字典最后显示是个list
+                _ret_list = intermediate_df.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+                i += 1
+            return report_dic
+        # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
+        elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
+            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
+
+            for piece in df:
+                # 获取表头
+                columns_key = piece.columns.values.tolist()
+                # 剔除表头中特殊字符等于号和空格
+                for i in range(len(columns_key)):
+                    columns_key[i] = columns_key[i].replace(' ', '').replace('=', '')
+                # 循环处理对应的预先设置，转换成数据库字段名称
+                for i in range(len(columns_key)):
+                    if self.__class__.INIT_FIELDS_DIC.get(columns_key[i], None) is not None:
+                        columns_key[i] = self.__class__.INIT_FIELDS_DIC.get(columns_key[i])
+                # 直接调用验证函数进行验证
+                _ret_verify_field = OriDialogOW.verify_mandatory(columns_key)
+                if _ret_verify_field is not None:
+                    return _ret_verify_field
+                # 验证通过进行重新处理。
+                columns_key_ori = piece.columns.values.tolist()
+                ret_columns_key = dict(zip(columns_key_ori, columns_key))
+                piece.rename(columns=ret_columns_key, inplace=True)
+                _ret_list = piece.to_dict(orient='records')
+                intermediate_report_dic = self.save_resources(request, _ret_list)
+                for k, v in intermediate_report_dic.items():
+                    if k == "error":
+                        if intermediate_report_dic["error"]:
+                            report_dic[k].append(v)
+                    else:
+                        report_dic[k] += v
+            return report_dic
+
+        else:
+            report_dic["error"].append('只支持excel和csv文件格式！')
+            return report_dic
+
+    @staticmethod
+    def save_resources(request, resource):
+        # 设置初始报告
+        report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error":[]}
+        category_dic = {'截单退回': 0, '无人收货': 1, '客户拒签': 2, '修改地址': 3, '催件派送': 4, '虚假签收': 5, '其他异常': 6}
+
+        shop = '小狗官方商城'
+
+        # 开始导入数据
+        for row in resource:
+            customer = str(row["customer"])
+            content = str(row["content"])
+
+            content_list = content.split('\r\n')
+            content_dic = {'content_text': '', 'sayer': ''}
+            dialog_contents = []
+            tag = 0
+            for words in content_list:
+                words = words.replace('\r', '')
+                if re.match(r'[\S]+\s\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2}', words):
+                    tag = 1
+                    if content_dic['sayer']:
+                        dialog_contents.append(content_dic)
+                    content_dic = {'content_text': '', 'sayer': ''}
+                    sayer_info = words.split(' ', 1)
+                    content_dic['sayer'] = str(sayer_info[0]).replace('/r', '').replace(' ', '').replace('/n', '')
+                    content_dic['time'] = str(sayer_info[1]).replace('/r', '').replace('/n', '')
+                elif re.match(r'----\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2}----', words):
+                    tag = 0
+                else:
+                    if tag == 1:
+                        content_dic['content_text'] = content_dic['content_text'] + words
+            if content_dic['sayer']:
+                dialog_contents.append(content_dic)
+
+            start_time = dialog_contents[0]['time']
+            _q_dialog = OriDialogOW.objects.filter(shop=shop, customer=customer)
+            if _q_dialog.exists():
+                dialog_order = _q_dialog[0]
+                end_time = datetime.datetime.strptime(str(dialog_contents[-1]['time']), '%Y/%m/%d %H:%M:%S')
+                if customer != '小程序用户':
+                    if dialog_order.end_time >= end_time:
+                        report_dic['discard'] += 1
+                        continue
+                dialog_order.end_time = end_time
+                dialog_order.min += 1
+            else:
+                dialog_order = OriDialogOW()
+                dialog_order.customer = customer
+                dialog_order.shop = shop
+                start_time = datetime.datetime.strptime(str(start_time), '%Y/%m/%d %H:%M:%S')
+                end_time = datetime.datetime.strptime(str(dialog_contents[-1]['time']), '%Y/%m/%d %H:%M:%S')
+                dialog_order.start_time = start_time
+                dialog_order.end_time = end_time
+                dialog_order.min = 1
+            try:
+                dialog_order.creator = request.user.username
+                dialog_order.save()
+                report_dic['successful'] += 1
+            except Exception as e:
+                report_dic['error'].append(e)
+                report_dic['false'] += 1
+                continue
+            previous_time = datetime.datetime.strptime(str(dialog_contents[0]['time']), '%Y/%m/%d %H:%M:%S')
+            for dialog_content in dialog_contents:
+                sayer = dialog_content['sayer']
+                time = dialog_content['time']
+                content_text = dialog_content['content_text']
+                if sayer == '客户':
+                    sayer = customer
+                _q_dialog_detial = OriDetailOW.objects.filter(sayer=sayer,
+                                                              time=datetime.datetime.strptime
+                                                              (str(time), '%Y/%m/%d %H:%M:%S'))
+                if _q_dialog_detial.exists():
+                    report_dic['discard'] += 1
+                    continue
+                dialog_detial = OriDetailOW()
+                dialog_detial.dialog_ow = dialog_order
+                dialog_detial.sayer = sayer
+                dialog_detial.time = datetime.datetime.strptime(str(time), '%Y/%m/%d %H:%M:%S')
+                dialog_detial.content = content_text
+                d_value = (dialog_detial.time - previous_time).seconds
+                dialog_detial.interval = d_value
+                previous_time = datetime.datetime.strptime(str(dialog_content['time']), '%Y/%m/%d %H:%M:%S')
+                if sayer == customer:
+                    dialog_detial.d_status = 1
+                else:
+                    dialog_detial.d_status = 0
+                try:
+                    dialog_detial.creator = request.user.username
+                    dialog_detial.content = emoji.demojize(str(dialog_detial.content))
+                    dialog_detial.save()
+                except Exception as e:
+                    report_dic['error'].append(e)
+
+        return report_dic
+
+    def save_models(self):
+        obj = self.new_obj
+        request = self.request
+        obj.creator = request.user.username
+        obj.servicer = request.user.username
+        obj.order_status = 3
+        obj.save()
+        super().save_models()
+
+
+class OriDetailOWAdmin(object):
+    list_display = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category', 'extract_tag',
+                    'sensitive_tag', 'order_status', 'mistake_tag']
+    list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
+                   'd_status', 'interval', 'creator', 'create_time']
+    search_fields = ['dialog_ow__customer',]
+
+    form_layout = [
+        Fieldset('客户信息',
+                 Row('sayer', 'd_status', ),
+                 Row('time', 'interval', 'category', ),
+                 'content',),
+        Fieldset(None,
+                 'creator', 'create_time', 'update_time', 'is_delete', **{"style": "display:None"}),
+    ]
+    readonly_fields = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category',
+                       'extract_tag', 'sensitive_tag', 'order_status', 'mistake_tag']
+
+
+class CheckODOWAdmin(object):
+    pass
+
+
+class ExtractODOWadmin(object):
+    list_display = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category', 'extract_tag',
+                    'sensitive_tag', 'order_status', 'mistake_tag']
+    list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
+                   'd_status', 'interval', 'creator', 'create_time']
+    search_fields = ['dialog_ow__customer',]
+    list_editable = ['content']
+    form_layout = [
+        Fieldset('客户信息',
+                 Row('sayer', 'd_status', ),
+                 Row('time', 'interval', 'category', ),
+                 'content', ),
+        Fieldset(None,
+                 'creator', 'create_time', 'update_time', 'is_delete', **{"style": "display:None"}),
+    ]
+    readonly_fields = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'index', 'category',
+                       'extract_tag', 'sensitive_tag', 'order_status', 'mistake_tag']
+    actions = [ExtractODOWAction, PassODJDAction]
+
+    def queryset(self):
+        queryset = super(ExtractODOWadmin, self).queryset()
+        queryset = queryset.filter(extract_tag=0)
+        return queryset
+
+
+class MyExtractODOWAdmin(object):
+    pass
+
+
+class ExceptionODOWAdmin(object):
+    pass
+
+
+
+
+
+
 xadmin.site.register(DialogTag, DialogTagAdmin)
 xadmin.site.register(SensitiveInfo, SensitiveInfoAdmin)
 xadmin.site.register(ServicerInfo, ServicerInfoAdmin)
@@ -1053,4 +1412,12 @@ xadmin.site.register(CheckODJD, CheckODJDAdmin)
 xadmin.site.register(ExceptionODJD, ExceptionODJDAdmin)
 xadmin.site.register(ExtractODJD, ExtractODJDAdmin)
 xadmin.site.register(OriDetailJD, OriDetailJDAdmin)
+
+xadmin.site.register(OriDialogOW, OriDialogOWAdmin)
+xadmin.site.register(OriDetailOW, OriDetailOWAdmin)
+xadmin.site.register(CheckODOW, CheckODOWAdmin)
+xadmin.site.register(ExtractODOW, ExtractODOWadmin)
+xadmin.site.register(MyExtractODOW, MyExtractODOWAdmin)
+xadmin.site.register(ExceptionODOW, ExceptionODOWAdmin)
+
 

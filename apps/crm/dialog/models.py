@@ -285,3 +285,111 @@ class ExceptionODJD(OriDetailJD):
         verbose_name_plural = verbose_name
         proxy = True
 
+
+class OriDialogOW(BaseModel):
+    ORDER_STATUS = (
+        (0, '被取消'),
+        (1, '正常'),
+    )
+    shop = models.CharField(max_length=60, verbose_name='店铺', db_index=True)
+    customer = models.CharField(max_length=150, verbose_name='客户', db_index=True)
+    start_time = models.DateTimeField(verbose_name='开始时间')
+    end_time = models.DateTimeField(verbose_name='结束时间')
+    min = models.IntegerField(verbose_name='总人次')
+    dialog_tag = models.ForeignKey(DialogTag, on_delete=models.CASCADE, null=True, blank=True, verbose_name='对话标签')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+
+    class Meta:
+        verbose_name = 'CRM-官网对话客户-查询'
+        unique_together = ('shop', 'customer')
+        verbose_name_plural = verbose_name
+        db_table = 'crm_dialog_oriofficial'
+
+    def __str__(self):
+        return self.customer
+
+    @classmethod
+    def verify_mandatory(cls, columns_key):
+        VERIFY_FIELD = ['customer', 'start_time', 'content']
+
+        for i in VERIFY_FIELD:
+            if i not in columns_key:
+                return 'verify_field error, must have mandatory field: "{}""'.format(i)
+        else:
+            return None
+
+
+class OriDetailOW(BaseModel):
+    ORDER_STATUS = (
+        (0, '被取消'),
+        (1, '正常'),
+    )
+
+    STATUS = (
+        (0, '客服'),
+        (1, '顾客'),
+    )
+    LOGICAL_DECISION = (
+        (0, '否'),
+        (1, '是'),
+    )
+    MISTAKE_LIST = (
+        (0, '正常'),
+        (1, '对话格式错误'),
+        (2, '重复导入'),
+    )
+    CATEGORY = (
+        (0, '常规'),
+        (1, '订单'),
+    )
+
+    dialog_ow = models.ForeignKey(OriDialogOW, on_delete=models.CASCADE, verbose_name='对话')
+    sayer = models.CharField(max_length=150, verbose_name='讲话者', db_index=True)
+    d_status = models.SmallIntegerField(choices=STATUS, verbose_name='角色')
+    time = models.DateTimeField(verbose_name='时间', db_index=True)
+    interval = models.IntegerField(verbose_name='对话间隔(秒)')
+    content = models.TextField(verbose_name='内容')
+
+    index = models.IntegerField(default=0, verbose_name='对话负面指数')
+
+    category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
+    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
+    sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
+
+    class Meta:
+        verbose_name = 'CRM-官网对话信息-查询'
+        verbose_name_plural = verbose_name
+        db_table = 'crm_diadetail_oriofficial'
+
+    def __str__(self):
+        return self.sayer
+
+
+class CheckODOW(OriDetailOW):
+    class Meta:
+        verbose_name = 'CRM-官网对话信息-未过滤'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class ExtractODOW(OriDetailOW):
+    class Meta:
+        verbose_name = 'CRM-官网对话信息-未提取'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class MyExtractODOW(OriDetailOW):
+    class Meta:
+        verbose_name = 'CRM-官网对话信息-未提取个人'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class ExceptionODOW(OriDetailOW):
+    class Meta:
+        verbose_name = 'CRM-官网对话信息-敏感对话'
+        verbose_name_plural = verbose_name
+        proxy = True

@@ -35,7 +35,7 @@ from xadmin.layout import Fieldset, Main, Row, Side
 
 
 from .models import OriTailOrder, OTOUnhandle, OTOCheck, OTOGoods, TailOrder, TOhandle, TOSpecialhandle, TOGoods
-from .models import PayBillOrder, PBOSubmit, PBOCheck, PBOGoods, TOHGoods, TOSGoods
+from .models import PayBillOrder, PBOSubmit, PBOCheck, PBOGoods, TOHGoods, TOSGoods, TOPrivilegeGoods
 from .models import AccountInfo, AccountCheck, AccountUnfinished, PBillToAccount, AccountSpecialCheck
 from .models import FSCheck, FSSpecialCheck, FSSubmit, FinalStatement, FinalStatementGoods, FSAffirm, FSSpecialAffirm
 from .models import ROHandle, ROCheck, RefundOrder, ROGCheck, ROGoods
@@ -247,7 +247,30 @@ class SetRetreadOTOAction(BaseActionView):
         return None
 
 
-# 工单提交
+# 设置订单为特殊情况发货
+class SetRepeatedOTOAction(BaseActionView):
+    action_name = "set_repeated_oto"
+    description = "设置特殊订单发货"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(process_tag=10)
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
+# 原始尾货单提交
 class SubmitOTOAction(BaseActionView):
     action_name = "submit_oto"
     description = "提交选中的订单"
@@ -282,6 +305,24 @@ class SubmitOTOAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
+                    _q_repeated_order = OriTailOrder.objects.filter(sent_consignee=obj.sent_consignee,
+                                                                    order_status__in=[2, 3, 4])
+                    if _q_repeated_order.exists():
+                        if obj.process_tag != 10:
+                            self.message_user("%s 重复提交的订单" % obj.order_id, "error")
+                            obj.mistake_tag = 15
+                            obj.save()
+                            n -= 1
+                            continue
+                    _q_repeated_order = OriTailOrder.objects.filter(sent_smartphone=obj.sent_smartphone,
+                                                                    order_status__in=[2, 3, 4])
+                    if _q_repeated_order.exists():
+                        if obj.process_tag != 10:
+                            self.message_user("%s 重复提交的订单" % obj.order_id, "error")
+                            obj.mistake_tag = 15
+                            obj.save()
+                            n -= 1
+                            continue
 
                     if obj.amount <= 0:
                         self.message_user("%s 没添加货品, 或者货品价格添加错误" % obj.order_id, "error")
@@ -302,17 +343,28 @@ class SubmitOTOAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
-                    if obj.mode_warehouse:
-                        if obj.process_tag != 8:
-                            self.message_user("%s 发货仓库和单据类型不符" % obj.order_id, "error")
-                            obj.mistake_tag = 12
-                            obj.save()
-                            n -= 1
-                            continue
-                    else:
-                        if obj.process_tag != 9:
-                            self.message_user("%s 发货仓库和单据类型不符" % obj.order_id, "error")
-                            obj.mistake_tag = 12
+                    if obj.process_tag != 10:
+                        if obj.mode_warehouse:
+
+                            if obj.process_tag != 8:
+                                self.message_user("%s 发货仓库和单据类型不符" % obj.order_id, "error")
+                                obj.mistake_tag = 12
+                                obj.save()
+                                n -= 1
+                                continue
+                        else:
+                            if obj.process_tag != 9:
+                                self.message_user("%s 发货仓库和单据类型不符" % obj.order_id, "error")
+                                obj.mistake_tag = 12
+                                obj.save()
+                                n -= 1
+                                continue
+                    check_name = obj.goods_name()
+                    if check_name not in ['无', '多种']:
+                        check_name = check_name.lower().replace(' ', '')
+                        if check_name not in obj.message:
+                            self.message_user("%s 发货型号与备注不符" % obj.order_id, "error")
+                            obj.mistake_tag = 16
                             obj.save()
                             n -= 1
                             continue
@@ -677,12 +729,12 @@ class CheckTOAction(BaseActionView):
                         obj.handle_interval = math.floor(total_seconds / 60)
                     copy_fields_order = ['shop', 'order_id', 'order_category', 'sent_consignee', 'sent_smartphone',
                                          'quantity', 'amount', 'mode_warehouse', 'creator', 'sign_company',
-                                         'message', 'sign_department']
+                                         'sign_department']
 
                     for key in copy_fields_order:
                         value = getattr(obj, key, None)
                         setattr(bill_order, key, value)
-
+                    bill_order.message = obj.message[:199]
                     bill_order.creator = self.request.user.username
                     bill_order.submit_time = datetime.datetime.now()
                     bill_order.tail_order = obj
@@ -1238,6 +1290,12 @@ class SubimtROAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
+                    if obj.order_category != 3:
+                        self.message_user("%s 现阶段只支持退货单，更正为退货单" % obj.order_id, "error")
+                        obj.mistake_tag = 14
+                        obj.save()
+                        n -= 1
+                        continue
                     if obj.order_id:
                         _q_refund_quantity = obj.tail_order.refund_tail_order.all().filter(
                             order_status__in=[1, 2, 3]).aggregate(quantity=Sum('quantity'))['quantity']
@@ -1618,7 +1676,6 @@ class CheckAOAction(BaseActionView):
         return None
 
 
-
 class OTOGoodsInline(object):
     model = OTOGoods
     exclude = ['creator', 'goods_id', 'is_delete', 'order_id']
@@ -1629,11 +1686,10 @@ class OTOGoodsInline(object):
 
 # 原始尾货订单创建并提交界面
 class OTOUnhandleAdmin(object):
-    list_display = ['shop', 'order_id', 'process_tag', 'mistake_tag',  'amount', 'quantity', 'order_category',
-                    'mode_warehouse', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
-                    'sent_address', 'submit_time', 'handle_time', 'handle_interval', 'message', 'feedback',
-                    'sign_company', 'sign_department', 'order_status']
-    actions = [SetUsedOTOAction, SetRetreadOTOAction, SubmitOTOAction, RejectSelectedAction]
+    list_display = ['shop',  'mistake_tag', 'goods_name', 'quantity', 'amount', 'sent_consignee', 'sent_smartphone', 'sent_address',
+                    'message', 'order_id', 'feedback', 'process_tag', 'mode_warehouse', 'order_category',
+                    'order_status', 'sent_city', 'sent_district',   'sign_company', 'sign_department', ]
+    actions = [SetUsedOTOAction, SetRetreadOTOAction, SetRepeatedOTOAction, SubmitOTOAction, RejectSelectedAction]
 
     search_fields = ['order_id']
     list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category']
@@ -1935,7 +1991,7 @@ class OTOUnhandleAdmin(object):
 
 
 class OTOCheckAdmin(object):
-    list_display = ['shop', 'order_id', 'mistake_tag', 'process_tag', 'amount', 'quantity', 'order_category',
+    list_display = ['shop', 'order_id', 'mistake_tag', 'process_tag', 'amount', 'goods_name', 'quantity', 'order_category',
                     'mode_warehouse', 'feedback', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
                     'sent_address', 'submit_time', 'handle_time', 'handle_interval', 'message',  'sign_company',
                     'sign_department']
@@ -1980,10 +2036,10 @@ class OTOCheckAdmin(object):
 
 
 class OriTailOrderAdmin(object):
-    list_display = ['shop', 'order_id', 'amount', 'order_category', 'mode_warehouse', 'feedback', 'sent_consignee',
-                    'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'submit_time', 'handle_time',
-                    'handle_interval', 'message',  'sign_company', 'sign_department', 'process_tag', 'mistake_tag',
-                    'order_status']
+    list_display = ['shop', 'order_id', 'goods_name', 'quantity', 'amount', 'order_category', 'mode_warehouse',
+                    'feedback', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',
+                    'submit_time', 'handle_time', 'handle_interval', 'message',  'sign_company', 'sign_department',
+                    'process_tag', 'mistake_tag', 'order_status']
 
     search_fields = ['order_id']
     list_filter = ['process_tag', 'mode_warehouse', 'creator', 'sent_smartphone', 'mistake_tag', 'order_category',
@@ -2031,7 +2087,7 @@ class OTOGoodsAdmin(object):
 
 class TOGoodsInline(object):
     model = TOGoods
-    exclude = ['creator', 'goods_id', 'is_delete', 'order_id', 'price', 'amount']
+    exclude = ['creator', 'goods_id', 'is_delete', 'order_id', 'price', 'amount', 'settlement_price', 'settlement_amount']
 
     extra = 1
     style = 'table'
@@ -2043,12 +2099,12 @@ class TOhandleAdmin(object):
                     'submit_time', 'handle_time', 'handle_interval', 'message',  'sign_company', 'sign_department',
                     'order_category', 'mode_warehouse', 'order_status']
 
-    exclude = ['amount', 'ori_amount',]
+    list_exclude = ['amount', 'ori_amount',]
 
     actions = [CheckTOAction, RejectSelectedAction,]
 
     search_fields = ['order_id']
-    list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
+    list_filter = ['order_id', 'mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
                    'submit_time', 'create_time']
 
     list_editable = ['track_no']
@@ -2230,10 +2286,10 @@ class TOSpecialhandleAdmin(object):
                     'process_tag', 'mistake_tag', 'order_status']
 
     actions = [CheckTOAction, RejectSelectedAction, ]
-    exclude = ['amount', 'ori_amount',]
+    list_exclude = ['amount', 'ori_amount', ]
 
     search_fields = ['order_id']
-    list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
+    list_filter = ['order_id', 'mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
                    'submit_time', 'create_time']
 
     list_editable = ['track_no']
@@ -2414,30 +2470,33 @@ class TailOrderAdmin(object):
                     'sent_address', 'submit_time', 'handle_time', 'handle_interval', 'message',
                     'sign_company', 'sign_department', 'process_tag', 'mistake_tag', 'order_status']
 
-    search_fields = ['order_id', 'track_no',]
-    list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
+    search_fields = ['sent_smartphone', 'track_no', 'order_id']
+    list_filter = ['order_id', 'mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category', 'sent_smartphone',
                    'submit_time', 'create_time']
 
-    list_editable = ['track_no', 'feedback']
     readonly_fields = ['shop', 'sign_company', 'order_id', 'sent_city', 'sent_district', 'sent_address', 'message',
-                       'sent_consignee', 'order_category', 'sent_smartphone', 'mode_warehouse', ]
+                       'sent_consignee', 'order_category', 'sent_smartphone', 'mode_warehouse', 'track_no',
+                       'ori_tail_order', 'sent_province', 'creator', 'submit_time', 'handle_time', 'quantity', 'amount',
+                       'ori_amount', 'handle_interval', 'feedback', 'sign_department', 'process_tag', 'mistake_tag',
+                       'order_status', 'is_delete',]
 
     inlines = [TOGoodsInline]
     relfield_style = 'fk-ajax'
 
     form_layout = [
-        Fieldset('可编辑信息',
-                 'feedback', ),
         Fieldset('基本信息',
                  Row('shop', 'sign_company'),
-                 'order_id',
-                 'order_category', ),
+                 Row('order_id', 'ori_tail_order',),
+                 Row('order_category', 'message',),
+                 Row('mode_warehouse', 'quantity',),),
+        Fieldset('单号反馈信息',
+                 'track_no', ),
         Fieldset('发货相关信息',
                  Row('sent_consignee', 'sent_smartphone'),
-                 Row('sent_city', 'sent_district'),
+                 Row('sent_province', 'sent_city', 'sent_district'),
                  'sent_address'),
         Fieldset(None,
-                 'submit_time', 'handle_time', 'handle_interval', 'process_tag', 'amount',
+                 'submit_time', 'handle_time', 'handle_interval', 'process_tag', 'feedback', 'amount', 'ori_amount',
                  'mistake_tag', 'order_status', 'is_delete', 'creator', 'sign_company', 'sign_department',
                  **{"style": "display:None"}),
     ]
@@ -2447,18 +2506,17 @@ class TailOrderAdmin(object):
         queryset = queryset.filter(is_delete=0)
         return queryset
 
-    def has_add_permission(self):
-        # 禁用添加按钮
-        return False
 
-
+# 重损仓未发货货品明细
 class TOHGoodsAdmin(object):
-    list_display = ['tail_order', 'mode_warehouse', 'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city',
-                    'sent_district', 'sent_address', 'shop', 'goods_name', 'goods_id', 'quantity', ]
+    list_display = ['shop', 'tail_order', 'sent_consignee', 'sent_consignee', 'sent_address', 'sent_smartphone',
+                    'sent_phone', 'deliver_condition', 'discounts', 'post_fee', 'receivable', 'settlement_price',
+                    'settlement_amount', 'goods_id', 'goods_name', 'quantity', 'order_category', 'message',
+                    'sent_province', 'sent_city', 'sent_district', 'track_no', 'mode_warehouse']
 
     readonly_fields = ['tail_order', 'goods_id', 'goods_name', 'quantity', 'price', 'memorandum', 'settlement_price',
                        'settlement_amount', 'goods_nickname', 'creator', 'amount']
-    list_exclude = ['settlement_price', 'settlement_amount', 'price', 'amount']
+    list_exclude = ['price', 'amount']
     list_filter = ['tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse',
                    'goods_name', 'quantity', 'price', 'create_time', 'creator']
     search_fields = ['tail_order__sent_smartphone']
@@ -2487,14 +2545,15 @@ class TOHGoodsAdmin(object):
         return queryset
 
 
+# 非重损仓未发货货品明细
 class TOSGoodsAdmin(object):
-    list_display = ['tail_order', 'mode_warehouse', 'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city',
-                    'sent_district', 'sent_address', 'shop', 'goods_name', 'goods_id', 'quantity', ]
+    list_display = ['tail_order', 'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city', 'sent_district',
+                    'sent_address', 'shop', 'goods_name',  'quantity', 'mode_warehouse', 'track_no', 'goods_id']
 
     readonly_fields = ['tail_order', 'goods_id', 'goods_name', 'quantity', 'price', 'memorandum', 'settlement_price',
                        'settlement_amount', 'goods_nickname', 'creator', 'amount']
     list_exclude = ['settlement_price', 'settlement_amount', 'price', 'amount']
-    list_filter = ['tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse',
+    list_filter = ['tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse',  'tail_order__track_no',
                    'goods_name', 'quantity', 'price', 'create_time', 'creator']
     search_fields = ['tail_order__sent_smartphone']
 
@@ -2520,14 +2579,16 @@ class TOSGoodsAdmin(object):
         return queryset
 
 
+# 尾货订单发货明细
 class TOGoodsAdmin(object):
-    list_display = ['tail_order', 'mode_warehouse', 'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city',
-                    'sent_district', 'sent_address', 'shop', 'goods_name', 'goods_id', 'quantity', ]
+    list_display = ['tail_order', 'mode_warehouse', 'shop', 'goods_name', 'goods_id', 'quantity', 'track_no',
+                    'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city',
+                    'sent_district', 'sent_address', ]
 
     readonly_fields = ['tail_order', 'goods_id', 'goods_name', 'quantity', 'price', 'memorandum', 'settlement_price',
                        'settlement_amount', 'goods_nickname', 'creator', 'amount']
     list_exclude = ['settlement_price', 'settlement_amount', 'price', 'amount']
-    list_filter = ['tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse',
+    list_filter = ['tail_order__order_id', 'tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse', 'tail_order__track_no',
                    'goods_name', 'quantity', 'price', 'create_time', 'creator']
     search_fields = ['tail_order__sent_smartphone']
 
@@ -2548,6 +2609,38 @@ class TOGoodsAdmin(object):
         return False
 
 
+# 特殊权限尾货订单发货明细
+class TOPrivilegeGoodsAdmin(object):
+    list_display = ['tail_order', 'mode_warehouse', 'shop', 'goods_name', 'goods_id', 'quantity', 'price', 'amount',
+                    'settlement_price', 'settlement_amount', 'track_no', 'message',  'order_status', 'refund_status',
+                    'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city', 'sent_district',
+                     'sent_address', 'submit_time',  'handle_time', 'handle_interval', ]
+
+    readonly_fields = ['tail_order', 'goods_id', 'goods_name', 'quantity', 'price', 'memorandum', 'settlement_price',
+                       'settlement_amount', 'goods_nickname', 'creator', 'amount']
+    list_filter = ['tail_order__order_id', 'tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse',
+                   'tail_order__track_no', 'goods_name', 'quantity', 'price', 'create_time', 'creator',]
+    search_fields = ['tail_order__order_id', 'tail_order__sent_smartphone', 'goods_nickname']
+
+    form_layout = [
+        Fieldset('基本信息',
+                 Row('tail_order'),
+                 ),
+        Fieldset('货品信息',
+                 Row('goods_id', 'goods_name', 'quantity', ),
+                 Row('price', 'amount',),
+                 Row('settlement_price', 'settlement_amount',),
+                 ),
+        Fieldset(None,
+                 'creator', 'is_delete',
+                 **{"style": "display:None"}),
+    ]
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
 class PBOGoodsInline(object):
     model = PBOGoods
     exclude = ['creator', 'goods_id', 'is_delete', 'goods_nickname', 'pb_order']
@@ -2556,6 +2649,7 @@ class PBOGoodsInline(object):
     style = 'table'
 
 
+# 付款结算单确认界面
 class PBOSubmitAdmin(object):
     list_display = ['tail_order', 'order_id', 'track_no', 'process_tag', 'mistake_tag', 'order_category', 'sent_consignee',
                     'sent_smartphone', 'mode_warehouse', 'quantity', 'amount', 'creator', 'create_time', 'message',]
@@ -2598,6 +2692,7 @@ class PBOSubmitAdmin(object):
         return False
 
 
+# 付款结算单审核界面
 class PBOCheckAdmin(object):
     list_display = ['tail_order', 'order_id', 'track_no', 'process_tag', 'mistake_tag', 'order_category', 'sent_consignee',
                     'sent_smartphone', 'mode_warehouse', 'quantity', 'amount', 'creator', 'create_time', 'message',]
@@ -2660,6 +2755,7 @@ class PBOCheckAdmin(object):
         return False
 
 
+# 付款结算单货品明细
 class PBOGoodsAdmin(object):
 
     def has_add_permission(self):
@@ -2667,6 +2763,7 @@ class PBOGoodsAdmin(object):
         return False
 
 
+# 付款结算单订单查询界面
 class PayBillOrderAdmin(object):
     list_display = ['tail_order', 'order_status', 'order_id', 'track_no', 'process_tag', 'mistake_tag',
                     'order_category', 'sent_consignee', 'sent_smartphone', 'mode_warehouse', 'quantity',
@@ -2687,6 +2784,7 @@ class PayBillOrderAdmin(object):
         return False
 
 
+# 重损仓对账明细单审核界面
 class AccountCheckAdmin(object):
     list_display = ['order_id', 'shop', 'mode_warehouse', 'order_category', 'goods_id', 'goods_name', 'goods_nickname',
                     'quantity', 'settlement_price', 'settlement_amount', 'sent_consignee', 'sent_smartphone',
@@ -2710,6 +2808,7 @@ class AccountCheckAdmin(object):
         return False
 
 
+# 非重损仓对账明细单审核界面
 class AccountSpecialCheckAdmin(object):
     list_display = ['order_id', 'shop', 'mode_warehouse', 'order_category', 'goods_id', 'goods_name', 'goods_nickname',
                     'quantity', 'settlement_price', 'settlement_amount', 'sent_consignee', 'sent_smartphone',
@@ -2733,6 +2832,7 @@ class AccountSpecialCheckAdmin(object):
         return False
 
 
+# 未结算完成对账明细界面
 class AccountUnfinishedAdmin(object):
     list_display = ['order_id', 'shop', 'mode_warehouse', 'order_category', 'goods_id', 'goods_name',
                     'goods_nickname', 'quantity', 'settlement_price', 'settlement_amount', 'sent_consignee', 'sent_smartphone',
@@ -2757,6 +2857,7 @@ class AccountUnfinishedAdmin(object):
         return False
 
 
+# 对账明细单查询界面
 class AccountInfoAdmin(object):
     list_display = ['order_id', 'shop', 'mode_warehouse', 'order_category', 'goods_id', 'goods_name',
                     'goods_nickname', 'quantity', 'settlement_price', 'settlement_amount', 'sent_consignee', 'sent_smartphone',
@@ -2778,6 +2879,7 @@ class AccountInfoAdmin(object):
         return False
 
 
+# 付款单和对账单关联界面
 class PBillToAccountAdmin(object):
     list_display = ['pbo_order', 'account_order']
 
@@ -2794,9 +2896,9 @@ class FSOGoodsInline(object):
     style = 'table'
 
 
-# 重损仓待确认
+# 重损仓待确认账单
 class FSAffirmAdmin(object):
-    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag', 'pay_order_id',
+    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag',
                     'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account']
     readonly_fields = ['order_id', 'message', 'mistake_tag', 'process_tag', 'creator', 'submit_time',
                        'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account', 'handle_time',
@@ -2819,9 +2921,9 @@ class FSAffirmAdmin(object):
         return False
 
 
-# 非重损仓待确认
+# 非重损仓待确认账单
 class FSSpecialAffirmAdmin(object):
-    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag', 'pay_order_id',
+    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag',
                     'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account']
     readonly_fields = ['order_id', 'message', 'mistake_tag', 'process_tag', 'creator', 'submit_time',
                        'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account', 'handle_time',
@@ -2844,6 +2946,7 @@ class FSSpecialAffirmAdmin(object):
         return False
 
 
+# 账单付款界面
 class FSSubmitAdmin(object):
     list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag',
                     'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account']
@@ -2867,8 +2970,9 @@ class FSSubmitAdmin(object):
         return False
 
 
+# 重损仓账单结算确认界面
 class FSCheckAdmin(object):
-    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag', 'pay_order_id',
+    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag',
                     'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account']
     readonly_fields = ['order_id', 'message', 'mistake_tag', 'process_tag', 'creator', 'submit_time',
                        'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account', 'handle_time',
@@ -2891,8 +2995,9 @@ class FSCheckAdmin(object):
         return False
 
 
+# 非重损账单确认界面
 class FSSpecialCheckAdmin(object):
-    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag', 'pay_order_id',
+    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag',
                     'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account']
     readonly_fields = ['order_id', 'message', 'mistake_tag', 'process_tag', 'creator', 'submit_time',
                        'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account', 'handle_time',
@@ -2916,8 +3021,9 @@ class FSSpecialCheckAdmin(object):
         return False
 
 
+# 账单查询界面
 class FinalStatementAdmin(object):
-    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag', 'pay_order_id',
+    list_display = ['order_id', 'pay_order_id', 'message', 'feedback', 'mistake_tag', 'process_tag',
                     'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account']
     readonly_fields = ['order_id', 'message', 'mistake_tag', 'process_tag', 'creator', 'submit_time',
                        'mode_warehouse', 'quantity', 'amount', 'payee', 'bank', 'account', 'handle_time',
@@ -2933,6 +3039,7 @@ class FinalStatementAdmin(object):
         return False
 
 
+# 账单货品明细界面
 class FinalStatementGoodsAdmin(object):
     list_display = ['fs_order', 'order_category', 'goods_id', 'goods_name', 'goods_nickname', 'quantity',
                     'settlement_price', 'settlement_amount', 'memorandum']
@@ -2956,10 +3063,10 @@ class ROGInline(object):
 # 退换货单创建界面
 class ROHandleAdmin(object):
     list_display = ['tail_order', 'order_id', 'process_tag', 'mistake_tag',  'shop', 'message', 'feedback',
-                    'order_category', 'info_refund', 'track_no', 'sent_consignee', 'sent_smartphone',
-                    'sent_city', 'sent_district', 'sent_address', 'quantity', 'amount',
+                    'goods_name', 'order_category', 'info_refund', 'track_no', 'sent_consignee', 'sent_smartphone',
+                    'sent_city', 'sent_district', 'sent_address', 'quantity', 'amount', 'mode_warehouse',
                     'sign_company',  'sign_department']
-    actions = [SetROEAction, SetROCAction, SubimtROAction, RejectSelectedAction]
+    actions = [SubimtROAction, RejectSelectedAction]
     search_fields = ['order_id']
     list_filter = []
 
@@ -3050,10 +3157,10 @@ class ROHandleAdmin(object):
 
 # 退换货单审核及待入库界面
 class ROCheckAdmin(object):
-    list_display = ['tail_order',  'process_tag', 'mistake_tag',  'shop', 'order_id', 'order_category', 'info_refund',
-                    'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
-                    'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
-                    'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department']
+    list_display = ['tail_order', 'mode_warehouse', 'process_tag', 'mistake_tag', 'message', 'feedback',  'shop',
+                    'order_id', 'goods_name', 'order_category', 'info_refund', 'track_no', 'sent_consignee',
+                    'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'quantity', 'amount',
+                    'ori_amount', 'receipted_quantity', 'receipted_amount',  'sign_company',  'sign_department']
 
     list_filter = ['tail_order__order_id',  'process_tag', 'mistake_tag',  'shop', 'order_category', 'create_time',
                    'sent_consignee', 'sent_smartphone', 'receipted_quantity', 'sign_company',
@@ -3066,7 +3173,7 @@ class ROCheckAdmin(object):
                        'receipted_quantity', 'receipted_amount', 'submit_time', 'handle_time', 'sent_consignee',
                        'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'handle_interval',
                        'sign_company', 'sign_department', 'process_tag', 'mistake_tag', 'order_status',
-                       'info_refund', 'order_category', 'fast_tag']
+                       'info_refund', 'order_category', 'fast_tag', 'track_no', 'mode_warehouse',]
     inlines = [ROGInline]
     batch_data = True
     delivery_ids = []
@@ -3116,12 +3223,17 @@ class ROCheckAdmin(object):
             obj.save()
         return queryset
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
+
+# 退货单查询界面
 class RefundOrderAdmin(object):
     list_display = ['tail_order',  'process_tag', 'mistake_tag',  'shop', 'order_id', 'order_category', 'info_refund',
-                    'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
-                    'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
-                    'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
+                    'track_no', 'goods_name', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
+                    'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity', 'receipted_amount',
+                    'mode_warehouse', 'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
     inlines = [ROGInline]
     readonly_fields = ['tail_order',  'process_tag', 'mistake_tag',  'shop', 'order_id', 'order_category', 'info_refund',
                        'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
@@ -3132,7 +3244,12 @@ class RefundOrderAdmin(object):
                     'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
                     'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
+
+# 退货单货品入库界面
 class ROGCheckAdmin(object):
     list_display = ['shop', 'refund_order', 'mistake_tag', 'goods_name', 'quantity', 'receipted_quantity',
                     'info_refund', 'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
@@ -3170,7 +3287,12 @@ class ROGCheckAdmin(object):
             queryset = queryset.filter(order_status__in=[2, 3], is_delete=0)
         return queryset
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
+
+# 退货单货品查询界面
 class ROGoodsAdmin(object):
     list_display = ['shop', 'refund_order', 'mistake_tag', 'goods_name', 'quantity', 'receipted_quantity',
                     'info_refund', 'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
@@ -3182,6 +3304,10 @@ class ROGoodsAdmin(object):
                        'settlement_price', 'settlement_amount', 'mistake_tag', 'receipted_quantity', 'creator',
                        'process_tag', 'memorandum']
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class ABOGInline(object):
     model = ABOGoods
@@ -3191,6 +3317,7 @@ class ABOGInline(object):
     style = 'table'
 
 
+# 退款单审核界面
 class ABOSubmitAdmin(object):
     list_display = ['refund_order', 'process_tag', 'mistake_tag', 'shop', 'order_id', 'order_category', 'track_no',
                     'sent_consignee', 'sent_smartphone', 'settlement_quantity',
@@ -3211,11 +3338,18 @@ class ABOSubmitAdmin(object):
         queryset = queryset.filter(order_status=1, is_delete=0)
         return queryset
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
 
 class ABOCheckAdmin(object):
-    pass
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
+# 退款结算单查询界面
 class ArrearsBillOrderAdmin(object):
     list_display = ['refund_order', 'order_status', 'process_tag', 'mistake_tag', 'shop', 'order_id', 'order_category',
                     'track_no', 'sent_consignee', 'sent_smartphone', 'settlement_quantity',
@@ -3227,15 +3361,25 @@ class ArrearsBillOrderAdmin(object):
                        'settlement_amount', 'message', 'feedback', 'sign_company', 'sign_department',
                        'creator', 'mode_warehouse', 'submit_time', 'handle_time', 'handle_interval', 'order_status']
 
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
+
+# 退款结算货品明细界面
 class ABOGoodsAdmin(object):
-    pass
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
+# 退款结算单关联对账单界面
 class ABillToAccountAdmin(object):
-    pass
 
-
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 # 提交赠品信息到订单
@@ -3254,6 +3398,14 @@ class SubmitTPOAction(BaseActionView):
             raise PermissionDenied
         if n:
             for obj in queryset:
+                _q_repeat_order = TailPartsOrder.objects.filter(sent_smartphone=obj.sent_smartphone, order_status=2)
+                if _q_repeat_order.exists():
+                    if obj.process_tag != 6:
+                        self.message_user("%s电话重复" % obj.order_id, "error")
+                        n -= 1
+                        obj.mistakes = 12
+                        obj.save()
+                        continue
                 if '整机' in obj.parts_info:
                     self.message_user("%s货品名称包含整机不是配件" % obj.order_id, "error")
                     n -= 1
@@ -3294,16 +3446,19 @@ class SubmitTPOAction(BaseActionView):
                     _gift_checked = GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id, mobile=obj.sent_smartphone)
                     if _gift_checked.exists():
                         delta_date = (obj.create_time - _gift_checked[0].create_time).days
-                        if int(delta_date) > 14:
-                            n -= 1
-                            obj.mistakes = 5
-                            obj.save()
-                            continue
-                        else:
-                            n -= 1
-                            obj.mistakes = 4
-                            obj.save()
-                            continue
+                        if obj.process_tag != 6:
+                            if int(delta_date) > 14:
+                                self.message_user("%s14天内重复" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 5
+                                obj.save()
+                                continue
+                            else:
+                                self.message_user("%s14天外重复" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 4
+                                obj.save()
+                                continue
 
                     gift_order.address = obj.sent_address
                     gift_order.receiver = obj.sent_consignee
@@ -3384,16 +3539,58 @@ class SubmitTPOAction(BaseActionView):
         return goods_group
 
 
+# 提交赠品信息到订单
+class SetTPOSAction(BaseActionView):
+    action_name = "set_tpo_special"
+    description = "设置选中为特殊订单"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            queryset.update(process_tag=6)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+class SetTPOCAction(BaseActionView):
+    action_name = "set_tpo_clear"
+    description = "清除选中订单标记"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            queryset.update(process_tag=0)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
 # 售后赠品配件创建界面
 class SubmitTPOAdmin(object):
     list_display = ['shop', 'order_id', 'process_tag', 'mistake_tag', 'sent_consignee', 'sent_smartphone', 'sent_city',
-                    'sent_district', 'sent_address', 'parts_info', 'message', 'sign_company', 'sign_department' ]
+                    'sent_district', 'sent_address', 'parts_info', 'message', 'sign_company', 'sign_department',
+                    'order_category', 'creator', 'create_time', 'update_time', 'order_status']
     actions = [SubmitTPOAction, RejectSelectedAction]
 
     search_fields = ['order_id']
-    list_filter = ['sent_consignee', 'process_tag', 'creator', 'mistake_tag', 'parts_info']
+    list_filter = ['sent_consignee', 'process_tag', 'creator', 'mistake_tag', 'parts_info', 'create_time']
 
-    list_editable = ['sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
+    list_editable = ['sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'parts_info',
                      'sent_address', 'message',]
 
     readonly_fields = []
@@ -3445,16 +3642,23 @@ class SubmitTPOAdmin(object):
         queryset = queryset.filter(order_status=1, is_delete=0)
         return queryset
 
+
+# 尾货配件查询界面
 class TailPartsOrderAdmin(object):
     list_display = ['shop', 'order_id', 'process_tag', 'mistake_tag', 'sent_consignee', 'sent_smartphone', 'sent_city',
-                    'sent_district', 'sent_address', 'parts_info', 'message', 'sign_company', 'sign_department' ]
-    actions = [SubmitTPOAction, RejectSelectedAction]
+                    'sent_district', 'sent_address', 'parts_info', 'message', 'sign_company', 'sign_department',
+                    'order_category', 'creator', 'create_time', 'update_time', 'order_status']
 
     search_fields = ['order_id']
-    list_filter = ['sent_consignee', 'process_tag', 'creator', 'mistake_tag', 'parts_info', 'sent_smartphone',]
+    list_filter = ['sent_consignee', 'process_tag', 'creator', 'mistake_tag', 'parts_info', 'sent_smartphone',
+                   'create_time']
     readonly_fields = ['shop', 'order_id', 'process_tag', 'mistake_tag', 'sent_consignee', 'sent_smartphone',
                        'sent_city', 'sent_district', 'sent_address', 'parts_info', 'message', 'sign_company',
                        'sign_department', 'order_status', 'order_category', 'creator', 'is_delete']
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
 
 
 xadmin.site.register(OTOUnhandle, OTOUnhandleAdmin)
@@ -3468,6 +3672,7 @@ xadmin.site.register(TailOrder, TailOrderAdmin)
 xadmin.site.register(TOHGoods, TOHGoodsAdmin)
 xadmin.site.register(TOSGoods, TOSGoodsAdmin)
 xadmin.site.register(TOGoods, TOGoodsAdmin)
+xadmin.site.register(TOPrivilegeGoods, TOPrivilegeGoodsAdmin)
 
 xadmin.site.register(PBOSubmit, PBOSubmitAdmin)
 xadmin.site.register(PBOCheck, PBOCheckAdmin)
