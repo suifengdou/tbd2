@@ -147,6 +147,10 @@ class RejectSelectedAction(BaseActionView):
                         else:
                             self.message_user("%s 驳回上一级成功" % obj.order_id, "success")
                         obj.save()
+                if isinstance(obj, TailPartsOrder):
+                    obj.order_status -= 1
+                    obj.process_tag = 5
+                    obj.save()
             self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None

@@ -577,7 +577,7 @@ class ODTBInfoInline(object):
 # 淘宝对话查询界面
 class OriDialogTBAdmin(object):
     list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag']
-    list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name']
+    list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name', 'creator']
     search_fields = ['customer']
     inlines = [ODTBInfoInline]
     import_data = True
@@ -817,7 +817,7 @@ class ExtractODTBAdmin(object):
     list_display = ['dialog_tb', 'mistake_tag', 'sayer', 'd_status', 'time', 'interval', 'content', 'index',
                     'sensitive_tag', 'order_status']
     list_filter = ['dialog_tb__customer', 'mistake_tag', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status',
-                   'time', 'interval', 'content']
+                   'time', 'interval', 'content', 'creator']
     search_fields = ['dialog_tb__customer']
     readonly_fields = ['dialog_tb', 'mistake_tag', 'sayer', 'd_status', 'time', 'interval', 'index', 'sensitive_tag',
                        'order_status', 'creator', 'extract_tag']
@@ -853,7 +853,7 @@ class OriDetailTBAdmin(object):
     list_display = ['dialog_tb', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag',
                     'sensitive_tag', 'order_status']
     list_filter = ['dialog_tb__customer', 'mistake_tag', 'category', 'create_time', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status',
-                   'time', 'interval', 'content']
+                   'time', 'interval', 'content', 'creator']
     search_fields = ['dialog_tb__customer']
     readonly_fields = ['dialog_tb', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag',
                        'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag', 'category',]
@@ -872,7 +872,7 @@ class ODJDInfoInline(object):
 # 京东对话查询界面
 class OriDialogJDAdmin(object):
     list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag']
-    list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name']
+    list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name', 'creator']
     search_fields = ['customer']
     inlines = [ODJDInfoInline,]
     import_data = True
@@ -1091,7 +1091,7 @@ class ExceptionODJDAdmin(object):
 class ExtractODJDAdmin(object):
     list_display = ['dialog_jd', 'mistake_tag', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'sensitive_tag', 'order_status']
     list_filter = ['dialog_jd__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status', 'time',
-                   'interval', 'content']
+                   'interval', 'content', 'creator']
     search_fields = ['dialog_jd__customer']
     readonly_fields = ['dialog_jd', 'mistake_tag', 'sayer', 'd_status', 'time', 'interval', 'index', 'sensitive_tag', 'order_status', 'creator', 'extract_tag']
     list_editable = ['content']
@@ -1105,10 +1105,13 @@ class ExtractODJDAdmin(object):
 
 # 京东对话明细
 class OriDetailJDAdmin(object):
-    list_display = ['dialog_jd', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag', 'sensitive_tag', 'order_status']
-    list_filter = ['dialog_jd__customer', 'mistake_tag', 'category', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status', 'time', 'interval', 'content']
+    list_display = ['dialog_jd', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag',
+                    'sensitive_tag', 'order_status']
+    list_filter = ['dialog_jd__customer', 'mistake_tag', 'category', 'index', 'extract_tag', 'sensitive_tag', 'sayer',
+                   'd_status', 'time', 'interval', 'content', 'creator']
     search_fields = ['dialog_jd__customer']
-    readonly_fields = ['dialog_jd', 'sayer', 'category', 'create_time', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag', 'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag']
+    readonly_fields = ['dialog_jd', 'sayer', 'category', 'create_time', 'd_status', 'time', 'interval', 'content',
+                       'index', 'extract_tag', 'sensitive_tag', 'order_status', 'creator', 'is_delete', 'mistake_tag']
     actions = [ResetODJDExtract, ResetODJDSensitive]
 
 
@@ -1195,7 +1198,7 @@ class OriDialogOWAdmin(object):
             return report_dic
         # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
         elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
-            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
+            df = pd.read_csv(_file, encoding="gb18030", chunksize=300)
 
             for piece in df:
                 # 获取表头
@@ -1385,7 +1388,28 @@ class ExtractODOWadmin(object):
 
 
 class MyExtractODOWAdmin(object):
-    pass
+    list_display = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category', 'extract_tag',
+                    'sensitive_tag', 'order_status', 'mistake_tag']
+    list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
+                   'd_status', 'interval', 'creator', 'create_time']
+    search_fields = ['dialog_ow__customer',]
+    list_editable = ['content']
+    form_layout = [
+        Fieldset('客户信息',
+                 Row('sayer', 'd_status', ),
+                 Row('time', 'interval', 'category', ),
+                 'content', ),
+        Fieldset(None,
+                 'creator', 'create_time', 'update_time', 'is_delete', **{"style": "display:None"}),
+    ]
+    readonly_fields = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'index', 'category',
+                       'extract_tag', 'sensitive_tag', 'order_status', 'mistake_tag']
+    actions = [ExtractODOWAction, PassODJDAction]
+
+    def queryset(self):
+        queryset = super(MyExtractODOWAdmin, self).queryset()
+        queryset = queryset.filter(extract_tag=0, creator=self.request.user.username)
+        return queryset
 
 
 class ExceptionODOWAdmin(object):

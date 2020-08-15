@@ -23,7 +23,7 @@ class GiftInTalkInfo(BaseModel):
         (1, '14天内重复订单'),
         (2, '14天外重复订单'),
         (3, '收货人，电话，地址不全'),
-        (4, '地址中，二级市出错，请使用京东系统信息'),
+        (4, '地址中，二级市出错，请使用标准系统信息'),
         (5, '网名错误'),
         (6, '系统出错，请重复提交，无法解决时联系管理员'),
         (7, '平台出错'),
@@ -43,6 +43,14 @@ class GiftInTalkInfo(BaseModel):
         (2, '开箱即损'),
         (3, '礼品赠品'),
     )
+    PROCESS_TAG = (
+        (0, '未处理'),
+        (1, '待核实'),
+        (2, '已确认'),
+        (3, '待清账'),
+        (4, '已处理'),
+        (5, '特殊订单'),
+    )
 
     cs_information = models.CharField(max_length=300, verbose_name='收件信息')
     goods = models.CharField(max_length=250, verbose_name='赠品信息')
@@ -55,6 +63,7 @@ class GiftInTalkInfo(BaseModel):
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='操作人')
     order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
     shop = models.CharField(max_length=150, null=True, blank=True, verbose_name='店铺')
+    process_tag = models.SmallIntegerField(choices=PROCESS_TAG, default=0, verbose_name='处理标签')
 
     class Meta:
         verbose_name = 'ASS-GT-手工订单提取查询'
