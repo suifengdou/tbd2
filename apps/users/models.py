@@ -22,7 +22,7 @@ class UserProfile(AbstractUser, BaseModel):
         (1, '淘系'),
         (2, '非淘'),
         (3, '官方商城'),
-        (4, '售后'),
+        (4, '呼叫中心'),
     )
     CATEGORY = (
         (0, '外埠'),

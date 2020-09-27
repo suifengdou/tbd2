@@ -25,9 +25,11 @@ import emoji
 
 from .models import DialogTag, OriDialogTB, OriDetailTB, OriDialogJD, OriDetailJD, ServicerInfo, MyExtractODTB
 from .models import SensitiveInfo, CheckODJD, ExtractODJD, ExceptionODJD, CheckODTB, ExtractODTB, ExceptionODTB
-from .models import OriDialogOW, OriDetailOW, CheckODOW, ExtractODOW, MyExtractODOW, ExceptionODOW
+from .models import OriDialogOW, OriDetailOW, CheckODOW, ExtractODOW, MyExtractODOW, ExceptionODOW, DOWID
 from apps.base.shop.models import ShopInfo
 from apps.assistants.giftintalk.models import GiftInTalkInfo, OrderTBList, OrderJDList, OrderOWList
+from apps.assistants.compensation.models import OriCompensation, DiaToOriist
+from apps.base.goods.models import MachineInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -460,6 +462,120 @@ class ExtractODTBAction(BaseActionView):
                         obj.category = 1
                         obj.save()
                         continue
+
+                _compensation_talk_data = re.findall(r'(·您好{.*}[\s\S]*?.*})', str(obj.content), re.DOTALL)
+                if _compensation_talk_data:
+                    _q_com_repeat = DiaToOriist.objects.filter(dialog_order=obj)
+                    if _q_com_repeat:
+                        result["false"] += 1
+                        obj.mistake_tag = 2
+                        obj.category = 2
+                        obj.save()
+                        continue
+                    else:
+                        _com_dia_list = DiaToOriist()
+                    _com_talk = OriCompensation()
+                    _rt_com_talk = re.findall(r'{((?:.|\n)*?)}', str(obj.content), re.DOTALL)
+
+                    if len(_rt_com_talk) == 7:
+                        _com_talk.servicer = _rt_com_talk[0]
+                        _com_talk.shop = obj.dialog_tb.shop
+                        _com_talk.nickname = obj.dialog_tb.customer
+                        _com_talk.goods_name = _rt_com_talk[1]
+                        _com_talk.compensation = _rt_com_talk[2].replace('差价', '').replace(' ', '')
+                        _com_talk.name = _rt_com_talk[3].replace('姓名', '').replace(' ', '')
+                        _com_talk.alipay_id = _rt_com_talk[4].replace('支付宝', '').replace(' ', '')
+                        _com_talk.order_id = _rt_com_talk[5].replace('订单号', '').replace(' ', '')
+                        formula = _rt_com_talk[6]
+
+                        _q_goods_name = MachineInfo.objects.filter(goods_name=_com_talk.goods_name)
+                        if not _q_goods_name.exists():
+                            result["false"] += 1
+                            obj.mistake_tag = 3
+                            obj.category = 2
+                            obj.save()
+                            continue
+                        try:
+                            _com_talk.compensation = float(_com_talk.compensation)
+
+                        except Exception as e:
+                            result["false"] += 1
+                            result["error"].append(e)
+                            obj.mistake_tag = 4
+                            obj.category = 2
+                            obj.save()
+                            continue
+                        if not _com_talk.name:
+                            result["false"] += 1
+                            obj.mistake_tag = 5
+                            obj.category = 2
+                            obj.save()
+                            continue
+                        if not _com_talk.alipay_id:
+                            result["false"] += 1
+                            obj.mistake_tag = 6
+                            obj.category = 2
+                            obj.save()
+                            continue
+                        if not re.match(r'^[0-9]+$', _com_talk.order_id):
+                            result["false"] += 1
+                            obj.mistake_tag = 7
+                            obj.category = 2
+                            obj.save()
+                            continue
+                        if re.match(r'^\d+-+\d+=\d+$', formula):
+
+                            elements = str(formula).split("-", 1)
+                            _com_talk.actual_receipts = float(elements[0])
+
+                            transition = str(elements[1]).split("=")
+                            _com_talk.receivable = float(transition[0])
+                            _com_talk.checking = float(transition[1])
+                            if _com_talk.actual_receipts - _com_talk.receivable != _com_talk.checking:
+                                result["false"] += 1
+                                obj.mistake_tag = 9
+                                obj.category = 2
+                                obj.save()
+                                continue
+                            if _com_talk.checking != _com_talk.compensation:
+                                result["false"] += 1
+                                obj.mistake_tag = 10
+                                obj.category = 2
+                                obj.save()
+                                continue
+                        else:
+                            result["false"] += 1
+                            obj.mistake_tag = 8
+                            obj.category = 2
+                            obj.save()
+                            continue
+
+                        try:
+                            _com_talk.creator = self.request.user.username
+                            _com_talk.save()
+                            _com_dia_list.ori_order = _com_talk
+                            _com_dia_list.dialog_order = obj
+                            _com_dia_list.creator = self.request.user.username
+                            _com_dia_list.save()
+                            obj.category = 2
+                            result["successful"] += 1
+                        except Exception as e:
+                            result["false"] += 1
+                            result["error"].append(e)
+                            obj.mistake_tag = 1
+                            obj.category = 2
+                            obj.save()
+                            continue
+
+
+
+                    else:
+                        result['false'] += 1
+                        result['error'].append("%s 对话的格式不对，导致无法提取" % _compensation_talk_data[1])
+                        obj.category = 2
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
                 obj.extract_tag = 1
                 obj.save()
             self.message_user(result)
@@ -815,7 +931,7 @@ class ExceptionODTBAdmin(object):
 # 淘宝对话明细订单提取界面
 class ExtractODTBAdmin(object):
     list_display = ['dialog_tb', 'mistake_tag', 'sayer', 'd_status', 'time', 'interval', 'content', 'index',
-                    'sensitive_tag', 'order_status']
+                    'sensitive_tag', 'order_status', 'create_time']
     list_filter = ['dialog_tb__customer', 'mistake_tag', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status',
                    'time', 'interval', 'content', 'creator']
     search_fields = ['dialog_tb__customer']
@@ -833,7 +949,7 @@ class ExtractODTBAdmin(object):
 # 淘宝对话明细订单提取界面
 class MyExtractODTBAdmin(object):
     list_display = ['dialog_tb', 'mistake_tag', 'sayer', 'd_status', 'time', 'interval', 'content', 'index',
-                    'sensitive_tag', 'order_status']
+                    'sensitive_tag', 'order_status', 'create_time']
     list_filter = ['dialog_tb__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status', 'time',
                    'interval', 'content']
     search_fields = ['dialog_tb__customer']
@@ -851,7 +967,7 @@ class MyExtractODTBAdmin(object):
 # 淘宝对话明细查询界面
 class OriDetailTBAdmin(object):
     list_display = ['dialog_tb', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag',
-                    'sensitive_tag', 'order_status']
+                    'sensitive_tag', 'order_status', 'create_time']
     list_filter = ['dialog_tb__customer', 'mistake_tag', 'category', 'create_time', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status',
                    'time', 'interval', 'content', 'creator']
     search_fields = ['dialog_tb__customer']
@@ -871,7 +987,7 @@ class ODJDInfoInline(object):
 
 # 京东对话查询界面
 class OriDialogJDAdmin(object):
-    list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag']
+    list_display = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag', 'create_time']
     list_filter = ['shop', 'customer', 'start_time', 'end_time', 'min', 'dialog_tag__name', 'creator']
     search_fields = ['customer']
     inlines = [ODJDInfoInline,]
@@ -1061,7 +1177,7 @@ class OriDialogJDAdmin(object):
 
 # 过滤敏感字
 class CheckODJDAdmin(object):
-    list_display = ['dialog_jd', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'sensitive_tag', 'order_status']
+    list_display = ['dialog_jd', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'sensitive_tag', 'order_status', 'create_time']
     list_filter = ['dialog_jd__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status', 'time',
                    'interval', 'content']
     search_fields = ['dialog_jd__customer']
@@ -1076,7 +1192,7 @@ class CheckODJDAdmin(object):
 # 异常对话界面
 class ExceptionODJDAdmin(object):
     list_display = ['dialog_jd', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'sensitive_tag',
-                    'order_status']
+                    'order_status', 'create_time']
     list_filter = ['dialog_jd__customer', 'index', 'extract_tag', 'sensitive_tag', 'sayer', 'd_status', 'time',
                    'interval', 'content']
     search_fields = ['dialog_jd__customer']
@@ -1106,7 +1222,7 @@ class ExtractODJDAdmin(object):
 # 京东对话明细
 class OriDetailJDAdmin(object):
     list_display = ['dialog_jd', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'extract_tag',
-                    'sensitive_tag', 'order_status']
+                    'sensitive_tag', 'order_status', 'create_time']
     list_filter = ['dialog_jd__customer', 'mistake_tag', 'category', 'index', 'extract_tag', 'sensitive_tag', 'sayer',
                    'd_status', 'time', 'interval', 'content', 'creator']
     search_fields = ['dialog_jd__customer']
@@ -1136,7 +1252,7 @@ class OriDialogOWAdmin(object):
 
 
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
-    INIT_FIELDS_DIC = {"客户": "customer", "对话开始时间": "start_time", "对话内容": "content"}
+    INIT_FIELDS_DIC = {"客户": "customer", "对话开始时间": "start_time", "对话内容": "content", "对话ID": "dialog_id"}
     import_data = True
 
     def post(self, request, *args, **kwargs):
@@ -1151,7 +1267,7 @@ class OriDialogOWAdmin(object):
         if '.' in _file.name and _file.name.rsplit('.')[-1] in self.__class__.ALLOWED_EXTENSIONS:
             df = pd.read_excel(_file, sheet_name=0)
 
-            FILTER_FIELDS = ['客户', '对话开始时间', '对话内容']
+            FILTER_FIELDS = ['客户', '对话开始时间', '对话内容', '对话ID']
 
             try:
                 df = df[FILTER_FIELDS]
@@ -1236,14 +1352,43 @@ class OriDialogOWAdmin(object):
     def save_resources(request, resource):
         # 设置初始报告
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error":[]}
-        category_dic = {'截单退回': 0, '无人收货': 1, '客户拒签': 2, '修改地址': 3, '催件派送': 4, '虚假签收': 5, '其他异常': 6}
 
         shop = '小狗官方商城'
 
         # 开始导入数据
+        i = 1
         for row in resource:
-            customer = str(row["customer"])
             content = str(row["content"])
+            customer = str(row["customer"])
+            dialog_id = str(row['dialog_id'])
+            if not dialog_id:
+                report_dic['discard'] += 1
+                continue
+            _q_dowid = DOWID.objects.filter(dialog_id=dialog_id)
+            if _q_dowid.exists():
+                report_dic['repeated'] += 1
+                continue
+            else:
+                dialog_id_order = DOWID()
+                dialog_id_order.dialog_id = dialog_id
+            try:
+                dialog_id_order.save()
+            except Exception as e:
+                report_dic['false'] += 1
+                report_dic['error'].append(e)
+                continue
+
+            if customer == "小程序用户":
+                while True:
+                    serial_number = str(datetime.datetime.now())[:10]
+                    postfix = str(int(serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", ""))) + str(i)
+                    i += 1
+                    customer = customer + postfix
+                    _q_dialog = OriDialogOW.objects.filter(shop=shop, customer=customer)
+                    if _q_dialog.exists():
+                        continue
+                    else:
+                        break
 
             content_list = content.split('\r\n')
             content_dic = {'content_text': '', 'sayer': ''}
@@ -1251,7 +1396,9 @@ class OriDialogOWAdmin(object):
             tag = 0
             for words in content_list:
                 words = words.replace('\r', '')
-                if re.match(r'[\S]+\s\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2}', words):
+                if re.match(r'----\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2}----', words):
+                    tag = 0
+                elif re.match(r'[\S]+\s\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2}', words):
                     tag = 1
                     if content_dic['sayer']:
                         dialog_contents.append(content_dic)
@@ -1259,23 +1406,18 @@ class OriDialogOWAdmin(object):
                     sayer_info = words.split(' ', 1)
                     content_dic['sayer'] = str(sayer_info[0]).replace('/r', '').replace(' ', '').replace('/n', '')
                     content_dic['time'] = str(sayer_info[1]).replace('/r', '').replace('/n', '')
-                elif re.match(r'----\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2}----', words):
-                    tag = 0
                 else:
                     if tag == 1:
                         content_dic['content_text'] = content_dic['content_text'] + words
             if content_dic['sayer']:
                 dialog_contents.append(content_dic)
-
+            if not dialog_contents:
+                continue
             start_time = dialog_contents[0]['time']
             _q_dialog = OriDialogOW.objects.filter(shop=shop, customer=customer)
             if _q_dialog.exists():
                 dialog_order = _q_dialog[0]
                 end_time = datetime.datetime.strptime(str(dialog_contents[-1]['time']), '%Y/%m/%d %H:%M:%S')
-                if customer != '小程序用户':
-                    if dialog_order.end_time >= end_time:
-                        report_dic['discard'] += 1
-                        continue
                 dialog_order.end_time = end_time
                 dialog_order.min += 1
             else:
@@ -1341,9 +1483,9 @@ class OriDialogOWAdmin(object):
 
 class OriDetailOWAdmin(object):
     list_display = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category', 'extract_tag',
-                    'sensitive_tag', 'order_status', 'mistake_tag']
+                    'sensitive_tag', 'order_status', 'mistake_tag', 'create_time']
     list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
-                   'd_status', 'interval', 'creator', 'create_time']
+                   'd_status', 'interval', 'creator', 'create_time', 'content', 'category']
     search_fields = ['dialog_ow__customer',]
 
     form_layout = [
@@ -1364,9 +1506,9 @@ class CheckODOWAdmin(object):
 
 class ExtractODOWadmin(object):
     list_display = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category', 'extract_tag',
-                    'sensitive_tag', 'order_status', 'mistake_tag']
+                    'sensitive_tag', 'order_status', 'mistake_tag', 'create_time']
     list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
-                   'd_status', 'interval', 'creator', 'create_time']
+                   'd_status', 'interval', 'creator', 'create_time', 'content',]
     search_fields = ['dialog_ow__customer',]
     list_editable = ['content']
     form_layout = [
@@ -1389,9 +1531,9 @@ class ExtractODOWadmin(object):
 
 class MyExtractODOWAdmin(object):
     list_display = ['dialog_ow', 'sayer', 'd_status', 'time', 'interval', 'content', 'index', 'category', 'extract_tag',
-                    'sensitive_tag', 'order_status', 'mistake_tag']
+                    'sensitive_tag', 'order_status', 'mistake_tag', 'create_time']
     list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
-                   'd_status', 'interval', 'creator', 'create_time']
+                   'd_status', 'interval', 'creator', 'create_time', 'content',]
     search_fields = ['dialog_ow__customer',]
     list_editable = ['content']
     form_layout = [
@@ -1415,6 +1557,9 @@ class MyExtractODOWAdmin(object):
 class ExceptionODOWAdmin(object):
     pass
 
+
+class DOWIDAdmin(object):
+    pass
 
 
 
@@ -1443,5 +1588,7 @@ xadmin.site.register(CheckODOW, CheckODOWAdmin)
 xadmin.site.register(ExtractODOW, ExtractODOWadmin)
 xadmin.site.register(MyExtractODOW, MyExtractODOWAdmin)
 xadmin.site.register(ExceptionODOW, ExceptionODOWAdmin)
+
+xadmin.site.register(DOWID, DOWIDAdmin)
 
 

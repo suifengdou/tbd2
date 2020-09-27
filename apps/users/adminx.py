@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 
 class GlobalSettings(object):
     site_title = 'UltraTool'
-    site_footer = 'UltraTool V0.5.0.41'
+    site_footer = 'UltraTool V0.5.0.42'
     menu_style = 'accordion'
 
 

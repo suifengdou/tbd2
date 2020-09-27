@@ -35,7 +35,6 @@ class GoodsInfo(BaseModel):
         (2, "礼品"),
     )
 
-
     goods_id = models.CharField(unique=True, max_length=30, verbose_name='货品编码', db_index=True)
     goods_name = models.CharField(unique=True, max_length=60, verbose_name='货品名称', db_index=True)
     category = models.CharField(choices=ATTRIBUTE, default="OTH", max_length=10, verbose_name='货品类别')

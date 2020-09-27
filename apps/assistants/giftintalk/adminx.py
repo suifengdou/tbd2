@@ -176,7 +176,7 @@ class SubmitGiftAction(BaseActionView):
         if not self.has_change_permission():
             raise PermissionDenied
 
-        PLATFORM = {2: '京东', 1: '淘系', 3: '官方商城'}
+        PLATFORM = {2: '京东', 1: '淘系', 3: '官方商城', 4: '呼叫中心'}
         if n:
             for obj in queryset:
                 goods_group = self.goods_split(obj.goods)
@@ -372,7 +372,7 @@ class SubmitGiftAction(BaseActionView):
                             obj.mistakes = 3
                             obj.save()
                             continue
-                    elif obj.platform == 3:
+                    elif obj.platform in [3, 4]:
                         cs_info = str(obj.cs_information).replace("收货信息", "").replace('\u3000', '').replace("：",
                                                                                                             "").replace(
                             "＋", "+").split("\r")
@@ -584,7 +584,7 @@ class SubmitGiftAction(BaseActionView):
                             obj.mistakes = 4
                             obj.save()
                             continue
-                    elif obj.platform == 3:
+                    elif obj.platform  in [3, 4]:
                         keywords = gift_order.address.split('，')
                         if len(keywords) > 2:
                             _city_key = keywords[1]
@@ -609,6 +609,7 @@ class SubmitGiftAction(BaseActionView):
                                 continue
                         else:
                             self.message_user("%s地址不是官方商城要求地址格式，请修正后提交" % obj.order_id, "error")
+
                             error_tag = 1
                             n -= 1
                             obj.mistakes = 4
@@ -631,12 +632,13 @@ class SubmitGiftAction(BaseActionView):
                             obj.save()
                             continue
                     if '集运' in str(gift_order.address):
-                        error_tag = 1
-                        self.message_user("%s地址是集运仓" % obj.order_id, "error")
-                        n -= 1
-                        obj.mistakes = 9
-                        obj.save()
-                        continue
+                        if obj.process_tag != 5:
+                            error_tag = 1
+                            self.message_user("%s地址是集运仓" % obj.order_id, "error")
+                            n -= 1
+                            obj.mistakes = 9
+                            obj.save()
+                            continue
                     if not ((gift_order.receiver and gift_order.address) and gift_order.mobile):
                         error_tag = 1
                         self.message_user("%s收货人电话地址不全" % obj.order_id, "error")
@@ -644,6 +646,25 @@ class SubmitGiftAction(BaseActionView):
                         obj.mistakes = 3
                         obj.save()
                         continue
+                    _gift_m_checked = GiftOrderInfo.objects.filter(goods_id=gift_order.goods_id,
+                                                                   mobile=gift_order.mobile)
+                    if _gift_m_checked.exists():
+                        if obj.process_tag != 5:
+                            delta_date = (obj.create_time - _gift_m_checked[0].create_time).days
+                            if int(delta_date) > 14:
+                                error_tag = 1
+                                self.message_user("%s14天内重复" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 2
+                                obj.save()
+                                continue
+                            else:
+                                error_tag = 1
+                                self.message_user("%s14天外重复" % obj.order_id, "error")
+                                n -= 1
+                                obj.mistakes = 1
+                                obj.save()
+                                continue
                     try:
                         gift_order.save()
                     except Exception as e:

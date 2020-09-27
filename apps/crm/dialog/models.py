@@ -129,10 +129,20 @@ class OriDetailTB(BaseModel):
         (0, '正常'),
         (1, '对话格式错误'),
         (2, '重复导入'),
+        (3, '差价货品名称错误'),
+        (4, '差价金额填写错误'),
+        (5, '差价收款人姓名错误'),
+        (6, '差价支付宝名称错误'),
+        (7, '差价订单号错误'),
+        (8, '差价核算公式格式错误'),
+        (9, '差价核算公式计算错误'),
+        (9, '差价核算公式计算错误'),
+        (10, '差价核算结果与上报差价不等'),
     )
     CATEGORY = (
         (0, '常规'),
         (1, '订单'),
+        (2, '差价'),
     )
 
     dialog_tb = models.ForeignKey(OriDialogTB, on_delete=models.CASCADE, verbose_name='对话')
@@ -310,7 +320,7 @@ class OriDialogOW(BaseModel):
 
     @classmethod
     def verify_mandatory(cls, columns_key):
-        VERIFY_FIELD = ['customer', 'start_time', 'content']
+        VERIFY_FIELD = ['customer', 'start_time', 'content', 'dialog_id']
 
         for i in VERIFY_FIELD:
             if i not in columns_key:
@@ -393,3 +403,15 @@ class ExceptionODOW(OriDetailOW):
         verbose_name = 'CRM-官网对话信息-敏感对话'
         verbose_name_plural = verbose_name
         proxy = True
+
+
+class DOWID(BaseModel):
+    dialog_id = models.CharField(unique=True, max_length=30, verbose_name='对话ID')
+
+    class Meta:
+        verbose_name = 'CRM-官网对话信息-对话ID'
+        verbose_name_plural = verbose_name
+        db_table = 'crm_diadetail_dowid'
+
+    def __str__(self):
+        return self.dialog_id

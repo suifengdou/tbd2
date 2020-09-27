@@ -325,7 +325,7 @@ class TOGoods(BaseModel):
     class Meta:
         verbose_name = 'EXT-尾货订单-货品明细'
         verbose_name_plural = verbose_name
-        unique_together = (('tail_order', 'goods_name'))
+        unique_together = (['tail_order', 'goods_name'])
         db_table = 'ext_tailorder_goods'
 
     def __str__(self):

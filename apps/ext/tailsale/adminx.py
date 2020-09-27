@@ -1456,6 +1456,30 @@ class StockROGAction(BaseActionView):
         return None
 
 
+# 设置退换单
+class SetROAction(BaseActionView):
+    action_name = "set_ro"
+    description = "设置单据为已建单"
+    model_perm = 'change'
+    icon = "fa fa-check-square-o"
+
+    @filter_hook
+    def do_action(self, queryset):
+        if not self.has_change_permission():
+            raise PermissionDenied
+        n = queryset.count()
+        if n:
+            self.log('change',
+                     '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+            queryset.update(message='确认可付款 %s' % self.request.user.username)
+            queryset.update(process_tag=4)
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+
+        return None
+
+
 # 审核退换单
 class CheckROAction(BaseActionView):
     action_name = "check_ro"
@@ -3170,7 +3194,7 @@ class ROCheckAdmin(object):
                    'sent_consignee', 'sent_smartphone', 'receipted_quantity', 'sign_company',
                    'sign_department', 'submit_time']
     search_fields = ['track_no']
-    actions = [CheckROAction, RejectSelectedAction]
+    actions = [SetROAction, CheckROAction, RejectSelectedAction]
 
     list_editable = ['feedback', 'track_no']
     readonly_fields = ['message', 'shop', 'order_id', 'quantity', 'amount', 'ori_amount', 'creator', 'tail_order',
@@ -3589,7 +3613,7 @@ class SubmitTPOAdmin(object):
     list_display = ['shop', 'order_id', 'process_tag', 'mistake_tag', 'sent_consignee', 'sent_smartphone', 'sent_city',
                     'sent_district', 'sent_address', 'parts_info', 'message', 'sign_company', 'sign_department',
                     'order_category', 'creator', 'create_time', 'update_time', 'order_status']
-    actions = [SubmitTPOAction, RejectSelectedAction]
+    actions = [SubmitTPOAction, SetTPOSAction, SetTPOCAction, RejectSelectedAction]
 
     search_fields = ['order_id']
     list_filter = ['sent_consignee', 'process_tag', 'creator', 'mistake_tag', 'parts_info', 'create_time']

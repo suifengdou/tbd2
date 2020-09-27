@@ -10,6 +10,7 @@ import django.utils.timezone as timezone
 
 from db.base_model import BaseModel
 from apps.crm.dialog.models import OriDetailJD, OriDetailTB, OriDetailOW
+from apps.crm.callcentre.models import OriCallLogInfo
 
 
 class GiftInTalkInfo(BaseModel):
@@ -37,6 +38,7 @@ class GiftInTalkInfo(BaseModel):
         (1, '淘系'),
         (2, '京东'),
         (3, '官方商城'),
+        (4, '呼叫中心'),
     )
     ORDER_CATEGORY = (
         (1, '质量问题'),
@@ -220,7 +222,16 @@ class OrderOWList(BaseModel):
     talk_ow = models.OneToOneField(OriDetailOW, on_delete=models.CASCADE, verbose_name='官方商城对话')
 
     class Meta:
-        verbose_name = '京东订单来源'
+        verbose_name = '官方商城订单来源'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_order_ow'
 
+
+class OrderCallList(BaseModel):
+    gift_order = models.OneToOneField(GiftInTalkInfo, on_delete=models.CASCADE, related_name='gift_call', verbose_name='提取单据')
+    call_order = models.OneToOneField(OriCallLogInfo, on_delete=models.CASCADE, verbose_name='400电话')
+
+    class Meta:
+        verbose_name = '呼叫中心来源'
+        verbose_name_plural = verbose_name
+        db_table = 'ass_gt_order_call'
