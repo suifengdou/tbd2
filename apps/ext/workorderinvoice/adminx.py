@@ -1728,7 +1728,7 @@ class WorkOrderAdmin(object):
 
 # 发票工单货品界面
 class GoodsDetailAdmin(object):
-    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'price', 'creator']
+    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'price', 'memorandum', 'creator']
     readonly_fields = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'is_delete', 'create_time',
                        'price', 'memorandum', 'update_time']
 
@@ -1899,7 +1899,7 @@ class InvoiceOrderAdmin(object):
 
 
 class InvoiceGoodsAdmin(object):
-    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'create_time']
+    list_display = ['invoice', 'goods_id', 'goods_name', 'quantity', 'price', 'creator', 'create_time']
     readonly_fields = ['invoice', 'goods_id', 'goods_name', 'quantity', 'creator', 'is_delete', 'create_time',
                        'price', 'memorandum', 'update_time']
 

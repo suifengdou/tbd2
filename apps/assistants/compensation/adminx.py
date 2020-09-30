@@ -51,6 +51,7 @@ class RejectSelectedAction(BaseActionView):
                 if isinstance(obj, OriCompensation):
                     if obj.order_status > 0:
                         obj.order_status -= 1
+                        obj.process_tag = 0
                         obj.save()
                         if obj.order_status == 0:
                             self.message_user("%s 取消成功" % obj.order_id, "success")
@@ -367,7 +368,7 @@ class SubmitOCAction(BaseActionView):
                     obj.handler = self.request.user.username
                     obj.order_status = 2
                     obj.mistake_tag = 0
-                    obj.process_tag = 0
+                    obj.process_tag = 4
                     obj.save()
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
@@ -479,7 +480,7 @@ class SubmitBCAction(BaseActionView):
                     obj.order_status = 2
                     obj.batchinfo_set.all().update(process_tag=2)
                     obj.mistake_tag = 0
-                    obj.process_tag = 0
+                    obj.process_tag = 2
                     obj.save()
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
@@ -545,8 +546,10 @@ class CheckBCAction(BaseActionView):
                         if order.paid_amount:
                             order.compensation_order.process_tag = 4
                             order.compensation_order.save()
+                    obj.submit_time = datetime.datetime.now()
+                    obj.handler = self.request.user.username
                     obj.mistake_tag = 0
-                    obj.process_tag = 0
+                    obj.process_tag = 4
                     obj.save()
 
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},

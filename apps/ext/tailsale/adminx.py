@@ -3185,8 +3185,8 @@ class ROHandleAdmin(object):
 
 # 退换货单审核及待入库界面
 class ROCheckAdmin(object):
-    list_display = ['tail_order', 'mode_warehouse', 'process_tag', 'mistake_tag', 'message', 'feedback',  'shop',
-                    'order_id', 'goods_name', 'order_category', 'info_refund', 'track_no', 'sent_consignee',
+    list_display = ['tail_order', 'track_no', 'mode_warehouse', 'process_tag', 'mistake_tag', 'message', 'feedback',  'shop',
+                    'order_id', 'goods_name', 'order_category', 'info_refund', 'sent_consignee',
                     'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'quantity', 'amount',
                     'ori_amount', 'receipted_quantity', 'receipted_amount',  'sign_company',  'sign_department']
 
@@ -3196,7 +3196,7 @@ class ROCheckAdmin(object):
     search_fields = ['track_no']
     actions = [SetROAction, CheckROAction, RejectSelectedAction]
 
-    list_editable = ['feedback', 'track_no']
+    list_editable = ['feedback']
     readonly_fields = ['message', 'shop', 'order_id', 'quantity', 'amount', 'ori_amount', 'creator', 'tail_order',
                        'receipted_quantity', 'receipted_amount', 'submit_time', 'handle_time', 'sent_consignee',
                        'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'handle_interval',

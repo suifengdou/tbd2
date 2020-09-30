@@ -481,7 +481,7 @@ class ExtractODTBAction(BaseActionView):
                         _com_talk.servicer = _rt_com_talk[0]
                         _com_talk.shop = obj.dialog_tb.shop
                         _com_talk.nickname = obj.dialog_tb.customer
-                        _com_talk.goods_name = _rt_com_talk[1]
+                        _com_talk.goods_name = _rt_com_talk[1].replace("型号", "")
                         _com_talk.compensation = _rt_com_talk[2].replace('差价', '').replace(' ', '')
                         _com_talk.name = _rt_com_talk[3].replace('姓名', '').replace(' ', '')
                         _com_talk.alipay_id = _rt_com_talk[4].replace('支付宝', '').replace(' ', '')
@@ -571,7 +571,7 @@ class ExtractODTBAction(BaseActionView):
 
                     else:
                         result['false'] += 1
-                        result['error'].append("%s 对话的格式不对，导致无法提取" % _compensation_talk_data[1])
+                        result['error'].append("对话的格式不对，导致无法提取")
                         obj.category = 2
                         obj.mistake_tag = 1
                         obj.save()
