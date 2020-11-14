@@ -1371,7 +1371,9 @@ class WOUnhandleAdmin(object):
                 columns_key_ori = df.columns.values.tolist()
                 ret_columns_key = dict(zip(columns_key_ori, columns_key))
                 df.rename(columns=ret_columns_key, inplace=True)
-                check_list = [ ]
+                check_list = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone', 'bank',
+                              'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
+                              'sent_city', 'sent_district', 'sent_address', 'is_deliver', 'goods_id']
                 df_check = df[check_list]
 
                 tax_ids = list(set(df_check.tax_id))

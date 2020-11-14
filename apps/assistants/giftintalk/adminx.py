@@ -20,7 +20,7 @@ import xadmin
 from xadmin.plugins.actions import BaseActionView
 from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
-from xadmin.layout import Fieldset
+from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import GiftInTalkPendding, GiftInTalkInfo, GiftOrderPendding, GiftOrderInfo, GiftImportInfo, GiftImportPendding
 from apps.base.goods.models import GoodsInfo
@@ -616,6 +616,12 @@ class SubmitGiftAction(BaseActionView):
                             obj.save()
                             continue
                     gift_order.order_category = obj.order_category
+                    if not obj.shop:
+                        error_tag = 1
+                        n -= 1
+                        obj.mistakes = 11
+                        obj.save()
+                        continue
                     gift_order.shop = obj.shop
                     gift_order.buyer_remark = "%s %s客服%s赠送客户%s赠品%sx%s" % \
                                               (PLATFORM[obj.platform], str(obj.update_time)[:11], obj.servicer,
@@ -810,14 +816,27 @@ class SubmitImportAction(BaseActionView):
 
 # 对话信息导入和处理
 class GiftInTalkPenddingAdmin(object):
-    list_display = ['platform',  'order_status', 'mistakes', 'process_tag', 'cs_information', 'goods', 'nickname', 'order_category', 'order_id', 'servicer', 'creator']
+    list_display = ['platform', 'shop', 'order_status', 'mistakes', 'process_tag', 'cs_information', 'goods',
+                    'nickname', 'order_category', 'order_id', 'servicer', 'creator']
     list_filter = ['mistakes', 'create_time', 'creator', 'order_category', 'cs_information',]
-    list_editable = ['goods', 'nickname', 'order_id', 'cs_information']
+    list_editable = ['shop', 'goods', 'nickname', 'order_id', 'cs_information']
     search_fields = ['nickname', 'order_id']
 
     ALLOWED_EXTENSIONS = ['log', 'txt']
-    actions = [SubmitGiftAction, CheckRAction, SetSpecialAction, RejectSelectedAction]
+    actions = [CheckRAction, SetSpecialAction, SubmitGiftAction, RejectSelectedAction]
     import_data = False
+    form_layout = [
+        Fieldset('基本信息',
+                 Row('shop', 'servicer',),
+                 Row('order_id', 'nickname'),
+                 'goods', 'order_category', ),
+        Fieldset('发货相关信息',
+                 'cs_information',),
+        Fieldset(None,
+                 'process_tag', 'mistakes', 'order_status', 'is_delete', 'creator', 'platform',
+                 'submit_user',
+                 **{"style": "display:None"}),
+    ]
 
     def post(self, request, *args, **kwargs):
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -913,6 +932,7 @@ class GiftInTalkPenddingAdmin(object):
     def save_models(self):
         obj = self.new_obj
         request = self.request
+        obj.platform = request.user.platform
         obj.creator = request.user.username
         obj.save()
         super().save_models()
@@ -926,7 +946,8 @@ class GiftInTalkPenddingAdmin(object):
 # 对话信息查询
 class GiftInTalkAdmin(object):
     list_display = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information', 'mistakes', 'creator']
-    list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status', 'order_category', 'cs_information', 'mistakes']
+    list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status', 'order_category',
+                   'cs_information', 'mistakes', 'shop']
     search_fields = ['nickname', 'order_id']
     readonly_fields = ['platform', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id',
                        'cs_information', 'creator', 'is_delete', 'mistakes', 'submit_user', 'shop']
@@ -961,7 +982,8 @@ class GiftOrderInfoAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
                     'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
-    list_filter = ['creator', 'update_time', 'order_status', 'city', 'district', 'mobile', 'address', 'order_category']
+    list_filter = ['creator', 'update_time', 'order_status', 'city', 'district', 'mobile', 'address', 'receiver',
+                   'shop', 'order_category']
     search_fields = ['nickname', 'mobile', 'order_id']
 
     def has_add_permission(self):

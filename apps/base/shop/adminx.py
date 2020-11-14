@@ -13,7 +13,7 @@ from .models import ShopInfo, PlatformInfo
 
 class ShopInfoAdmin(object):
     list_display = ['shop_name', 'shop_id', 'platform', 'group_name', 'company', 'status']
-    relfield_style = 'fk-ajax'
+    # relfield_style = 'fk-ajax'
 
 
 class PlatformInfoAdmin(object):

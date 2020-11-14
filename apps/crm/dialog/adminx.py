@@ -195,7 +195,7 @@ class DFAFilter(object):
         self.keyword_chains = {}  # 关键词链表
         self.delimit = '\x00'  # 限定
 
-    def add(self, sensitive):
+    def add(self, sensitive: object) -> object:
         keyword = sensitive.words  # 关键词英文变为小写
         chars = keyword.strip()  # 关键字去除首尾空格和换行
         if not chars:  # 如果关键词为空直接返回
@@ -477,7 +477,7 @@ class ExtractODTBAction(BaseActionView):
                     _com_talk = OriCompensation()
                     _rt_com_talk = re.findall(r'{((?:.|\n)*?)}', str(obj.content), re.DOTALL)
 
-                    if len(_rt_com_talk) == 7:
+                    if len(_rt_com_talk) == 8:
                         _com_talk.servicer = _rt_com_talk[0]
                         _com_talk.shop = obj.dialog_tb.shop
                         _com_talk.nickname = obj.dialog_tb.customer
@@ -487,6 +487,7 @@ class ExtractODTBAction(BaseActionView):
                         _com_talk.alipay_id = _rt_com_talk[4].replace('支付宝', '').replace(' ', '')
                         _com_talk.order_id = _rt_com_talk[5].replace('订单号', '').replace(' ', '')
                         formula = _rt_com_talk[6]
+                        _com_talk.order_category = _rt_com_talk[7]
 
                         _q_goods_name = MachineInfo.objects.filter(goods_name=_com_talk.goods_name)
                         if not _q_goods_name.exists():
@@ -520,6 +521,12 @@ class ExtractODTBAction(BaseActionView):
                         if not re.match(r'^[0-9]+$', _com_talk.order_id):
                             result["false"] += 1
                             obj.mistake_tag = 7
+                            obj.category = 2
+                            obj.save()
+                            continue
+                        if _com_talk.order_category not in ['1', '3']:
+                            result["false"] += 1
+                            obj.mistake_tag = 11
                             obj.category = 2
                             obj.save()
                             continue
@@ -1487,7 +1494,7 @@ class OriDetailOWAdmin(object):
     list_filter = ['dialog_ow__customer', 'dialog_ow__creator', 'dialog_ow__start_time', 'dialog_ow__end_time', 'sayer',
                    'd_status', 'interval', 'creator', 'create_time', 'content', 'category']
     search_fields = ['dialog_ow__customer',]
-
+    actions = [ResetODJDExtract]
     form_layout = [
         Fieldset('客户信息',
                  Row('sayer', 'd_status', ),
@@ -1559,10 +1566,9 @@ class ExceptionODOWAdmin(object):
 
 
 class DOWIDAdmin(object):
-    pass
-
-
-
+    list_display = ['dialog_id']
+    list_filter = ['dialog_id', 'create_time', 'creator']
+    search_fields = ['dialog_id', ]
 
 
 xadmin.site.register(DialogTag, DialogTagAdmin)

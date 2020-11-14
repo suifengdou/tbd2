@@ -546,7 +546,7 @@ class CheckBCAction(BaseActionView):
                         if order.paid_amount:
                             order.compensation_order.process_tag = 4
                             order.compensation_order.save()
-                    obj.submit_time = datetime.datetime.now()
+                    obj.handle_time = datetime.datetime.now()
                     obj.handler = self.request.user.username
                     obj.mistake_tag = 0
                     obj.process_tag = 4
@@ -831,10 +831,10 @@ class BatchInfoAdmin(object):
                     'servicer', 'shop', 'goods_name', 'nickname', 'order_id', 'actual_receipts',
                     'receivable', 'checking', 'oa_order_id', 'compensation_order', ]
 
-    list_filter = ['batch_order__oa_order_id', 'batch_order__order_id', 'alipay_id', 'name', 'process_tag',
+    list_filter = ['batch_order__oa_order_id', 'batch_order__order_id', 'alipay_id', 'nickname', 'name', 'process_tag',
                    'compensation', 'paid_amount', 'creator']
     readonly_fields = ['oa_order_id', 'order_id', 'mistake_tag', 'process_tag', 'amount', 'quantity', 'creator',
-                       'handler', 'handle_time', 'order_status']
+                       'nickname', 'handler', 'handle_time', 'order_status']
     list_editable = ['paid_amount']
     form_layout = [
         Fieldset('基本信息',

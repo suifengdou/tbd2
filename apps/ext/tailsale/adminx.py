@@ -1719,8 +1719,8 @@ class OTOUnhandleAdmin(object):
                     'order_status', 'sent_city', 'sent_district',   'sign_company', 'sign_department', ]
     actions = [SetUsedOTOAction, SetRetreadOTOAction, SetRepeatedOTOAction, SubmitOTOAction, RejectSelectedAction]
 
-    search_fields = ['order_id']
-    list_filter = ['mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category']
+    search_fields = ['order_id', 'sent_smartphone']
+    list_filter = ['sent_consignee', 'sent_smartphone', 'mode_warehouse', 'process_tag', 'creator', 'mistake_tag', 'order_category']
 
     list_editable = ['order_category', 'mode_warehouse', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
                      'sent_address', 'message',]
@@ -2064,10 +2064,10 @@ class OTOCheckAdmin(object):
 
 
 class OriTailOrderAdmin(object):
-    list_display = ['shop', 'order_id', 'goods_name', 'quantity', 'amount', 'order_category', 'mode_warehouse',
+    list_display = ['order_status', 'shop', 'order_id', 'goods_name', 'quantity', 'amount', 'order_category', 'mode_warehouse',
                     'feedback', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',
                     'submit_time', 'handle_time', 'handle_interval', 'message',  'sign_company', 'sign_department',
-                    'process_tag', 'mistake_tag', 'order_status']
+                    'process_tag', 'mistake_tag']
 
     search_fields = ['order_id']
     list_filter = ['process_tag', 'mode_warehouse', 'creator', 'sent_smartphone', 'mistake_tag', 'order_category',
@@ -2093,6 +2093,31 @@ class OriTailOrderAdmin(object):
                 'handle_interval', 'process_tag', 'mistake_tag', 'is_delete', 'creator', 'sign_company',
                  'sign_department', **{"style": "display:None"}),
     ]
+    batch_data = True
+    order_ids = []
+
+    def post(self, request, *args, **kwargs):
+        order_ids = request.POST.get('ids', None)
+        if order_ids is not None:
+            if " " in order_ids:
+                order_ids = order_ids.split(" ")
+                for i in order_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(order_ids), 'error')
+                        break
+
+                self.order_ids = order_ids
+                self.queryset()
+
+        return super(OriTailOrderAdmin, self).post(request, *args, **kwargs)
+
+    def queryset(self):
+        queryset = super(OriTailOrderAdmin, self).queryset()
+
+        if self.order_ids:
+            queryset = queryset.filter(is_delete=0, order_id__in=self.order_ids)
+        return queryset
+
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -3185,13 +3210,14 @@ class ROHandleAdmin(object):
 
 # 退换货单审核及待入库界面
 class ROCheckAdmin(object):
-    list_display = ['tail_order', 'track_no', 'mode_warehouse', 'process_tag', 'mistake_tag', 'message', 'feedback',  'shop',
+    list_display = ['tail_order', 'track_no', 'quantity', 'receipted_amount', 'mode_warehouse', 'process_tag',
+                    'mistake_tag', 'message', 'feedback',  'shop',
                     'order_id', 'goods_name', 'order_category', 'info_refund', 'sent_consignee',
-                    'sent_smartphone', 'sent_city', 'sent_district', 'sent_address', 'quantity', 'amount',
-                    'ori_amount', 'receipted_quantity', 'receipted_amount',  'sign_company',  'sign_department']
+                    'sent_smartphone', 'sent_city', 'sent_district', 'sent_address',  'amount',
+                    'ori_amount', 'receipted_quantity',   'sign_company',  'sign_department']
 
-    list_filter = ['tail_order__order_id',  'process_tag', 'mistake_tag',  'shop', 'order_category', 'create_time',
-                   'sent_consignee', 'sent_smartphone', 'receipted_quantity', 'sign_company',
+    list_filter = ['tail_order__order_id', 'order_id', 'process_tag', 'mistake_tag',  'shop', 'order_category',
+                   'sent_consignee', 'sent_smartphone', 'receipted_quantity', 'sign_company', 'create_time',
                    'sign_department', 'submit_time']
     search_fields = ['track_no']
     actions = [SetROAction, CheckROAction, RejectSelectedAction]
@@ -3267,10 +3293,10 @@ class RefundOrderAdmin(object):
                        'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
                        'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
                        'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
-    list_filter = ['process_tag', 'mistake_tag',  'shop', 'order_id', 'order_category', 'info_refund',
-                    'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
-                    'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
-                    'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
+    list_filter = ['tail_order__order_id', 'process_tag', 'mistake_tag',  'shop', 'order_id', 'order_category',
+                   'info_refund', 'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
+                   'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
+                   'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -3383,6 +3409,8 @@ class ArrearsBillOrderAdmin(object):
                     'track_no', 'sent_consignee', 'sent_smartphone', 'settlement_quantity',
                     'settlement_amount', 'message', 'feedback', 'sign_company', 'sign_department']
     inlines = [ABOGInline]
+    list_filter = ['process_tag', 'mistake_tag', 'shop', 'order_id', 'order_category', 'refund_order__track_no',
+                   'sent_consignee', 'sent_smartphone', 'settlement_quantity', 'settlement_amount', ]
 
     readonly_fields = ['refund_order', 'process_tag', 'mistake_tag', 'shop', 'order_id', 'order_category',
                        'track_no', 'sent_consignee', 'sent_smartphone', 'settlement_quantity', 'is_delete',

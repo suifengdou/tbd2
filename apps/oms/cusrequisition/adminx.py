@@ -246,6 +246,7 @@ class CusRequisitionSubmitInfoAdmin(object):
                 self.message_user(
                     "注意：订单 %s 配件 %s 没有关联工厂，需要请设置货品关联工厂" % (obj.planorder_id, self.formsets[0].forms[i].goods_name), 'error')
 
+
         super().save_related()
 
 

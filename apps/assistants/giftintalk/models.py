@@ -31,6 +31,7 @@ class GiftInTalkInfo(BaseModel):
         (8, '同名订单'),
         (9, '手机错误'),
         (10, '集运仓地址'),
+        (11, '无店铺'),
 
     )
     PLATFORM = (

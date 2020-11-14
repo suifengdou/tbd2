@@ -99,7 +99,7 @@ class OriDialogTB(BaseModel):
     end_time = models.DateTimeField(verbose_name='结束时间')
     min = models.IntegerField(verbose_name='总人次')
     dialog_tag = models.ForeignKey(DialogTag, on_delete=models.CASCADE, null=True, blank=True, verbose_name='对话标签')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态', db_index=True)
 
     class Meta:
         verbose_name = 'CRM-淘系对话客户-查询'
@@ -136,8 +136,8 @@ class OriDetailTB(BaseModel):
         (7, '差价订单号错误'),
         (8, '差价核算公式格式错误'),
         (9, '差价核算公式计算错误'),
-        (9, '差价核算公式计算错误'),
         (10, '差价核算结果与上报差价不等'),
+        (11, '差价类型只能是1或者3'),
     )
     CATEGORY = (
         (0, '常规'),
@@ -155,9 +155,9 @@ class OriDetailTB(BaseModel):
     index = models.IntegerField(default=0, verbose_name='对话负面指数')
 
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
-    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
+    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单', db_index=True)
     sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态', db_index=True)
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
 
     class Meta:
@@ -213,7 +213,7 @@ class OriDialogJD(BaseModel):
     min = models.IntegerField(verbose_name='总人次')
     category = models.SmallIntegerField(choices=CATEGORY, default=1, verbose_name='对话类型')
     dialog_tag = models.ForeignKey(DialogTag, on_delete=models.CASCADE, null=True, blank=True, verbose_name='对话标签')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态', db_index=True)
 
     class Meta:
         verbose_name = 'CRM-京东对话客户-查询'
@@ -261,9 +261,9 @@ class OriDetailJD(BaseModel):
 
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
 
-    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
+    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单', db_index=True)
     sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态', db_index=True)
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
 
     class Meta:
@@ -307,7 +307,7 @@ class OriDialogOW(BaseModel):
     end_time = models.DateTimeField(verbose_name='结束时间')
     min = models.IntegerField(verbose_name='总人次')
     dialog_tag = models.ForeignKey(DialogTag, on_delete=models.CASCADE, null=True, blank=True, verbose_name='对话标签')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态', db_index=True)
 
     class Meta:
         verbose_name = 'CRM-官网对话客户-查询'
@@ -363,9 +363,9 @@ class OriDetailOW(BaseModel):
     index = models.IntegerField(default=0, verbose_name='对话负面指数')
 
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
-    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单')
+    extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单', db_index=True)
     sensitive_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否过滤')
-    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
+    order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态', db_index=True)
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
 
     class Meta:

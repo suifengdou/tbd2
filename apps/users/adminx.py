@@ -5,18 +5,16 @@
 # @File    : adminx.py
 # @Software: PyCharm
 
-
 import xadmin
 from xadmin import views
 from django.contrib.auth import get_user_model
+from .models import UserProfile
 
 
 class GlobalSettings(object):
     site_title = 'UltraTool'
-    site_footer = 'UltraTool V0.5.0.43'
+    site_footer = 'UltraTool V0.5.0.45'
     menu_style = 'accordion'
 
 
 xadmin.site.register(views.CommAdminView, GlobalSettings)
-
-
