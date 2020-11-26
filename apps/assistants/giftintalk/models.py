@@ -203,7 +203,7 @@ class OrderTBList(BaseModel):
     talk_tb = models.OneToOneField(OriDetailTB, on_delete=models.CASCADE, verbose_name='淘宝对话')
 
     class Meta:
-        verbose_name = '淘宝订单来源'
+        verbose_name = 'ASS-GT-淘宝订单来源'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_order_tb'
 
@@ -213,7 +213,7 @@ class OrderJDList(BaseModel):
     talk_jd = models.OneToOneField(OriDetailJD, on_delete=models.CASCADE, verbose_name='京东对话')
 
     class Meta:
-        verbose_name = '京东订单来源'
+        verbose_name = 'ASS-GT-京东订单来源'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_order_jd'
 
@@ -223,7 +223,7 @@ class OrderOWList(BaseModel):
     talk_ow = models.OneToOneField(OriDetailOW, on_delete=models.CASCADE, verbose_name='官方商城对话')
 
     class Meta:
-        verbose_name = '官方商城订单来源'
+        verbose_name = 'ASS-GT-官方商城订单来源'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_order_ow'
 
@@ -233,6 +233,19 @@ class OrderCallList(BaseModel):
     call_order = models.OneToOneField(OriCallLogInfo, on_delete=models.CASCADE, verbose_name='400电话')
 
     class Meta:
-        verbose_name = '呼叫中心来源'
+        verbose_name = 'ASS-GT-呼叫中心来源'
         verbose_name_plural = verbose_name
         db_table = 'ass_gt_order_call'
+
+
+class OriGiftList(BaseModel):
+    ori_order = models.ForeignKey(GiftInTalkInfo, on_delete=models.CASCADE, verbose_name='原始递交订单')
+    goods_id = models.CharField(max_length=60, db_index=True, verbose_name='货品ID')
+
+    class Meta:
+        verbose_name = 'ASS-GT-手工原始单列表'
+        verbose_name_plural = verbose_name
+        db_table = 'ass_gt_list_oriorder'
+        unique_together = ('ori_order', 'goods_id')
+
+

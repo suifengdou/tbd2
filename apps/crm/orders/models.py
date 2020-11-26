@@ -25,16 +25,18 @@ class OriOrderInfo(BaseModel):
     )
     MISTAKE_LIST = (
         (0, '正常'),
-        (1, '待确认重复订单'),
+        (1, '已导入过的订单'),
+        (2, '待确认重复订单'),
 
     )
     PROCESS_TAG = (
         (0, '未处理'),
         (1, '待核实'),
         (2, '已确认'),
-        (3, '待清账'),
+        (3, '待清理'),
         (4, '已处理'),
-        (5, '特殊订单'),
+        (5, '驳回'),
+        (6, '特殊订单'),
     )
     ORDER_CATEGORY = (
         (1, "网店销售"),
@@ -79,7 +81,7 @@ class OriOrderInfo(BaseModel):
         db_table = 'crm_o_oriorderinfo'
 
     def __str__(self):
-        return str(self.trade_no)
+        return str(self.id)
 
     @classmethod
     def verify_mandatory(cls, columns_key):
@@ -107,20 +109,27 @@ class OrderInfo(BaseModel):
     ORDERSTATUS = (
         (0, '已取消'),
         (1, '未处理'),
-        (2, '已完成'),
+        (2, '未标记'),
+        (3, '未财审'),
+        (4, '已完成'),
     )
     MISTAKE_LIST = (
         (0, '正常'),
-        (1, '14天内重复订单'),
+        (1, '已导入过的订单'),
+        (2, 'UT中无此店铺'),
+        (3, 'UT中店铺关联平台'),
+        (4, '保存出错'),
 
     )
     PROCESS_TAG = (
         (0, '未处理'),
         (1, '待核实'),
         (2, '已确认'),
-        (3, '待清账'),
+        (3, '待清理'),
         (4, '已处理'),
-        (5, '特殊订单'),
+        (5, '驳回'),
+        (6, '特殊订单'),
+        (7, '手工设置成功'),
     )
     ORDER_CATEGORY = (
         (1, "网店销售"),
@@ -132,9 +141,9 @@ class OrderInfo(BaseModel):
         (7, "订单补发"),
         (101, "干线调拨"),
     )
-
+    ori_order = models.ForeignKey(OriOrderInfo, on_delete=models.CASCADE, verbose_name='原始订单')
     buyer_nick = models.CharField(max_length=150, db_index=True, verbose_name='客户网名')
-    trade_no = models.CharField(max_length=60, db_index=True, verbose_name='订单编号')
+    trade_no = models.CharField(max_length=120, db_index=True, verbose_name='订单编号')
     receiver_name = models.CharField(max_length=150, verbose_name='收件人')
     receiver_address = models.CharField(max_length=256, verbose_name='收货地址')
     receiver_mobile = models.CharField(max_length=40, db_index=True, verbose_name='收件人手机')
@@ -165,7 +174,7 @@ class OrderInfo(BaseModel):
         db_table = 'crm_o_orderinfo'
 
     def __str__(self):
-        return str(self.trade_no)
+        return str(self.id)
 
     @classmethod
     def verify_mandatory(cls, columns_key):
@@ -175,63 +184,105 @@ class OrderInfo(BaseModel):
         else:
             return None
 
+    def cs_info(self):
+        cs_info = str(self.receiver_name) + "+" + str(self.receiver_area) + "+" + str(self.receiver_address) + "+" + str(self.receiver_mobile)
+        return cs_info
+    cs_info.short_description = '客户信息'
+
+
+class SimpleOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-极简订单'
+        verbose_name_plural = verbose_name
+        proxy = True
+
 
 class SubmitOrder(OrderInfo):
     class Meta:
-        verbose_name = 'CRM-UT订单-未提交'
+        verbose_name = 'CRM-UT订单-未处理'
+
         verbose_name_plural = verbose_name
         proxy = True
 
 
 class CheckOrder(OrderInfo):
     class Meta:
-        verbose_name = 'CRM-UT订单-未过滤'
+        verbose_name = 'CRM-UT订单-未关联'
         verbose_name_plural = verbose_name
         proxy = True
 
 
+class PartWHCheckOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-未关联配件仓'
+        verbose_name_plural = verbose_name
+        proxy = True
 
 
+class PartWHOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-配件仓查询'
+        verbose_name_plural = verbose_name
+        proxy = True
 
-class SimpleOrderInfo(BaseModel):
+
+class MachineWHCheckOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-未关联整机仓'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class MachineWHOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-整机仓查询'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class CenterTWHCheckOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-未关联中央仓'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class CenterTWHOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-中央仓查询'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class LabelOptions(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-未标记'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class TailShopOrder(OrderInfo):
+    class Meta:
+        verbose_name = 'CRM-UT订单-尾货配件查询'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
+class OriOrderList(BaseModel):
     ORDERSTATUS = (
         (0, '已取消'),
         (1, '未处理'),
         (2, '已完成'),
     )
-    MISTAKE_LIST = (
-        (0, '货品名称错误'),
-        (1, '14天内重复订单'),
 
-    )
-    PROCESS_TAG = (
-        (0, '未处理'),
-        (1, '待核实'),
-        (2, '已确认'),
-        (3, '待清账'),
-        (4, '已处理'),
-        (5, '特殊订单'),
-    )
-    ori_order = models.ForeignKey(OriOrderInfo, on_delete=models.CASCADE, verbose_name='源订单')
-    buyer_nick = models.CharField(max_length=150, db_index=True, verbose_name='客户网名')
-    receiver_name = models.CharField(max_length=150, verbose_name='收件人')
-    receiver_address = models.CharField(max_length=256, verbose_name='收货地址')
-    receiver_mobile = models.CharField(max_length=40, db_index=True, verbose_name='收件人手机')
-    receiver_area = models.CharField(max_length=150, verbose_name='收货地区')
-
+    ori_order = models.OneToOneField(OriOrderInfo, on_delete=models.CASCADE, related_name='listori', verbose_name='原始订单')
     order_status = models.SmallIntegerField(choices=ORDERSTATUS, default=1, db_index=True, verbose_name='单据状态')
-    process_tag = models.SmallIntegerField(choices=PROCESS_TAG, default=0, verbose_name='处理标签')
-    mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
 
     class Meta:
-        verbose_name = 'CRM-D-极简订单'
+        verbose_name = 'CRM-原始订单-递交列表'
         verbose_name_plural = verbose_name
-        db_table = 'crm_o_simpleorder'
+        db_table = 'crm_o_oriorderlist'
 
     def __str__(self):
-        return str(self.buyer_nick)
+        return str(self.ori_order)
 
-    def cs_info(self):
-        cs_info = str(self.receiver_name) + "+" + str(self.receiver_area) + "+" + str(self.receiver_address) + "+" + str(self.receiver_mobile)
-        return cs_info
-    cs_info.short_description = '客户信息'

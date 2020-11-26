@@ -23,6 +23,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import GiftInTalkPendding, GiftInTalkInfo, GiftOrderPendding, GiftOrderInfo, GiftImportInfo, GiftImportPendding
+from .models import OrderJDList, OrderOWList, OrderTBList, OrderCallList, OriGiftList
 from apps.base.goods.models import GoodsInfo
 from apps.utils.geography.models import CityInfo, DistrictInfo
 
@@ -198,6 +199,14 @@ class SubmitGiftAction(BaseActionView):
                             obj.mistakes = 0
                             obj.save()
                             continue
+                    _q_ori_unique = OriGiftList.objects.filter(ori_order=obj, goods_id=gift_order.goods_id)
+                    if _q_ori_unique.exists():
+                        self.message_user("%s此次递交的货品：%s已经生成" % (obj.order_id, gift_order.goods_id), "error")
+                        continue
+                    else:
+                        ori_unique = OriGiftList()
+                        ori_unique.ori_order = obj
+                        ori_unique.goods_id = gift_order.goods_id
                     order_id = str(obj.order_id).replace("订单号", "").replace(" ", "").replace("：", "")
                     gift_order.order_id = order_id
 
@@ -671,8 +680,10 @@ class SubmitGiftAction(BaseActionView):
                                 obj.mistakes = 1
                                 obj.save()
                                 continue
+
                     try:
                         gift_order.save()
+                        ori_unique.save()
                     except Exception as e:
                         error_tag = 1
                         self.message_user("%s出错:%s" % (obj.order_id, e), "error")
@@ -683,6 +694,7 @@ class SubmitGiftAction(BaseActionView):
                 if error_tag:
                     continue
                 self.log('change', '', obj)
+                obj.submit_user = self.request.user.username
                 obj.order_status = 2
                 obj.process_tag = 4
                 obj.save()
@@ -817,7 +829,7 @@ class SubmitImportAction(BaseActionView):
 # 对话信息导入和处理
 class GiftInTalkPenddingAdmin(object):
     list_display = ['platform', 'shop', 'order_status', 'mistakes', 'process_tag', 'cs_information', 'goods',
-                    'nickname', 'order_category', 'order_id', 'servicer', 'creator']
+                    'nickname', 'order_category', 'order_id', 'servicer', 'creator', 'create_time']
     list_filter = ['mistakes', 'create_time', 'creator', 'order_category', 'cs_information',]
     list_editable = ['shop', 'goods', 'nickname', 'order_id', 'cs_information']
     search_fields = ['nickname', 'order_id']
@@ -945,9 +957,10 @@ class GiftInTalkPenddingAdmin(object):
 
 # 对话信息查询
 class GiftInTalkAdmin(object):
-    list_display = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id', 'cs_information', 'mistakes', 'creator']
+    list_display = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname',
+                    'order_id', 'cs_information', 'mistakes', 'creator', 'create_time']
     list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status', 'order_category',
-                   'cs_information', 'mistakes', 'shop']
+                   'cs_information', 'mistakes', 'shop', 'nickname',]
     search_fields = ['nickname', 'order_id']
     readonly_fields = ['platform', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id',
                        'cs_information', 'creator', 'is_delete', 'mistakes', 'submit_user', 'shop']
@@ -1023,9 +1036,35 @@ class GiftImportAdmin(object):
         return False
 
 
+class OrderTBListAdmin(object):
+    pass
+
+
+class OrderJDListAdmin(object):
+    pass
+
+
+class OrderOWListAdmin(object):
+    pass
+
+
+class OrderCallListAdmin(object):
+    pass
+
+
+class OriGiftListAdmin(object):
+    pass
+
+
 xadmin.site.register(GiftInTalkPendding, GiftInTalkPenddingAdmin)
 xadmin.site.register(GiftInTalkInfo, GiftInTalkAdmin)
 xadmin.site.register(GiftOrderPendding, GiftOrderPenddingAdmin)
 xadmin.site.register(GiftOrderInfo, GiftOrderInfoAdmin)
 xadmin.site.register(GiftImportPendding, GiftImportPenddingAdmin)
 xadmin.site.register(GiftImportInfo, GiftImportAdmin)
+
+xadmin.site.register(OrderTBList, OrderTBListAdmin)
+xadmin.site.register(OrderJDList, OrderJDListAdmin)
+xadmin.site.register(OrderOWList, OrderOWListAdmin)
+xadmin.site.register(OrderCallList, OrderCallListAdmin)
+xadmin.site.register(OriGiftList, OriGiftListAdmin)

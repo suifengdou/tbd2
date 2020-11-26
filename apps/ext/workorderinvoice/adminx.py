@@ -273,7 +273,7 @@ class ConfirmWOAction(BaseActionView):
                             obj.save()
                             n -= 1
                             continue
-                    if not re.match("^([1589Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-90-9ABCDEFGHJKLMNPQRTUWXY])$", obj.tax_id):
+                    if not re.match("^([13589Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-90-9ABCDEFGHJKLMNPQRTUWXY])$", obj.tax_id):
 
                         self.message_user("%s 税号错误" % obj.order_id, "error")
                         obj.mistake_tag = 13
@@ -359,7 +359,7 @@ class SubmitWOAction(BaseActionView):
                             n -= 1
                             continue
                     if not re.match(
-                            "^([1598Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-9ABCDEFGHJKLMNPQRTUWXY])$",
+                            "^([13598Y]{1})([1239]{1})([0-9ABCDEFGHJKLMNPQRTUWXY]{6})([0-9ABCDEFGHJKLMNPQRTUWXY]{9})([0-9ABCDEFGHJKLMNPQRTUWXY])$",
                             obj.tax_id):
                         self.message_user("%s 税号错误" % obj.order_id, "error")
                         obj.mistake_tag = 13

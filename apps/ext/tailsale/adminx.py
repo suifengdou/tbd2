@@ -38,7 +38,7 @@ from .models import OriTailOrder, OTOUnhandle, OTOCheck, OTOGoods, TailOrder, TO
 from .models import PayBillOrder, PBOSubmit, PBOCheck, PBOGoods, TOHGoods, TOSGoods, TOPrivilegeGoods
 from .models import AccountInfo, AccountCheck, AccountUnfinished, PBillToAccount, AccountSpecialCheck
 from .models import FSCheck, FSSpecialCheck, FSSubmit, FinalStatement, FinalStatementGoods, FSAffirm, FSSpecialAffirm
-from .models import ROHandle, ROCheck, RefundOrder, ROGCheck, ROGoods
+from .models import ROHandle, ROCheck, RefundOrder, ROGCheck, ROGoods, TODeliverGoods
 from .models import ABOSubmit, ABOCheck, ArrearsBillOrder, ABOGoods, ABillToAccount, TailPartsOrder, SubmitTPO
 from apps.assistants.giftintalk.models import GiftOrderInfo
 from apps.utils.geography.models import DistrictInfo
@@ -1329,6 +1329,13 @@ class SubimtROAction(BaseActionView):
                         obj.save()
                         n -= 1
                         continue
+                    _q_track_no = RefundOrder.objects.filter(order_status__in=[2, 3], track_no=obj.track_no)
+                    if _q_track_no.exists():
+                        self.message_user("%s 此单退回单号重复" % obj.order_id, "error")
+                        obj.mistake_tag = 15
+                        obj.save()
+                        n -= 1
+                        continue
                     if obj.order_category == 4:
                         if obj.process_tag != 7:
                             self.message_user("%s 换货单必须要进行标记" % obj.order_id, "error")
@@ -1379,7 +1386,7 @@ class SetROGHAction(BaseActionView):
         return None
 
 
-# 设置待入库处理标记
+# 清除标记设置待入库处理标记
 class SetROGCAction(BaseActionView):
     action_name = "set_rog_clear"
     description = "清除标记设置"
@@ -1502,6 +1509,13 @@ class CheckROAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '', obj)
+                    _q_deliver_no = RefundOrder.objects.filter(order_status=3,track_no=obj.track_no)
+                    if _q_deliver_no.exists():
+                        self.message_user("%s 物流单号重复" % obj.order_id, "error")
+                        obj.mistake_tag = 15
+                        obj.save()
+                        n -= 1
+                        continue
                     if obj.process_tag != 6:
                         self.message_user("%s 非已到货状态不可以审核" % obj.order_id, "error")
                         obj.mistake_tag = 7
@@ -2662,7 +2676,7 @@ class TOGoodsAdmin(object):
         return False
 
 
-# 特殊权限尾货订单发货明细
+# 特殊权限尾货订单发货明细， 完整查询
 class TOPrivilegeGoodsAdmin(object):
     list_display = ['tail_order', 'mode_warehouse', 'shop', 'goods_name', 'goods_id', 'quantity', 'price', 'amount',
                     'settlement_price', 'settlement_amount', 'track_no', 'message',  'order_status', 'refund_status',
@@ -2686,6 +2700,36 @@ class TOPrivilegeGoodsAdmin(object):
                  ),
         Fieldset(None,
                  'creator', 'is_delete',
+                 **{"style": "display:None"}),
+    ]
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
+
+# 发货查询
+class TODeliverGoodsAdmin(object):
+    list_display = ['tail_order', 'mode_warehouse', 'shop', 'goods_name', 'goods_id', 'quantity',
+                    'track_no', 'message',  'order_status', 'refund_status',
+                    'sent_consignee', 'sent_smartphone', 'sent_province', 'sent_city', 'sent_district',
+                     'sent_address', 'submit_time',  'handle_time', 'handle_interval', ]
+
+    readonly_fields = ['tail_order', 'goods_id', 'goods_name', 'quantity', 'memorandum', 'goods_nickname', 'creator']
+    list_filter = ['tail_order__order_id', 'tail_order__sent_smartphone', 'goods_id', 'tail_order__mode_warehouse',
+                   'tail_order__track_no', 'goods_name', 'quantity', 'create_time', 'creator',]
+    search_fields = ['tail_order__order_id', 'tail_order__sent_smartphone', 'goods_nickname']
+
+    list_exclude = ['price', 'amount', 'settlement_price', 'settlement_amount']
+    form_layout = [
+        Fieldset('基本信息',
+                 Row('tail_order'),
+                 ),
+        Fieldset('货品信息',
+                 Row('goods_id', 'goods_name', 'quantity', ),
+                 ),
+        Fieldset(None,
+                 'creator', 'is_delete', 'price', 'amount', 'settlement_price', 'settlement_amount',
                  **{"style": "display:None"}),
     ]
 
@@ -3220,7 +3264,7 @@ class ROCheckAdmin(object):
                    'sent_consignee', 'sent_smartphone', 'receipted_quantity', 'sign_company', 'create_time',
                    'sign_department', 'submit_time']
     search_fields = ['track_no']
-    actions = [SetROAction, CheckROAction, RejectSelectedAction]
+    actions = [SetROAction, SetROGCAction, CheckROAction, RejectSelectedAction]
 
     list_editable = ['feedback']
     readonly_fields = ['message', 'shop', 'order_id', 'quantity', 'amount', 'ori_amount', 'creator', 'tail_order',
@@ -3298,6 +3342,36 @@ class RefundOrderAdmin(object):
                    'sent_address', 'quantity', 'amount', 'ori_amount', 'receipted_quantity',
                    'receipted_amount',  'message', 'feedback', 'sign_company',  'sign_department',  'order_status']
 
+    batch_data = True
+    delivery_ids = []
+
+    def post(self, request, *args, **kwargs):
+        delivery_ids = request.POST.get('ids', None)
+        if delivery_ids is not None:
+            if " " in delivery_ids:
+                delivery_ids = delivery_ids.split(" ")
+                for i in delivery_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(delivery_ids), 'error')
+                        break
+
+                self.delivery_ids = delivery_ids
+                self.queryset()
+
+        return super(RefundOrderAdmin, self).post(request, *args, **kwargs)
+
+    def queryset(self):
+        queryset = super(RefundOrderAdmin, self).queryset()
+        if self.delivery_ids:
+            queryset = queryset.filter(is_delete=0, tail_order__track_no__in=self.delivery_ids)
+        else:
+            queryset = queryset.filter(is_delete=0)
+        return queryset
+
+    def has_add_permission(self):
+        # 禁用添加按钮
+        return False
+
     def has_add_permission(self):
         # 禁用添加按钮
         return False
@@ -3308,8 +3382,9 @@ class ROGCheckAdmin(object):
     list_display = ['shop', 'refund_order', 'mistake_tag', 'goods_name', 'quantity', 'receipted_quantity',
                     'info_refund', 'track_no', 'sent_consignee', 'sent_smartphone', 'sent_city', 'sent_district',
                     'sent_address', 'message', 'order_status']
-    search_fields = ['tail_order__track_no', 'tail_order__order_id']
-    list_filter = []
+    search_fields = ['refund_order__track_no']
+    list_filter = ['refund_order__track_no', 'goods_name', 'quantity', 'receipted_quantity', 'order_status',
+                   'mistake_tag', 'process_tag']
     actions = [SetROGHAction, SetROGCAction, StockROGAction]
 
     list_editable = ['receipted_quantity']
@@ -3336,7 +3411,7 @@ class ROGCheckAdmin(object):
     def queryset(self):
         queryset = super(ROGCheckAdmin, self).queryset()
         if self.delivery_ids:
-            queryset = queryset.filter(order_status__in=[2, 3], is_delete=0, tail_order__track_no__in=self.delivery_ids)
+            queryset = queryset.filter(order_status__in=[2, 3], is_delete=0, refund_order__track_no__in=self.delivery_ids)
         else:
             queryset = queryset.filter(order_status__in=[2, 3], is_delete=0)
         return queryset
@@ -3357,6 +3432,32 @@ class ROGoodsAdmin(object):
     readonly_fields = ['order_status', 'refund_order', 'goods_id', 'goods_name', 'goods_nickname', 'quantity',
                        'settlement_price', 'settlement_amount', 'mistake_tag', 'receipted_quantity', 'creator',
                        'process_tag', 'memorandum']
+
+    batch_data = True
+    delivery_ids = []
+
+    def post(self, request, *args, **kwargs):
+        delivery_ids = request.POST.get('ids', None)
+        if delivery_ids is not None:
+            if " " in delivery_ids:
+                delivery_ids = delivery_ids.split(" ")
+                for i in delivery_ids:
+                    if not re.match(r'^[0-9a-zA-Z]+$', i):
+                        self.message_user('%s包含错误的订单编号，请检查' % str(delivery_ids), 'error')
+                        break
+
+                self.delivery_ids = delivery_ids
+                self.queryset()
+
+        return super(ROGoodsAdmin, self).post(request, *args, **kwargs)
+
+    def queryset(self):
+        queryset = super(ROGoodsAdmin, self).queryset()
+        if self.delivery_ids:
+            queryset = queryset.filter(is_delete=0, tail_order__track_no__in=self.delivery_ids)
+        else:
+            queryset = queryset.filter(is_delete=0)
+        return queryset
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -3459,13 +3560,13 @@ class SubmitTPOAction(BaseActionView):
                     if obj.process_tag != 6:
                         self.message_user("%s电话重复" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 12
+                        obj.mistake_tag = 12
                         obj.save()
                         continue
                 if '整机' in obj.parts_info:
                     self.message_user("%s货品名称包含整机不是配件" % obj.order_id, "error")
                     n -= 1
-                    obj.mistakes = 1
+                    obj.mistake_tag = 1
                     obj.save()
                     continue
                 goods_group = self.goods_split(obj.parts_info)
@@ -3484,7 +3585,7 @@ class SubmitTPOAction(BaseActionView):
                         else:
                             self.message_user("%s货品名称错误，修正后再次重新提交，如果名称无误，请联系管理员" % obj.order_id, "error")
                             n -= 1
-                            obj.mistakes = 2
+                            obj.mistake_tag = 2
                             obj.save()
                             continue
                     order_id = str(obj.order_id).replace("订单号", "").replace(" ", "").replace("：", "")
@@ -3494,7 +3595,7 @@ class SubmitTPOAction(BaseActionView):
                     if len(gift_order.nickname) == 0:
                         self.message_user("%s收货人错误" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 3
+                        obj.mistake_tag = 3
                         obj.save()
                         continue
 
@@ -3506,13 +3607,13 @@ class SubmitTPOAction(BaseActionView):
                             if int(delta_date) > 14:
                                 self.message_user("%s14天内重复" % obj.order_id, "error")
                                 n -= 1
-                                obj.mistakes = 5
+                                obj.mistake_tag = 5
                                 obj.save()
                                 continue
                             else:
                                 self.message_user("%s14天外重复" % obj.order_id, "error")
                                 n -= 1
-                                obj.mistakes = 4
+                                obj.mistake_tag = 4
                                 obj.save()
                                 continue
 
@@ -3523,7 +3624,7 @@ class SubmitTPOAction(BaseActionView):
                     if gift_order.shop != '小狗尾货':
                         self.message_user("%s店铺错误" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 11
+                        obj.mistake_tag = 11
                         obj.save()
                         continue
 
@@ -3539,19 +3640,19 @@ class SubmitTPOAction(BaseActionView):
                         if len(gift_order.mobile) != 11:
                             self.message_user("%s手机出错" % obj.order_id, "error")
                             n -= 1
-                            obj.mistakes = 6
+                            obj.mistake_tag = 6
                             obj.save()
                             continue
                     if '集运' in str(gift_order.address):
                         self.message_user("%s地址是集运仓" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 7
+                        obj.mistake_tag = 7
                         obj.save()
                         continue
                     if not ((gift_order.receiver and gift_order.address) and gift_order.mobile):
                         self.message_user("%s收货人电话地址不全" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 8
+                        obj.mistake_tag = 8
                         obj.save()
                         continue
                     if obj.sent_city:
@@ -3562,7 +3663,7 @@ class SubmitTPOAction(BaseActionView):
                     else:
                         self.message_user("%s城市错误" % obj.order_id, "error")
                         n -= 1
-                        obj.mistakes = 9
+                        obj.mistake_tag = 9
                         obj.save()
                         continue
                     try:
@@ -3570,7 +3671,7 @@ class SubmitTPOAction(BaseActionView):
                     except Exception as e:
                         self.message_user("%s出错:%s" % (obj.order_id, e), "error")
                         n -= 1
-                        obj.mistakes = 10
+                        obj.mistake_tag = 10
                         obj.save()
                         continue
 
@@ -3729,6 +3830,7 @@ xadmin.site.register(TOHGoods, TOHGoodsAdmin)
 xadmin.site.register(TOSGoods, TOSGoodsAdmin)
 xadmin.site.register(TOGoods, TOGoodsAdmin)
 xadmin.site.register(TOPrivilegeGoods, TOPrivilegeGoodsAdmin)
+xadmin.site.register(TODeliverGoods, TODeliverGoodsAdmin)
 
 xadmin.site.register(PBOSubmit, PBOSubmitAdmin)
 xadmin.site.register(PBOCheck, PBOCheckAdmin)

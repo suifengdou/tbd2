@@ -13,7 +13,7 @@ from .models import UserProfile
 
 class GlobalSettings(object):
     site_title = 'UltraTool'
-    site_footer = 'UltraTool V0.5.0.45'
+    site_footer = 'UltraTool V0.5.0.46'
     menu_style = 'accordion'
 
 

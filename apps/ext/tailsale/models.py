@@ -458,6 +458,13 @@ class TOPrivilegeGoods(TOGoods):
         proxy = True
 
 
+class TODeliverGoods(TOGoods):
+    class Meta:
+        verbose_name = 'EXT-尾货订单-发货查询'
+        verbose_name_plural = verbose_name
+        proxy = True
+
+
 # 尾货售后单
 class RefundOrder(BaseModel):
     ORDER_STATUS = (
@@ -493,6 +500,7 @@ class RefundOrder(BaseModel):
         (12, '生成结算单货品出错'),
         (13, '关联的订单未发货'),
         (14, '不是退货单不可以审核'),
+        (15, '物流单号重复'),
 
     )
     MODE_W = (

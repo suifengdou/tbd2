@@ -631,7 +631,7 @@ class OCCheckAdmin(object):
         Fieldset('验算信息',
                  Row('actual_receipts', 'receivable', 'checking',),),
         Fieldset(None,
-                 'process_tag', 'mistake_tag', 'order_status', 'is_delete', 'creator',
+                 'process_tag', 'mistake_tag', 'order_status', 'is_delete', 'creator', 'handler', 'handle_time',
                  **{"style": "display:None"}),
     ]
 
@@ -639,10 +639,6 @@ class OCCheckAdmin(object):
         queryset = super(OCCheckAdmin, self).queryset()
         queryset = queryset.filter(order_status=1, is_delete=0)
         return queryset
-
-    def has_add_permission(self):
-        # 禁用添加按钮
-        return False
 
 
 class OriCompensationAdmin(object):

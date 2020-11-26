@@ -133,11 +133,12 @@ class SubmitWODPAction(BaseActionView):
                 _q_repeat_order = WorkOrderDealerPart.objects.filter(order_id=obj.order_id,
                                                                      order_status__in=[2, 3])
                 if _q_repeat_order.exists():
-                    self.message_user("%s一个订单号不可重复提交" % obj.order_id, "error")
-                    n -= 1
-                    obj.mistake_tag = 1
-                    obj.save()
-                    continue
+                    if obj.process_tag != 6:
+                        self.message_user("%s一个订单号不可重复提交" % obj.order_id, "error")
+                        n -= 1
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
                 _q_repeat_order_smart = WorkOrderDealerPart.objects.filter(sent_smartphone=obj.sent_smartphone,
                                                                            order_status__in=[2, 3])
                 if _q_repeat_order_smart.exists():
