@@ -26,7 +26,6 @@ from xadmin.views.base import filter_hook
 from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
-
 from .models import OriOrderInfo, SubmitOriOrder, CheckOrder, SubmitOrder, SimpleOrder, OrderInfo, OriOrderList
 from .models import PartWHCheckOrder, PartWHOrder, MachineWHCheckOrder, MachineWHOrder, CenterTWHCheckOrder
 from .models import CenterTWHOrder, TailShopOrder, LabelOptions
@@ -494,8 +493,8 @@ class SubmitOriOrderAdmin(object):
                     'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name', 'logistics_no',
                     'buyer_message', 'cs_remark', 'order_status', 'src_tids']
 
-    list_filter = ['buyer_nick', 'receiver_mobile', 'deliver_time', 'goods_name', 'spec_code', 'num', 'price',
-                   'share_amount', 'src_tids', ]
+    list_filter = ['trade_no', 'process_tag', 'mistake_tag', 'buyer_nick', 'receiver_mobile', 'deliver_time',
+                   'goods_name', 'spec_code', 'num', 'price','share_amount', 'src_tids', 'creator']
     actions = [SetODSAction, SetODCAction, SetODComplishAction, SubmitOriODAction, RejectSelectedAction]
 
     form_layout = [
@@ -653,8 +652,8 @@ class OriOrderInfoAdmin(object):
                     'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name', 'logistics_no',
                     'buyer_message', 'cs_remark', 'order_status', 'src_tids']
 
-    list_filter = ['buyer_nick', 'receiver_mobile', 'deliver_time', 'goods_name', 'spec_code', 'num', 'price',
-                   'share_amount', 'src_tids',]
+    list_filter = ['trade_no', 'process_tag', 'mistake_tag', 'buyer_nick', 'receiver_mobile', 'deliver_time',
+                   'goods_name', 'spec_code', 'num', 'price', 'share_amount', 'src_tids', 'creator']
 
     readonley_fields = ['trade_no', 'process_tag', 'mistake_tag', 'shop_name', 'warehouse_name', 'buyer_nick',
                         'receiver_name', 'receiver_area', 'receiver_address', 'receiver_mobile', 'goods_name',
@@ -740,7 +739,7 @@ class SubmitOrderAdmin(object):
                     'buyer_message', 'cs_remark', 'order_status', 'src_tids']
 
     list_filter = ['process_tag', 'mistake_tag', 'trade_no', 'buyer_nick', 'receiver_mobile', 'deliver_time',
-                   'goods_name', 'spec_code', 'num', 'price', 'share_amount', 'src_tids', ]
+                   'goods_name', 'spec_code', 'num', 'price', 'share_amount', 'src_tids', 'creator']
     readonley_fields = ['trade_no', 'process_tag', 'mistake_tag', 'shop_name', 'warehouse_name', 'buyer_nick',
                         'receiver_name', 'receiver_area', 'receiver_address', 'receiver_mobile', 'goods_name',
                         'spec_code', 'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name',

@@ -41,7 +41,7 @@ class SensitiveInfo(BaseModel):
         (1, '正面'),
     )
     words = models.CharField(max_length=10, unique=True, verbose_name='敏感字')
-    index = models.IntegerField(verbose_name='指数')
+    index_num = models.IntegerField(verbose_name='指数')
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='敏感字类型')
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='单据状态')
 
@@ -152,7 +152,7 @@ class OriDetailTB(BaseModel):
     interval = models.IntegerField(verbose_name='对话间隔(秒)')
     content = models.TextField(verbose_name='内容')
 
-    index = models.IntegerField(default=0, verbose_name='对话负面指数')
+    index_num = models.IntegerField(default=0, verbose_name='对话负面指数')
 
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
     extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单', db_index=True)
@@ -257,7 +257,7 @@ class OriDetailJD(BaseModel):
     interval = models.IntegerField(verbose_name='对话间隔(秒)')
     content = models.TextField(verbose_name='内容')
 
-    index = models.IntegerField(default=0, verbose_name='对话负面指数')
+    index_num = models.IntegerField(default=0, verbose_name='对话负面指数')
 
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
 
@@ -360,7 +360,7 @@ class OriDetailOW(BaseModel):
     interval = models.IntegerField(verbose_name='对话间隔(秒)')
     content = models.TextField(verbose_name='内容')
 
-    index = models.IntegerField(default=0, verbose_name='对话负面指数')
+    index_num = models.IntegerField(default=0, verbose_name='对话负面指数')
 
     category = models.SmallIntegerField(choices=CATEGORY, default=0, verbose_name='内容类型')
     extract_tag = models.SmallIntegerField(choices=LOGICAL_DECISION, default=0, verbose_name='是否提取订单', db_index=True)

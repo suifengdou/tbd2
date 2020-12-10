@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'apps.users.apps.UsersConfig',
     'pure_pagination',
+    'debug_toolbar',
     'xadmin',
     'crispy_forms',
     'apps.ext.sf_consignation.apps.SfConsignationConfig',
@@ -99,6 +100,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "users.UserProfile"
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -106,8 +108,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
 ]
+
 
 ROOT_URLCONF = 'tbd2.urls'
 
@@ -138,7 +140,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'tbd2mb4',
-        'HOST': '192.168.116.131',
+        'HOST': '127.0.0.1',
         "USER": 'sfd',
         'PASSWORD': 'suifengdou963',
         'PORT': 3306
@@ -209,3 +211,7 @@ PAGINATION_SETTINGS = {
 LOGGING_CONFIG = None
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 30000
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]

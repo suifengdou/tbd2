@@ -2888,7 +2888,7 @@ class AccountCheckAdmin(object):
                     'submit_time', 'handle_time', 'handle_interval', 'final_statement', 'message', 'feedback',
                     'order_status', 'process_tag', 'mistake_tag']
     list_filter = ['order_category', 'process_tag', 'mistake_tag', 'goods_id', 'quantity', 'settlement_price',
-                   'settlement_amount', 'sent_consignee', 'sent_smartphone', 'submit_time', 'handle_time',]
+                   'settlement_amount', 'sent_consignee', 'sent_smartphone', 'submit_time', 'handle_time', 'create_time']
     readonly_fields = ['order_id', 'shop', 'mode_warehouse', 'order_category', 'goods_id', 'goods_name',
                        'goods_nickname', 'quantity', 'settlement_price', 'settlement_amount', 'sent_consignee',
                        'sent_smartphone', 'submit_time', 'handle_time', 'handle_interval', 'final_statement',
@@ -2912,7 +2912,7 @@ class AccountSpecialCheckAdmin(object):
                     'submit_time', 'handle_time', 'handle_interval', 'final_statement', 'message', 'feedback',
                     'order_status', 'process_tag', 'mistake_tag']
     list_filter = ['order_category', 'process_tag', 'mistake_tag', 'goods_id', 'quantity', 'settlement_price',
-                   'settlement_amount', 'sent_consignee', 'sent_smartphone', 'submit_time', 'handle_time',]
+                   'settlement_amount', 'sent_consignee', 'sent_smartphone', 'submit_time', 'handle_time', 'create_time']
     readonly_fields = ['order_id', 'shop', 'mode_warehouse', 'order_category', 'goods_id', 'goods_name',
                        'goods_nickname', 'quantity', 'settlement_price', 'settlement_amount', 'sent_consignee',
                        'sent_smartphone', 'submit_time', 'handle_time', 'handle_interval', 'final_statement',

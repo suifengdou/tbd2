@@ -13,19 +13,22 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.conf.urls import url, include
 from django.contrib import admin
 import xadmin
 
 from apps.users.views import IndexView
-
-urlpatterns = [
-    url(r'^xadmin/', xadmin.site.urls),
-    url(r'^users/', include('apps.users.urls', namespace='users')),
-    url(r'^assistants/refund/jdfbp/', include('apps.assistants.refund_jdfbp.urls', namespace='ass_ref_jdfbp')),
-    url(r'^external/express/sf/', include('apps.ext.sf_consignation.urls', namespace='ext_exp_sf')),
-    # url(r'^crm/orders/', include('apps.crm.orders.urls', namespace='crm_orders')),
-    url(r'^crm/maintenance/', include('apps.crm.maintenance.urls', namespace='crm_maintenance')),
-    url(r'^$', IndexView.as_view(), name='index'),
-    url(r'^crm/refurbishment/', include('apps.crm.refurbishment.urls', namespace='crm_refurbishment')),
-    ]
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [
+        url(r'^xadmin/', xadmin.site.urls),
+        url(r'^users/', include('apps.users.urls', namespace='users')),
+        url(r'^assistants/refund/jdfbp/', include('apps.assistants.refund_jdfbp.urls', namespace='ass_ref_jdfbp')),
+        url(r'^external/express/sf/', include('apps.ext.sf_consignation.urls', namespace='ext_exp_sf')),
+        # url(r'^crm/orders/', include('apps.crm.orders.urls', namespace='crm_orders')),
+        url(r'^crm/maintenance/', include('apps.crm.maintenance.urls', namespace='crm_maintenance')),
+        url(r'^$', IndexView.as_view(), name='index'),
+        url(r'^crm/refurbishment/', include('apps.crm.refurbishment.urls', namespace='crm_refurbishment')),
+        url('__debug__', include(debug_toolbar.urls)),
+        ]

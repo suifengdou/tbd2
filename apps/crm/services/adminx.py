@@ -28,6 +28,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import SSICreate, SSIDistribute, SSIOnProcess, SSIProcess, ServicesInfo, SDDistribute, SDProcess, ServicesDetail
+from .models import SIMirror, SDMirror
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -141,7 +142,21 @@ class SetODSAction(BaseActionView):
 
 
 class SSICreateAdmin(object):
-    pass
+    list_display = ['name', 'mistake_tag', 'process_tag', 'order_category', 'prepare_time', 'services_info',
+                    'quantity', 'memorandum', 'creator', 'create_time']
+
+    actions = []
+
+    list_filter = ['name', 'mistake_tag', 'process_tag', 'order_category', 'memorandum', 'creator', 'create_time']
+
+    form_layout = [
+        Fieldset('基本信息',
+                 Row('name', 'order_category', ),
+                 'memorandum',
+                 Row('creator', 'create_time', ), ),
+        Fieldset(None,
+                 'update_time', 'is_delete', **{"style": "display:None"}),
+    ]
 
 
 class SSIDistributeAdmin(object):
@@ -175,6 +190,14 @@ class ServicesDetailAdmin(object):
     pass
 
 
+class SIMirrorAdmin(object):
+    pass
+
+
+class SDMirrorAdmin(object):
+    pass
+
+
 xadmin.site.register(SSICreate, SSICreateAdmin)
 xadmin.site.register(SSIDistribute, SSIDistributeAdmin)
 xadmin.site.register(SSIOnProcess, SSIOnProcessAdmin)
@@ -183,6 +206,8 @@ xadmin.site.register(ServicesInfo, ServicesInfoAdmin)
 xadmin.site.register(SDDistribute, SDDistributeAdmin)
 xadmin.site.register(SDProcess, SDProcessAdmin)
 xadmin.site.register(ServicesDetail, ServicesDetailAdmin)
+xadmin.site.register(SIMirror, SIMirrorAdmin)
+xadmin.site.register(SDMirror, SDMirrorAdmin)
 
 
 

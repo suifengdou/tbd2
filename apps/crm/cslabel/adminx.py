@@ -27,8 +27,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import LabelInfo, AssociateLabel, LabelOrder, LabelDetial, LabelResult, AssociateLabelDetial
-
-
+from apps.crm.services.models import ServicesInfo, ServicesDetail, SDMirror, SIMirror
 
 
 # 审核标签订单
@@ -154,14 +153,14 @@ class SetALDAction(BaseActionView):
         return None
 
 
-# 创建任务界面
+# 快捷创建四个客户电话任务
 class CreateSTAction(BaseActionView):
     action_name = "create_service_task"
-    description = "创建客户关系任务"
+    description = "快捷创建四个客户电话任务"
     model_perm = 'change'
     icon = "fa fa-flag"
 
-    modify_models_batch = True
+    modify_models_batch = False
 
     @filter_hook
     def do_action(self, queryset):
@@ -178,19 +177,79 @@ class CreateSTAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '%s审核了标签订单' % self.request.user.username, obj)
-                    order_detials = obj.labeldetial_set.all().filter(order_status=1)
-                    if not order_detials:
-                        obj.mistake_tag = 0
-                        obj.order_status = 2
+                    order_detials = obj.labeldetial_set.all()
+                    if not order_detials.exists():
+                        self.message_user("选择的标签订单不存在客户", "error")
+                        obj.mistake_tag = 2
                         obj.save()
-                    else:
-                        self.message_user("单据还存在未处理的明细单,先处理明细单", "error")
+                    current_date = datetime.datetime.now()
+                    date_list = [7, 30, 60, 180]
+                    i = 0
+                    mis_tag = 0
+                    for mid_date in date_list:
+                        service_order = ServicesInfo()
+                        i += 1
+                        service_order.prepare_time = current_date + datetime.timedelta(days=mid_date)
+                        service_order.name = str(obj.order_id) + '第%s次任务' % str(i)
+                        service_order.order_category = 1
+                        service_order.quantity = order_detials.count()
+                        try:
+                            service_order.creator = self.request.user.username
+                            service_order.save()
+                        except Exception as e:
+                            mis_tag = 1
+                            self.message_user("保存任务出错：%s" % e, "error")
+                            obj.mistake_tag = 3
+                            obj.save()
+                            break
+                        mirror_so = SIMirror()
+                        mirror_so.ori_order = service_order
+                        keywords = ['name', 'order_category', 'prepare_time', 'creator', 'quantity']
+                        for keyword in keywords:
+                            setattr(mirror_so, keyword, getattr(service_order, keyword, None))
+                        try:
+                            mirror_so.save()
+                        except Exception as e:
+                            mis_tag = 1
+                            self.message_user("保存任务镜像出错：%s" % e, "error")
+                            obj.mistake_tag = 4
+                            obj.save()
+                            break
+                        for order_detial in order_detials:
+                            service_detail = ServicesDetail()
+                            service_detail.customer = order_detial.customer
+                            service_detail.services = service_order
+                            service_detail.target = order_detial.customer.mobile
+                            service_detail.creator = self.request.user.username
+                            try:
+                                service_detail.save()
+                            except Exception as e:
+                                self.message_user("保存明细出错：%s" % e, "error")
+                                obj.mistake_tag = 5
+                                obj.save()
+                                continue
+                            mirror_sd = SDMirror()
+                            mirror_sd.customer = order_detial.customer
+                            mirror_sd.services = mirror_so
+                            mirror_sd.target = order_detial.customer.mobile
+                            mirror_sd.creator = self.request.user.username
+                            try:
+                                mirror_sd.save()
+                            except Exception as e:
+                                self.message_user("保存镜像明细出错：%s" % e, "error")
+                                obj.mistake_tag = 6
+                                obj.save()
+                                continue
+                    if mis_tag:
+                        continue
+                    obj.service_num += 4
+                    obj.save()
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None
 
 
-# 标签创建界面
+# 标签界面
 class LabelInfoAdmin(object):
     list_display = ['name', 'order_category', 'memorandum', 'order_status', 'creator', 'create_time',]
 
@@ -206,17 +265,18 @@ class LabelInfoAdmin(object):
         Fieldset(None,
                  'update_time', 'is_delete', **{"style": "display:None"}),
     ]
+    relfield_style = 'fk-ajax'
 
 
 # 标签订单审核界面
 class AssociateLabelAdmin(object):
-    list_display = ['order_id', 'label', 'quantity', 'order_status', 'creator', 'create_time',]
+    list_display = ['order_id', 'mistake_tag', 'label', 'quantity', 'order_status', 'creator', 'create_time',]
     readonley_fields = ['order_id', 'label', 'quantity', 'order_status', 'creator',
                         'is_delete', 'create_time', 'update_time']
 
     actions = [FinishALAction, SubmitALAction]
 
-    list_filter = ['order_id', 'label',  'creator', 'create_time']
+    list_filter = ['mistake_tag', 'order_id', 'label',  'creator', 'create_time']
 
     form_layout = [
         Fieldset('基本信息',
@@ -234,11 +294,11 @@ class AssociateLabelAdmin(object):
 
 # 标签查询和任务创建界面
 class LabelOrderAdmin(object):
-    list_display = ['order_id', 'label', 'quantity', 'order_status', 'creator', 'create_time',]
+    list_display = ['order_id', 'label', 'quantity', 'order_status', 'creator', 'create_time', 'service_num']
     readonley_fields = ['order_id', 'label', 'quantity', 'order_status', 'creator',
                         'is_delete', 'create_time', 'update_time']
 
-    actions = []
+    actions = [CreateSTAction]
 
     list_filter = ['order_id', 'label',  'creator', 'create_time']
 
@@ -254,13 +314,13 @@ class LabelOrderAdmin(object):
 
 # 标签订单明细未审核界面
 class AssociateLabelDetialAdmin(object):
-    list_display = ['mistake_tag', 'label_order', 'customer', 'order_status', 'creator', 'create_time', ]
+    list_display = ['label_order', 'mistake_tag', 'customer', 'order_status', 'creator', 'create_time', ]
     readonley_fields = ['mistake_tag', 'label_order', 'order_status', 'creator', 'create_time', 'customer',
                         'is_delete', 'update_time']
 
     actions = [SetALDAction]
 
-    list_filter = ['label_order__order_id', 'customer__mobile', 'creator', 'create_time']
+    list_filter = ['mistake_tag', 'label_order__order_id', 'customer__mobile', 'creator', 'create_time']
 
     form_layout = [
         Fieldset('基本信息',

@@ -48,6 +48,11 @@ class LabelOrder(BaseModel):
     MISTAKE_LIST = (
         (0, '正常'),
         (1, '个别明细单出错，无法审核'),
+        (2, '没有客户'),
+        (3, '保存任务出错'),
+        (4, '保存任务镜像出错'),
+        (5, '保存明细出错'),
+        (6, '保存镜像明细出错'),
     )
 
     order_id = models.CharField(max_length=150, unique=True, verbose_name='单据编号')
