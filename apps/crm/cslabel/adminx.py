@@ -27,7 +27,7 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import LabelInfo, AssociateLabel, LabelOrder, LabelDetial, LabelResult, AssociateLabelDetial
-from apps.crm.services.models import ServicesInfo, ServicesDetail, SDMirror, SIMirror
+from apps.crm.services.models import ServicesInfo, ServicesDetail
 
 
 # 审核标签订单
@@ -153,10 +153,10 @@ class SetALDAction(BaseActionView):
         return None
 
 
-# 快捷创建四个客户电话任务
+# 快捷创建注册任务
 class CreateSTAction(BaseActionView):
     action_name = "create_service_task"
-    description = "快捷创建四个客户电话任务"
+    description = "快捷创建快捷注册任务"
     model_perm = 'change'
     icon = "fa fa-flag"
 
@@ -182,67 +182,37 @@ class CreateSTAction(BaseActionView):
                         self.message_user("选择的标签订单不存在客户", "error")
                         obj.mistake_tag = 2
                         obj.save()
-                    current_date = datetime.datetime.now()
-                    date_list = [7, 30, 60, 180]
-                    i = 0
-                    mis_tag = 0
-                    for mid_date in date_list:
-                        service_order = ServicesInfo()
-                        i += 1
-                        service_order.prepare_time = current_date + datetime.timedelta(days=mid_date)
-                        service_order.name = str(obj.order_id) + '第%s次任务' % str(i)
-                        service_order.order_category = 1
-                        service_order.quantity = order_detials.count()
+
+                    service_order = ServicesInfo()
+                    service_order.prepare_time = datetime.datetime.now()
+                    service_order.name = str(obj.order_id) + '快捷注册任务'
+                    service_order.order_category = 2
+                    service_order.order_type = 2
+                    service_order.quantity = order_detials.count()
+                    try:
+                        service_order.creator = self.request.user.username
+                        service_order.save()
+                    except Exception as e:
+                        self.message_user("保存任务出错：%s" % e, "error")
+                        obj.mistake_tag = 3
+                        obj.save()
+                        break
+                    for order_detial in order_detials:
+                        service_detail = ServicesDetail()
+                        service_detail.customer = order_detial.customer
+                        service_detail.order_type = service_order.order_type
+                        service_detail.services = service_order
+                        service_detail.target = order_detial.customer.mobile
+                        service_detail.creator = self.request.user.username
                         try:
-                            service_order.creator = self.request.user.username
-                            service_order.save()
+                            service_detail.save()
                         except Exception as e:
-                            mis_tag = 1
-                            self.message_user("保存任务出错：%s" % e, "error")
-                            obj.mistake_tag = 3
+                            self.message_user("保存明细出错：%s" % e, "error")
+                            obj.mistake_tag = 5
                             obj.save()
-                            break
-                        mirror_so = SIMirror()
-                        mirror_so.ori_order = service_order
-                        keywords = ['name', 'order_category', 'prepare_time', 'creator', 'quantity']
-                        for keyword in keywords:
-                            setattr(mirror_so, keyword, getattr(service_order, keyword, None))
-                        try:
-                            mirror_so.save()
-                        except Exception as e:
-                            mis_tag = 1
-                            self.message_user("保存任务镜像出错：%s" % e, "error")
-                            obj.mistake_tag = 4
-                            obj.save()
-                            break
-                        for order_detial in order_detials:
-                            service_detail = ServicesDetail()
-                            service_detail.customer = order_detial.customer
-                            service_detail.services = service_order
-                            service_detail.target = order_detial.customer.mobile
-                            service_detail.creator = self.request.user.username
-                            try:
-                                service_detail.save()
-                            except Exception as e:
-                                self.message_user("保存明细出错：%s" % e, "error")
-                                obj.mistake_tag = 5
-                                obj.save()
-                                continue
-                            mirror_sd = SDMirror()
-                            mirror_sd.customer = order_detial.customer
-                            mirror_sd.services = mirror_so
-                            mirror_sd.target = order_detial.customer.mobile
-                            mirror_sd.creator = self.request.user.username
-                            try:
-                                mirror_sd.save()
-                            except Exception as e:
-                                self.message_user("保存镜像明细出错：%s" % e, "error")
-                                obj.mistake_tag = 6
-                                obj.save()
-                                continue
-                    if mis_tag:
-                        continue
-                    obj.service_num += 4
+                            continue
+
+                    obj.service_num += 1
                     obj.save()
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')

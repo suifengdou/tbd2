@@ -27,20 +27,77 @@ from xadmin.util import model_ngettext
 from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import CustomerInfo, CountIdList, OrderList
+from apps.crm.services.models import ServicesInfo, ServicesDetail
+
+
+
+# 快捷创建注册任务
+class CreateSTAction(BaseActionView):
+    action_name = "create_service_task"
+    description = "快捷创建快捷注册任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '%(user)s批量审核了 %(count)d %(items)s.' % {"count": n,
+                                                                 "items": model_ngettext(self.opts, n),
+                                                                 "user": self.request.user.username})
+                queryset.update(order_status=2)
+            else:
+                service_order = ServicesInfo()
+                service_order.prepare_time = datetime.datetime.now()
+                service_order.name = str(datetime.datetime.now()) + '快捷注册任务'
+                service_order.order_category = 2
+                service_order.order_type = 2
+                service_order.quantity = n
+                try:
+                    service_order.creator = self.request.user.username
+                    service_order.save()
+                except Exception as e:
+                    self.message_user("保存任务出错：%s" % e, "error")
+                    return None
+
+                for obj in queryset:
+                    self.log('change', '%s创建了关系任务' % self.request.user.username, obj)
+
+                    service_detail = ServicesDetail()
+                    service_detail.customer = obj
+                    service_detail.order_type = service_order.order_type
+                    service_detail.services = service_order
+                    service_detail.target = obj.mobile
+                    service_detail.creator = self.request.user.username
+                    try:
+                        service_detail.save()
+                    except Exception as e:
+                        self.message_user("保存明细出错：%s" % e, "error")
+                        continue
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
 
 
 class CustomerInfoAdmin(object):
     list_display = ['mobile', 'e_mail', 'qq', 'wangwang', 'jdfbp_id', 'jdzy_id', 'gfsc_id', 'alipay_id', 'pdd_id',
-                    'wechat', 'others_id', 'birthday', 'total_amount', 'total_times', 'last_time', 'return_time',
+                    'webchat', 'others_id', 'birthday', 'total_amount', 'total_times', 'last_time', 'return_time',
                     'contact_times', 'free_service_times', 'maintenance_times', 'memorandum', 'order_failure_times',
                     'creator', 'create_time']
     readonly_fields = ['mobile', 'e_mail', 'qq', 'wangwang', 'jdfbp_id', 'jdzy_id', 'gfsc_id', 'alipay_id', 'pdd_id',
-                       'wechat', 'others_id', 'birthday', 'total_amount', 'total_times', 'last_time', 'return_time',
+                       'webchat', 'others_id', 'birthday', 'total_amount', 'total_times', 'last_time', 'return_time',
                        'contact_times', 'free_service_times', 'maintenance_times', 'memorandum', 'order_failure_times',
                        'creator', 'create_time', 'update_time', 'is_delete']
+    actions = [CreateSTAction]
 
-    list_filter = ['mobile', 'wangwang', 'jdfbp_id', 'jdzy_id', 'gfsc_id',]
-
+    list_filter = ['mobile', 'wangwang', 'jdfbp_id', 'jdzy_id', 'gfsc_id', 'webchat']
+    relfield_style = 'fk-ajax'
     form_layout = [
         Fieldset('基本信息',
                  Row('mobile',),),
@@ -48,7 +105,7 @@ class CustomerInfoAdmin(object):
                  Row('wangwang', 'jdfbp_id', 'jdzy_id', ),
 
                  Row('gfsc_id', 'alipay_id', 'pdd_id', ),
-                 Row('wechat', 'others_id',),),
+                 Row('webchat', 'others_id',),),
         Fieldset('计数信息',
                  Row('total_amount', 'total_times',),
                  Row('free_service_times', 'maintenance_times',),

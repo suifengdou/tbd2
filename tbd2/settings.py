@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'apps.crm.orders.apps.OrdersConfig',
     'apps.crm.customers.apps.CustomersConfig',
     'apps.crm.cslabel.apps.CslabelConfig',
+    'apps.crm.webchatcus.apps.WebchatcusConfig',
     'apps.crm.services.apps.ServicesConfig',
     'apps.base.warehouse.apps.WarehouseConfig',
     'apps.base.relationship.apps.RelationshipConfig',
@@ -94,7 +95,6 @@ INSTALLED_APPS = [
     'apps.ops.tbgoodskpi.apps.TbgoodskpiConfig',
     'apps.ops.tbshopkpi.apps.ShopkpiConfig',
     'apps.ops.tbwangwang.apps.TbwangwangConfig',
-
 ]
 
 AUTH_USER_MODEL = "users.UserProfile"

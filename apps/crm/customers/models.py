@@ -24,7 +24,7 @@ class CustomerInfo(BaseModel):
     gfsc_id = models.CharField(null=True, blank=True, max_length=60, verbose_name='官方商城账号')
     alipay_id = models.CharField(null=True, blank=True, max_length=60, verbose_name='支付宝账号')
     pdd_id = models.CharField(null=True, blank=True, max_length=60, verbose_name='拼多多账号')
-    wechat = models.CharField(null=True, blank=True, max_length=60, verbose_name='微信号')
+    webchat = models.CharField(null=True, blank=True, max_length=60, verbose_name='微信号')
     others_id = models.CharField(null=True, blank=True, max_length=60, verbose_name='其他平台')
 
     birthday = models.DateTimeField(null=True, blank=True, verbose_name='生日')

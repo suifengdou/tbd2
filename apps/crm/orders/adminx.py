@@ -32,6 +32,7 @@ from .models import CenterTWHOrder, TailShopOrder, LabelOptions
 from apps.crm.customers.models import CustomerInfo, OrderList, CountIdList
 from apps.base.shop.models import ShopInfo
 from apps.crm.cslabel.models import LabelInfo, LabelOrder, LabelDetial
+from apps.crm.services.models import ServicesInfo, ServicesDetail
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -426,7 +427,9 @@ class LabelODAction(BaseActionView):
             else:
                 parts_queryset = queryset.exclude(goods_name__contains='整机')
                 parts_queryset.update(order_status=3)
-                machine_queryset = queryset.filter(goods_name__contains='整机')
+                maintenance_queryset = queryset.filter(warehouse_name='苏州小狗维修仓')
+                maintenance_queryset.update(order_status=3)
+                machine_queryset = queryset.filter(goods_name__contains='整机', order_status=2)
                 machine_queryset = machine_queryset.values_list("goods_name")
                 machine_queryset = set(machine_queryset)
                 for machine in machine_queryset:
@@ -481,6 +484,69 @@ class LabelODAction(BaseActionView):
                             self.message_user("标签单据明细%s保存出错：%s" % (label_detial.id, e), "error")
                             continue
                     receiver_mobile_orders.update(order_status=3)
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 创建客户关系任务
+class CreateSOAction(BaseActionView):
+    action_name = "create_service_order"
+    description = "创建常规客户关系任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=3)
+            else:
+                service_order = ServicesInfo()
+                service_order.name = str(datetime.datetime.now()) + '订单创建需要改名'
+                service_order.prepare_time = datetime.datetime.now()
+                service_order.order_type = 1
+                service_order.quantity = n
+                service_order.memorandum = '%s 在订单层创建了客户关系任务' % self.request.user.username
+                try:
+                    service_order.creator = self.request.user.username
+                    service_order.save()
+                except Exception as e:
+                    self.message_user("创建任务订单保存出错：%s" % e, "error")
+                    return None
+                customer_list = []
+                for obj in queryset:
+
+                    self.log('change', '%s创建了客户关系任务' % self.request.user.username, obj)
+                    _q_customer = CustomerInfo.objects.filter(mobile=obj.receiver_mobile)
+                    if _q_customer.exists():
+                        customer_list.append(_q_customer[0])
+                    else:
+                        n -= 1
+                        continue
+                customer_list = set(customer_list)
+                n = len(customer_list)
+                service_order.quantity = n
+                service_order.save()
+                for customer in customer_list:
+                    service_detail = ServicesDetail()
+                    service_detail.customer = customer
+                    service_detail.services = service_order
+                    service_detail.target = customer.mobile
+                    try:
+                        service_detail.creator = self.request.user.username
+                        service_detail.save()
+                    except Exception as e:
+                        self.message_user("创建任务订单保存出错：%s" % e, "error")
+                        continue
+
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None
@@ -682,7 +748,8 @@ class OriOrderInfoAdmin(object):
 # 极简订单快速查询
 class SimpleOrderAdmin(object):
     list_display = ['trade_no', 'buyer_nick', 'cs_info', 'src_tids', 'goods_name', 'spec_code', 'order_status',
-                    'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name', 'logistics_no']
+                    'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name', 'logistics_no',
+                    'order_category', 'warehouse_name']
     readonley_fields = ['trade_no', 'process_tag', 'mistake_tag', 'shop_name', 'warehouse_name', 'buyer_nick',
                         'receiver_name', 'receiver_area', 'receiver_address', 'receiver_mobile', 'goods_name',
                         'spec_code', 'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name',
@@ -855,6 +922,7 @@ class OrderInfoAdmin(object):
                         'spec_code', 'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name',
                         'logistics_no', 'buyer_message', 'cs_remark', 'order_status', 'src_tids', 'creator',
                         'is_delete', 'create_time', 'update_time']
+    actions = [CreateSOAction]
 
     list_filter = ['process_tag', 'mistake_tag', 'trade_no', 'buyer_nick', 'receiver_mobile', 'deliver_time',
                    'goods_name', 'spec_code', 'num', 'price', 'share_amount', 'src_tids', ]
@@ -1119,13 +1187,14 @@ class CenterTWHOrderAdmin(object):
 class TailShopOrderAdmin(object):
     list_display = ['trade_no', 'process_tag', 'mistake_tag', 'shop_name', 'warehouse_name', 'buyer_nick',
                     'receiver_name', 'receiver_area', 'receiver_address', 'receiver_mobile', 'goods_name', 'spec_code',
-                    'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name', 'logistics_no',
+                    'num', 'pay_time', 'deliver_time', 'logistics_name', 'logistics_no',
                     'buyer_message', 'cs_remark', 'order_status', 'src_tids']
     readonley_fields = ['trade_no', 'process_tag', 'mistake_tag', 'shop_name', 'warehouse_name', 'buyer_nick',
                         'receiver_name', 'receiver_area', 'receiver_address', 'receiver_mobile', 'goods_name',
                         'spec_code', 'num', 'price', 'share_amount', 'pay_time', 'deliver_time', 'logistics_name',
                         'logistics_no', 'buyer_message', 'cs_remark', 'order_status', 'src_tids', 'creator',
                         'is_delete', 'create_time', 'update_time']
+    list_exclude = ['price', 'share_amount', ]
 
     list_filter = ['buyer_nick', 'receiver_mobile', 'deliver_time', 'goods_name', 'spec_code', 'num',
                    'src_tids', ]
@@ -1139,7 +1208,8 @@ class TailShopOrderAdmin(object):
                      'price', 'share_amount', ),
                  Row('deliver_time', 'logistics_name', 'logistics_no', ), ),
         Fieldset(None,
-                 'creator', 'create_time', 'update_time', 'is_delete', **{"style": "display:None"}),
+                 'price', 'share_amount', 'creator', 'create_time', 'update_time',
+                 'is_delete', **{"style": "display:None"}),
     ]
 
     def queryset(self):

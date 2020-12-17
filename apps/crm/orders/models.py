@@ -158,9 +158,9 @@ class OrderInfo(BaseModel):
     share_amount = models.FloatField(verbose_name='货品成交总价')
     goods_name = models.CharField(max_length=255, verbose_name='货品名称')
     spec_code = models.CharField(max_length=150, verbose_name='商家编码', db_index=True)
-    shop_name = models.CharField(max_length=128, verbose_name='店铺')
+    shop_name = models.CharField(max_length=128, db_index=True, verbose_name='店铺')
     logistics_name = models.CharField(null=True, blank=True, max_length=60, verbose_name='物流公司')
-    warehouse_name = models.CharField(max_length=100, verbose_name='仓库')
+    warehouse_name = models.CharField(max_length=100, db_index=True, verbose_name='仓库')
     order_category = models.CharField(max_length=40, db_index=True,  verbose_name='订单类型')
     deliver_time = models.DateTimeField(verbose_name='发货时间', db_index=True)
 
