@@ -45,6 +45,7 @@ class GoodsInfo(BaseModel):
     height = models.IntegerField(null=True, blank=True, verbose_name='宽')
     depth = models.IntegerField(null=True, blank=True, verbose_name='高')
     weight = models.IntegerField(null=True, blank=True, verbose_name='重量')
+    catalog_num = models.CharField(null=True, blank=True, max_length=230, verbose_name='爆炸图号')
 
     class Meta:
         verbose_name = 'BASE-货品信息表'

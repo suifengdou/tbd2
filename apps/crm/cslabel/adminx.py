@@ -28,7 +28,7 @@ from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import LabelInfo, AssociateLabel, LabelOrder, LabelDetial, LabelResult, AssociateLabelDetial
 from apps.crm.services.models import ServicesInfo, ServicesDetail
-
+from apps.crm.customers.models import CustomerInfo
 
 # 审核标签订单
 class SubmitALAction(BaseActionView):
@@ -153,7 +153,7 @@ class SetALDAction(BaseActionView):
         return None
 
 
-# 快捷创建注册任务
+# 标签直接创建注册任务
 class CreateSTAction(BaseActionView):
     action_name = "create_service_task"
     description = "快捷创建快捷注册任务"
@@ -185,7 +185,7 @@ class CreateSTAction(BaseActionView):
 
                     service_order = ServicesInfo()
                     service_order.prepare_time = datetime.datetime.now()
-                    service_order.name = str(obj.order_id) + '快捷注册任务'
+                    service_order.name = str(obj.order_id) + '标签管理快捷注册任务'
                     service_order.order_category = 2
                     service_order.order_type = 2
                     service_order.quantity = order_detials.count()
@@ -219,11 +219,142 @@ class CreateSTAction(BaseActionView):
         return None
 
 
+# 快捷创建注册任务
+class CreateLIAction(BaseActionView):
+    action_name = "create_label_task"
+    description = "快捷创建快捷注册任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '%(user)s批量审核了 %(count)d %(items)s.' % {"count": n,
+                                                                 "items": model_ngettext(self.opts, n),
+                                                                 "user": self.request.user.username})
+                queryset.update(order_status=2)
+            else:
+                for obj in queryset:
+                    self.log('change', '%s审核了标签订单' % self.request.user.username, obj)
+                    order_detials = obj.labelresult_set.all()
+                    if not order_detials.exists():
+                        self.message_user("选择的标签订单不存在客户", "error")
+                        obj.mistake_tag = 2
+                        obj.save()
+
+                    service_order = ServicesInfo()
+                    serial_number = str(datetime.datetime.now())
+                    serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
+                    service_order.prepare_time = datetime.datetime.now()
+                    goods_name = str(obj.name).replace('整机：', '').replace(' ', '')
+                    service_order.name = str(serial_number) + str(goods_name) + '快捷注册任务'
+                    service_order.order_category = 2
+                    service_order.order_type = 2
+                    service_order.quantity = order_detials.count()
+                    try:
+                        service_order.creator = self.request.user.username
+                        service_order.save()
+                    except Exception as e:
+                        self.message_user("保存任务出错：%s" % e, "error")
+                        obj.mistake_tag = 3
+                        obj.save()
+                        break
+                    for order_detial in order_detials:
+                        service_detail = ServicesDetail()
+                        service_detail.customer = order_detial.customer
+                        service_detail.order_type = service_order.order_type
+                        service_detail.services = service_order
+                        service_detail.target = order_detial.customer.mobile
+                        service_detail.creator = self.request.user.username
+                        try:
+                            service_detail.save()
+                        except Exception as e:
+                            self.message_user("保存明细出错：%s" % e, "error")
+                            obj.mistake_tag = 5
+                            obj.save()
+                            continue
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 标签明细创建快捷任务
+class CreateLDAction(BaseActionView):
+    action_name = "create_service_order"
+    description = "创建常规客户关系任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=3)
+            else:
+                service_order = ServicesInfo()
+                serial_number = str(datetime.datetime.now())
+                serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
+                service_order.name = str(serial_number) + '完整标签明细创建任务-需要改名'
+                service_order.prepare_time = datetime.datetime.now()
+                service_order.order_type = 1
+                service_order.quantity = n
+                service_order.memorandum = '%s 在订单层创建了客户关系任务' % self.request.user.username
+                try:
+                    service_order.creator = self.request.user.username
+                    service_order.save()
+                except Exception as e:
+                    self.message_user("创建任务订单保存出错：%s" % e, "error")
+                    return None
+                customer_list = []
+                for obj in queryset:
+
+                    self.log('change', '%s创建了客户关系任务' % self.request.user.username, obj)
+                    _q_customer = CustomerInfo.objects.filter(mobile=obj.receiver_mobile)
+                    if _q_customer.exists():
+                        customer_list.append(_q_customer[0])
+                    else:
+                        n -= 1
+                        continue
+                customer_list = set(customer_list)
+                n = len(customer_list)
+                service_order.quantity = n
+                service_order.save()
+                for customer in customer_list:
+                    service_detail = ServicesDetail()
+                    service_detail.customer = customer
+                    service_detail.services = service_order
+                    service_detail.target = customer.mobile
+                    try:
+                        service_detail.creator = self.request.user.username
+                        service_detail.save()
+                    except Exception as e:
+                        self.message_user("创建任务订单保存出错：%s" % e, "error")
+                        continue
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
 # 标签界面
 class LabelInfoAdmin(object):
     list_display = ['name', 'order_category', 'memorandum', 'order_status', 'creator', 'create_time',]
 
-    actions = []
+    actions = [CreateLIAction]
 
     list_filter = ['name', 'order_category', 'memorandum', 'creator', 'create_time']
 
@@ -330,7 +461,7 @@ class LabelResultAdmin(object):
     readonley_fields = ['mistake_tag', 'label_order', 'label', 'order_status', 'creator', 'create_time', 'customer',
                         'is_delete', 'update_time']
 
-    actions = []
+    actions = [CreateLDAction]
 
     list_filter = ['label__name', 'customer__mobile', 'creator', 'create_time']
 

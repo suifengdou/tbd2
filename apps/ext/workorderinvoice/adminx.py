@@ -41,6 +41,8 @@ from apps.base.company.models import MainInfo
 from apps.base.goods.models import MachineInfo
 from apps.utils.geography.models import CityInfo
 from apps.users.models import UserProfile
+from apps.crm.customers.models import CustomerInfo
+from apps.crm.services.models import ServicesInfo, ServicesDetail
 
 
 ACTION_CHECKBOX_NAME = '_selected_action'
@@ -426,7 +428,7 @@ class CheckWOAction(BaseActionView):
                     copy_fields_order = ['shop', 'company', 'order_id', 'order_category', 'title', 'tax_id', 'phone',
                                          'bank', 'account', 'address', 'remark', 'sent_consignee', 'sent_smartphone',
                                          'sent_city', 'sent_district', 'sent_address', 'amount', 'is_deliver',
-                                         'message', 'creator', 'sign_company', 'sign_department']
+                                         'message', 'creator', 'sign_company', 'sign_department', 'nickname']
 
                     for key in copy_fields_order:
                         value = getattr(obj, key, None)
@@ -449,7 +451,8 @@ class CheckWOAction(BaseActionView):
                         invoice_good = InvoiceGoods()
                         invoice_good.invoice = invoice_order
                         invoice_good.goods_nickname = good.goods_name.goods_name
-                        copy_fields_goods = ['goods_id', 'goods_name', 'quantity', 'price', 'sign_company', 'sing_department', 'nickname', 'memorandum']
+                        copy_fields_goods = ['goods_id', 'goods_name', 'quantity', 'price', 'sign_company',
+                                             'sing_department', 'memorandum']
                         for key in copy_fields_goods:
                             value = getattr(good, key, None)
                             setattr(invoice_good, key, value)
@@ -904,6 +907,71 @@ class SubmitDOAction(BaseActionView):
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
 
+        return None
+
+
+# 创建客户留言任务
+class CreateDOSAction(BaseActionView):
+    action_name = "create_service_order"
+    description = "创建客户留言关系任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        queryset = queryset.filter(shop='小狗电器旗舰店')
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=3)
+            else:
+                service_order = ServicesInfo()
+                serial_number = str(datetime.datetime.now())
+                serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
+                service_order.name = str(serial_number) + '发票发货单旺旺留言'
+                service_order.prepare_time = datetime.datetime.now()
+                service_order.order_type = 1
+                service_order.order_category = 3
+                service_order.quantity = n
+                service_order.memorandum = '%s 在发票发货单创建了客户关系任务' % self.request.user.username
+                try:
+                    service_order.creator = self.request.user.username
+                    service_order.save()
+                except Exception as e:
+                    self.message_user("创建发票发货单任务订单保存出错：%s" % e, "error")
+                    return None
+                for obj in queryset:
+
+                    self.log('change', '%s创建了客户关系任务' % self.request.user.username, obj)
+                    _q_customer = CustomerInfo.objects.filter(mobile=obj.smartphone)
+                    if _q_customer.exists():
+                        customer = _q_customer[0]
+                    else:
+                        customer = CustomerInfo()
+                        customer.mobile = obj.smartphone
+                        customer.wangwang = obj.nickname
+                        customer.save()
+
+                    service_detail = ServicesDetail()
+                    service_detail.customer = customer
+                    service_detail.services = service_order
+                    service_detail.target = obj.nickname
+                    service_detail.memorandum = '发票的快递信息：%s单号：%s，还请您留意' % (str(obj.logistics), str(obj.track_no))
+                    try:
+                        service_detail.creator = self.request.user.username
+                        service_detail.save()
+                    except Exception as e:
+                        self.message_user("创建发票发货单任务订单明细保存出错：%s" % e, "error")
+                        continue
+
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
         return None
 
 
@@ -2074,9 +2142,11 @@ class DeliverOrderAdmin(object):
                        'ori_order_id', 'nickname', 'consignee', 'address', 'smartphone', 'condition_deliver', 'discounts',
                        'postage', 'receivable', 'goods_price', 'goods_amount',
                        'goods_id', 'goods_name', 'quantity', 'order_category', 'message', 'province', 'city', 'district']
+    actions = [CreateDOSAction]
 
     search_fields = ['track_no', 'ori_order_id']
-    list_filter = ['logistics', 'shop', 'mistake_tag', 'order_status', 'process_tag', 'nickname', 'consignee', 'smartphone', 'province', 'city', 'district']
+    list_filter = ['create_time', 'logistics', 'shop', 'mistake_tag', 'order_status',
+                   'process_tag', 'nickname', 'consignee', 'smartphone', 'province', 'city', 'district']
 
     def has_add_permission(self):
         # 禁用添加按钮

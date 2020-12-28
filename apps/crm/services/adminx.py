@@ -73,6 +73,7 @@ class RejectSelectedAction(BaseActionView):
                 if isinstance(obj, ServicesDetail):
                     obj.order_status -= 1
                     obj.process_tag = 5
+                    obj.handler = ''
                     obj.save()
             self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
@@ -249,9 +250,11 @@ class FilterSDAction(BaseActionView):
                         obj.process_tag = 7
                         obj.order_status = 5
                         obj.is_completed = True
-                        obj.outcome = 6
-                        obj.handler = self.request.user.username
-                        obj.handle_time = datetime.datetime.now()
+                        if not obj.outcome:
+                            obj.outcome = 6
+                        if not obj.handler:
+                            obj.handler = self.request.user.username
+                            obj.handle_time = datetime.datetime.now()
                         obj.save()
                         continue
                     if not obj.warranty_sn:
@@ -262,9 +265,11 @@ class FilterSDAction(BaseActionView):
                         obj.process_tag = 7
                         obj.order_status = 5
                         obj.is_completed = True
-                        obj.outcome = 6
-                        obj.handler = self.request.user.username
-                        obj.handle_time = datetime.datetime.now()
+                        if not obj.outcome:
+                            obj.outcome = 6
+                        if not obj.handler:
+                            obj.handler = self.request.user.username
+                            obj.handle_time = datetime.datetime.now()
                         obj.save()
                         continue
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
@@ -283,6 +288,7 @@ class GetSDAction(BaseActionView):
 
     @filter_hook
     def do_action(self, queryset):
+        queryset = queryset[:1000]
         n = queryset.count()
         if not self.has_change_permission():
             raise PermissionDenied
@@ -308,7 +314,7 @@ class GetSDAction(BaseActionView):
         return None
 
 
-# 确认关系任务
+# 确认关系任务明细
 class ConfirmSDAction(BaseActionView):
     action_name = "confirm_sd"
     description = "确认关系任务"
@@ -342,10 +348,186 @@ class ConfirmSDAction(BaseActionView):
                         obj.mistake_tag = 2
                         obj.save()
                         continue
+                    obj.mistake_tag = 0
                     obj.process_tag = 4
                     obj.order_status = 4
                     obj.save()
             self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 终审关系任务
+class FinishSSIAction(BaseActionView):
+    action_name = "finished_ssi_order"
+    description = "终审关系任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '%(user)s批量审核了 %(count)d %(items)s.' % {"count": n,
+                                                                 "items": model_ngettext(self.opts, n),
+                                                                 "user": self.request.user.username})
+                queryset.update(order_status=2)
+            else:
+                for obj in queryset:
+                    self.log('change', '%s终审了关系任务明细' % self.request.user.username, obj)
+                    obj.mistake_tag = 0
+                    obj.process_tag = 4
+                    obj.order_status = 5
+                    obj.save()
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 确认短信关系任务
+class FinishMSAction(BaseActionView):
+    action_name = "finished_ms_sd"
+    description = "完成短信快捷注册任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = True
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '%(user)s批量审核了 %(count)d %(items)s.' % {"count": n,
+                                                                 "items": model_ngettext(self.opts, n),
+                                                                 "user": self.request.user.username})
+                queryset.update(outcome=3, handler=self.request.user.username, handle_time=datetime.datetime.now())
+            else:
+                for obj in queryset:
+                    self.log('change', '%s提交了关系任务明细' % self.request.user.username, obj)
+                    if not obj.handle_time:
+                        self.message_user("%s 此客户还未处理，系统没有记录到实施时间" % obj.target, "error")
+                        obj.mistake_tag = 1
+                        obj.save()
+                        continue
+                    if not obj.outcome:
+                        self.message_user("%s 此客户还未登记处理结果" % obj.target, "error")
+                        obj.mistake_tag = 2
+                        obj.save()
+                        continue
+                    obj.process_tag = 4
+                    obj.order_status = 4
+                    obj.save()
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 完结旺旺关系任务
+class FinishWWAction(BaseActionView):
+    action_name = "finished_wangwang_sd"
+    description = "终结旺旺留言任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '%(user)s批量审核了 %(count)d %(items)s.' % {"count": n,
+                                                                 "items": model_ngettext(self.opts, n),
+                                                                 "user": self.request.user.username})
+                queryset.update()
+            else:
+                for obj in queryset:
+                    self.log('change', '%s提交了关系任务明细' % self.request.user.username, obj)
+                    if obj.services.order_category != 3:
+                        self.message_user("%s 此任务不是旺旺任务无法批量完结" % obj.target, "error")
+                        obj.mistake_tag = 3
+                        obj.save()
+                        continue
+                    obj.handler = self.request.user.username
+                    obj.handle_time = datetime.datetime.now()
+                    obj.is_completed = True
+                    obj.process_tag = 4
+                    obj.order_status = 5
+                    obj.save()
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+
+# 快捷创建注册任务
+class CreateRepeatAction(BaseActionView):
+    action_name = "create_service_repeat"
+    description = "再次创建快捷注册任务"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        queryset = queryset.filter(order_type=2)
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '%(user)s批量审核了 %(count)d %(items)s.' % {"count": n,
+                                                                 "items": model_ngettext(self.opts, n),
+                                                                 "user": self.request.user.username})
+                queryset.update(order_status=2)
+            else:
+                service_order = ServicesInfo()
+                serial_number = str(datetime.datetime.now())
+                serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
+                service_order.prepare_time = datetime.datetime.now()
+                service_order.name = str(serial_number) + '重复快捷注册任务-需要改名'
+                service_order.order_category = 2
+                service_order.order_type = 2
+                service_order.quantity = n
+                try:
+                    service_order.creator = self.request.user.username
+                    service_order.save()
+                except Exception as e:
+                    self.message_user("保存任务出错：%s" % e, "error")
+                    return None
+                for obj in queryset:
+                    self.log('change', '%s创建了关系任务' % self.request.user.username, obj)
+
+                    service_detail = ServicesDetail()
+                    service_detail.customer = obj.customer
+                    service_detail.order_type = service_order.order_type
+                    service_detail.services = service_order
+                    service_detail.target = obj.customer.mobile
+                    service_detail.creator = self.request.user.username
+                    service_detail.warranty_sn = obj.warranty_sn
+                    service_detail.memorandum = '#来源于 %s ' % str(obj.services.name)
+                    try:
+                        service_detail.save()
+                        obj.order_status = 5
+                        obj.save()
+                    except Exception as e:
+                        self.message_user("保存明细出错：%s" % e, "error")
+                        continue
+            self.message_user("成功创建 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
                               'success')
         return None
 
@@ -378,6 +560,8 @@ class SSICreateAdmin(object):
         services_info = obj.services_info
         order_type = obj.order_type
         all_details.update(services_info=services_info, order_type=order_type)
+        obj.quantity = all_details.count()
+        obj.save()
         super().save_models()
 
     def queryset(self):
@@ -436,7 +620,8 @@ class SSIDistributeAdmin(object):
 # 待执行任务
 class SSIProcessAdmin(object):
     list_display = ['name', 'count_down', 'mistake_tag', 'process_tag', 'order_category', 'order_type', 'prepare_time',
-                    'services_info', 'quantity', 'received_num', 'completed_num', 'memorandum', 'creator', 'create_time']
+                    'services_info', 'quantity', 'received_num', 'completed_num', 'unhandle_num',
+                    'memorandum', 'creator', 'create_time']
 
     actions = [RejectSelectedAction]
 
@@ -445,6 +630,7 @@ class SSIProcessAdmin(object):
     readonly_fields = ['id', 'name', 'count_down', 'mistake_tag', 'process_tag', 'order_category', 'prepare_time',
                        'services_info', 'quantity', 'creator', 'create_time', 'is_delete', 'order_type',
                        'received_num', 'completed_num', ]
+
     form_layout = [
         Fieldset('基本信息',
                  'name', 'order_category', 'order_type',),
@@ -461,9 +647,9 @@ class SSIProcessAdmin(object):
         queryset = super(SSIProcessAdmin, self).queryset().filter(order_status=3, is_delete=0)
         for obj in queryset:
             obj.count_down = int((obj.prepare_time - datetime.datetime.now()).days)
-            obj.completed_count = obj.servicesdetail_set.all().filter(order_status=5).count()
-            obj.received_num = obj.servicesdetail_set.all().filter(order_status__in=[3, 4]).count()
-            if obj.completed_count == obj.quantity:
+            obj.completed_num = obj.servicesdetail_set.all().filter(order_status=5).count()
+            obj.received_num = obj.servicesdetail_set.all().filter(order_status=4).count()
+            if obj.completed_num == obj.quantity:
                 obj.order_status = 4
             obj.save()
         return queryset
@@ -479,7 +665,7 @@ class SSIFinishedAdmin(object):
     list_display = ['name', 'count_down', 'mistake_tag', 'process_tag', 'order_category', 'order_type', 'prepare_time',
                     'services_info', 'quantity', 'received_num', 'completed_num', 'memorandum', 'creator', 'create_time']
 
-    actions = []
+    actions = [FinishSSIAction]
 
     list_filter = ['name', 'mistake_tag', 'process_tag', 'count_down', 'order_category', 'memorandum',
                    'creator', 'create_time']
@@ -534,8 +720,9 @@ class ServicesInfoAdmin(object):
 
 # 待生成任务明细
 class SDCreateAdmin(object):
-    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome', 'memorandum',
-                    'order_type', 'order_status', 'memorandum', 'creator', 'create_time']
+    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome',
+                    'services_info', 'memorandum', 'order_type', 'order_status',
+                    'creator', 'create_time']
 
     actions = []
     list_exclude = ['customer', 'ori_amount', ]
@@ -690,9 +877,9 @@ class SDCreateAdmin(object):
 
 # 待领取任务明细
 class SDDistributeAdmin(object):
-
-    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome', 'memorandum',
-                    'order_type', 'order_status', 'memorandum', 'creator', 'create_time']
+    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome',
+                    'services_info', 'memorandum', 'order_type', 'order_status',
+                    'creator', 'create_time']
 
     actions = [GetSDAction, FilterSDAction]
     list_exclude = ['customer', 'ori_amount', ]
@@ -721,23 +908,24 @@ class SDDistributeAdmin(object):
 
 # 待执行任务明细
 class SDProcessAdmin(object):
-    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome', 'memorandum',
-                    'order_type', 'order_status', 'memorandum', 'creator', 'create_time']
+    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome',
+                    'services_info', 'memorandum', 'order_type', 'order_status',
+                    'creator', 'create_time']
 
-    actions = [ConfirmSDAction, RejectSelectedAction]
+    actions = [FinishWWAction, FinishMSAction, ConfirmSDAction, RejectSelectedAction]
     list_exclude = ['customer', 'ori_amount', ]
-    list_filter = ['target', 'mistake_tag', 'process_tag', 'services__name', 'handler', 'memorandum', 'creator',
+    list_filter = ['target', 'outcome', 'mistake_tag', 'process_tag', 'services__name', 'handler', 'memorandum', 'creator',
                    'create_time']
     readonly_fields = ['target', 'customer', 'services', 'services_info', 'order_type']
-
+    search_fields = ['target']
     form_layout = [
         Fieldset('基本信息',
                  'services', 'order_type', 'target', 'services_info', ),
         Fieldset('执行结果',
                  'outcome', 'memorandum', ),
         Fieldset(None,
-                 'process_tag', 'mistake_tag', 'order_status', 'is_completed', 'handler', 'update_time', 'customer',
-                 'handle_time', 'creator', 'is_delete', **{"style": "display:None"}),
+                 'process_tag', 'mistake_tag', 'order_status', 'is_completed', 'handler', 'customer',
+                 'warranty_sn', 'handle_time', 'creator', 'is_delete', **{"style": "display:None"}),
     ]
 
     def save_models(self):
@@ -759,12 +947,13 @@ class SDProcessAdmin(object):
 
 # 待反馈任务明细
 class SDFeedbackAdmin(object):
-    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome', 'memorandum',
-                    'order_type', 'order_status', 'memorandum', 'creator', 'create_time']
+    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome',
+                    'services_info', 'memorandum', 'order_type', 'order_status', 'handler', 'handle_time',
+                    'creator', 'create_time']
 
-    actions = []
+    actions = [CreateRepeatAction, FilterSDAction]
     list_exclude = ['customer', 'ori_amount', ]
-    list_filter = ['target', 'services__name', 'mistake_tag', 'process_tag', 'handler',
+    list_filter = ['target', 'services__name', 'mistake_tag', 'process_tag', 'handler', 'handle_time', 'order_type',
                    'memorandum', 'creator', 'create_time']
     readonly_fields = ['target', 'customer', 'services', 'services_info', 'order_type']
 
@@ -790,13 +979,14 @@ class SDFeedbackAdmin(object):
 
 # 任务明细查询
 class ServicesDetailAdmin(object):
-    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome', 'memorandum',
-                    'order_type', 'order_status', 'memorandum', 'creator', 'create_time']
+    list_display = ['target', 'services', 'mistake_tag', 'process_tag', 'warranty_sn', 'outcome',
+                    'services_info', 'memorandum', 'order_type', 'order_status', 'handle_time', 'handler',
+                    'creator', 'create_time']
 
     actions = []
     list_exclude = ['customer', 'ori_amount', ]
-    list_filter = ['target', 'mistake_tag', 'process_tag', 'services__name', 'handler', 'memorandum', 'creator',
-                   'create_time']
+    list_filter = ['target', 'order_type', 'order_status', 'mistake_tag', 'process_tag', 'handle_time',
+                   'services__name', 'handler', 'memorandum', 'creator', 'create_time']
     readonly_fields = ['handle_time', 'target', 'customer', 'services', 'services_info', 'order_type']
 
     form_layout = [

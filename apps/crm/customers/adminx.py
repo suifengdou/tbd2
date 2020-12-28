@@ -54,8 +54,10 @@ class CreateSTAction(BaseActionView):
                 queryset.update(order_status=2)
             else:
                 service_order = ServicesInfo()
+                serial_number = str(datetime.datetime.now())
+                serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
                 service_order.prepare_time = datetime.datetime.now()
-                service_order.name = str(datetime.datetime.now()) + '快捷注册任务'
+                service_order.name = str(serial_number) + '档案创建快捷任务-需要改名'
                 service_order.order_category = 2
                 service_order.order_type = 2
                 service_order.quantity = n

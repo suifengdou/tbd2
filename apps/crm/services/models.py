@@ -60,7 +60,7 @@ class ServicesInfo(BaseModel):
     process_tag = models.SmallIntegerField(choices=PROCESS_TAG, default=0, verbose_name='处理标签')
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误列表')
     count_down = models.IntegerField(blank=True, null=True, verbose_name='预计开始倒计时')
-    received_num = models.IntegerField(default=0, verbose_name='在执行数量')
+    received_num = models.IntegerField(default=0, verbose_name='待反馈数量')
     completed_num = models.IntegerField(default=0, verbose_name='已完成数量')
 
     class Meta:
@@ -70,6 +70,11 @@ class ServicesInfo(BaseModel):
 
     def __str__(self):
         return str(self.name)
+
+    def unhandle_num(self):
+        unhandle_num = self.quantity - self.received_num - self.completed_num
+        return unhandle_num
+    unhandle_num.short_description = '未完成数量'
 
 
 class SSICreate(ServicesInfo):
@@ -125,6 +130,7 @@ class ServicesDetail(BaseModel):
         (0, '正常'),
         (1, '无实施时间'),
         (2, '无处理结果'),
+        (3, '非旺旺任务无法批量完结'),
     )
     ORDER_TYPE = (
         (1, "常规任务"),

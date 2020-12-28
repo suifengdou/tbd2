@@ -220,11 +220,11 @@ class CheckWAction(BaseActionView):
             else:
                 for obj in queryset:
                     self.log('change', '%s过滤了微信客户信息' % self.request.user.username, obj)
-                    _q_detail_list = ServicesDetail.objects.filter(customer=obj.customer, order_status__in=[1, 2, 3],
+                    _q_detail_list = ServicesDetail.objects.filter(customer=obj.customer, order_status__in=[2, 3],
                                                                    order_type=2)
                     if _q_detail_list.exists():
                         for detail in _q_detail_list:
-                            detail.order_status = 4
+                            detail.order_status = 5
                             detail.process_tag = 7
                             detail.save()
                     obj.order_status = 2
@@ -311,11 +311,11 @@ class CheckWNAction(BaseActionView):
                 for obj in queryset:
                     self.log('change', '%s过滤了微信客户信息' % self.request.user.username, obj)
                     _q_detail_list = ServicesDetail.objects.filter(warranty_sn=obj.warranty_sn,
-                                                                   order_status__in=[1, 2, 3],
+                                                                   order_status__in=[2, 3],
                                                                    order_type=2)
                     if _q_detail_list.exists():
                         for detail in _q_detail_list:
-                            detail.order_status = 4
+                            detail.order_status = 5
                             detail.process_tag = 7
                             detail.save()
                     obj.order_status = 2
@@ -332,7 +332,8 @@ class OWOrderAdmin(object):
                     'purchase_time', 'grade', 'comment', 'register_time', 'cs_id', 'nick_name', 'area',
                     'gender', 'check_status', 'name', 'cs_gender', 'cs_mobile', 'cs_area',
                     'cs_address', 'living_area', 'family', 'habit', 'other_habit', 'auth_time']
-    list_filter = []
+    list_filter = ['type', 'goods_code', 'goods_name', 'goods_series', 'goods_id', 'produce_year', 'cs_mobile',
+                   'produce_sn', 'create_time', 'creator']
     actions = [SubmitOWAction, RejectSelectedAction]
 
     ALLOWED_EXTENSIONS = ['xls', 'xlsx']
@@ -435,7 +436,7 @@ class OWOrderAdmin(object):
             return report_dic
             # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
         elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
-            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
+            df = pd.read_csv(_file, encoding="GBK", chunksize=300, dtype=str)
 
             for piece in df:
                 # 获取表头
@@ -479,6 +480,9 @@ class OWOrderAdmin(object):
                 report_dic['error'].append("电话不符合规则，无法导入")
                 report_dic["false"] += 1
                 continue
+            # row['purchase_time'] = str(row['purchase_time'] + ':00').replace('/', '-')
+            # row['register_time'] = str(row['register_time'] + ':00').replace('/', '-')
+            # row['auth_time'] = str(row['auth_time'] + ':00').replace('/', '-')
             row['activity_time'] = row['activity_time'].replace('T', ' ').replace('Z', '')
             emo_fields = ['nick_name', 'comment', 'name', 'cs_address', 'living_area']
             for word in emo_fields:
@@ -519,14 +523,20 @@ class OWOrderAdmin(object):
 # 原始微信公众号注册信息查询
 class OriWebchatInfoAdmin(object):
     list_display = ['type', 'goods_code', 'goods_name', 'goods_series', 'goods_id', 'produce_year',
-                    'produce_week', 'produce_batch', 'produce_sn', 'activity_time', 'delivery_time',
+                    'produce_week', 'produce_batch', 'produce_sn', 'activity_time',
                     'purchase_time', 'grade', 'comment', 'register_time', 'cs_id', 'nick_name', 'area',
-                    'gender', 'check_status', 'name', 'birthday', 'cs_gender', 'cs_mobile', 'cs_area',
+                    'gender', 'check_status', 'name', 'cs_gender', 'cs_mobile', 'cs_area',
                     'cs_address', 'living_area', 'family', 'habit', 'other_habit', 'auth_time']
 
-    list_filter = []
+    list_filter = ['type', 'goods_code', 'goods_name', 'goods_series', 'goods_id', 'produce_year', 'cs_mobile',
+                   'produce_sn', 'create_time', 'creator']
 
-    readonley_fields = []
+    readonley_fields = ['type', 'goods_code', 'goods_name', 'goods_series', 'goods_id', 'produce_year',
+                        'produce_week', 'produce_batch', 'produce_sn', 'activity_time',
+                        'purchase_time', 'grade', 'comment', 'register_time', 'cs_id', 'nick_name', 'area',
+                        'gender', 'check_status', 'name', 'cs_gender', 'cs_mobile', 'cs_area',
+                        'cs_address', 'living_area', 'family', 'habit', 'other_habit', 'auth_time',
+                        'creator', 'create_time', 'update_time', 'is_delete']
 
     form_layout = [
         Fieldset('基本信息',
@@ -645,14 +655,12 @@ class OWNumberAdmin(object):
 
     import_data = True
 
-
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file', None)
         if file:
             result = self.handle_upload_file(request, file)
             self.message_user('结果提示：%s' % result)
         return super(OWNumberAdmin, self).post(request, *args, **kwargs)
-
 
     def handle_upload_file(self, request, _file):
         report_dic = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
@@ -708,7 +716,7 @@ class OWNumberAdmin(object):
             return report_dic
             # 以下是csv处理逻辑，和上面的处理逻辑基本一致。
         elif '.' in _file.name and _file.name.rsplit('.')[-1] == 'csv':
-            df = pd.read_csv(_file, encoding="GBK", chunksize=300)
+            df = pd.read_csv(_file, encoding="GBK", chunksize=300, dtype=str)
 
             for piece in df:
                 # 获取表头
@@ -761,8 +769,9 @@ class OWNumberAdmin(object):
             for word in emo_fields:
                 row[word] = emoji.demojize(str(row[word]))
             row['duration'] = str(row['duration']).replace('天', '')
-            row['purchase_time'] = str(row['purchase_time'] + ':00').replace('/', '-')
-            row['register_time'] = str(row['register_time'] + ':00').replace('/', '-')
+            #
+            # row['purchase_time'] = str(row['purchase_time'] + ':00').replace('/', '-')
+            # row['register_time'] = str(row['register_time'] + ':00').replace('/', '-')
             order_fields = ['warranty_sn', 'batch_name', 'duration', 'goods_name', 'produce_sn',
                             'purchase_time', 'register_time', 'webchat_name', 'name',
                             'gender', 'smartphone', 'area', 'living_area', 'family', 'habit', 'other_habit']
@@ -782,12 +791,10 @@ class OWNumberAdmin(object):
 
         return report_dic
 
-
     def queryset(self):
         queryset = super(OWNumberAdmin, self).queryset()
         queryset = queryset.filter(order_status=1)
         return queryset
-
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -800,7 +807,9 @@ class OriWarrantyInfoAdmin(object):
                     'purchase_time', 'register_time', 'webchat_name', 'name',
                     'gender', 'smartphone', 'area', 'living_area', 'family', 'habit', 'other_habit']
 
-    list_filter = []
+    list_filter = ['process_tag', 'mistake_tag', 'warranty_sn', 'batch_name', 'goods_name',
+                   'produce_sn', 'purchase_time', 'register_time', 'smartphone', 'creator', 'create_time']
+    readonly_fields = []
 
     def has_add_permission(self):
         # 禁用添加按钮
