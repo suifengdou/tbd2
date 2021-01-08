@@ -337,6 +337,8 @@ class ExtractODJDAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information']
+        _rt_talk_title_total = ['order_category', 'servicer', 'goods', 'nickname', 'order_id', 'cs_information',
+                                'm_sn', 'broken_part', 'description']
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         if not self.has_change_permission():
             raise PermissionDenied
@@ -361,6 +363,12 @@ class ExtractODJDAction(BaseActionView):
                     if len(_rt_talk_data) == 6:
                         _rt_talk.platform = 2
                         _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                        for k, v in _rt_talk_dic.items():
+                            if hasattr(_rt_talk, k):
+                                setattr(_rt_talk, k, v)
+                    elif len(_rt_talk_data) == 9:
+                        _rt_talk.platform = 2
+                        _rt_talk_dic = dict(zip(_rt_talk_title_total, _rt_talk_data))
                         for k, v in _rt_talk_dic.items():
                             if hasattr(_rt_talk, k):
                                 setattr(_rt_talk, k, v)
@@ -409,6 +417,8 @@ class ExtractODTBAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'order_id', 'cs_information']
+        _rt_talk_title_total = ['order_category', 'servicer', 'goods', 'order_id', 'cs_information',
+                                'm_sn', 'broken_part', 'description']
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         if not self.has_change_permission():
             raise PermissionDenied
@@ -433,6 +443,12 @@ class ExtractODTBAction(BaseActionView):
                     if len(_rt_talk_data) == 5:
                         _rt_talk.platform = 1
                         _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                        for k, v in _rt_talk_dic.items():
+                            if hasattr(_rt_talk, k):
+                                setattr(_rt_talk, k, v)
+                    elif len(_rt_talk_data) == 8:
+                        _rt_talk.platform = 1
+                        _rt_talk_dic = dict(zip(_rt_talk_title_total, _rt_talk_data))
                         for k, v in _rt_talk_dic.items():
                             if hasattr(_rt_talk, k):
                                 setattr(_rt_talk, k, v)
@@ -604,6 +620,8 @@ class ExtractODOWAction(BaseActionView):
     @filter_hook
     def do_action(self, queryset):
         _rt_talk_title_new = ['order_category', 'servicer', 'goods', 'order_id', 'cs_information']
+        _rt_talk_title_total = ['order_category', 'servicer', 'goods', 'order_id', 'cs_information',
+                                'm_sn', 'broken_part', 'description']
         result = {"successful": 0, "discard": 0, "false": 0, "repeated": 0, "error": []}
         if not self.has_change_permission():
             raise PermissionDenied
@@ -628,6 +646,12 @@ class ExtractODOWAction(BaseActionView):
                     if len(_rt_talk_data) == 5:
                         _rt_talk.platform = 3
                         _rt_talk_dic = dict(zip(_rt_talk_title_new, _rt_talk_data))
+                        for k, v in _rt_talk_dic.items():
+                            if hasattr(_rt_talk, k):
+                                setattr(_rt_talk, k, v)
+                    elif len(_rt_talk_data) == 8:
+                        _rt_talk.platform = 3
+                        _rt_talk_dic = dict(zip(_rt_talk_title_total, _rt_talk_data))
                         for k, v in _rt_talk_dic.items():
                             if hasattr(_rt_talk, k):
                                 setattr(_rt_talk, k, v)

@@ -72,14 +72,21 @@ class ExtractAction(BaseActionView):
                     continue
                 parts_order = GiftInTalkInfo()
                 _check_data = re.findall(r'{(.*?)}', str(obj.service_info), re.DOTALL)
-                if not _check_data or len(_check_data) != 2:
+
+                if len(_check_data) == 4:
+                    parts_order.goods = _check_data[0]
+                    parts_order.cs_information = _check_data[1]
+                    parts_order.broken_part = _check_data[2]
+                    parts_order.description = _check_data[3]
+                elif len(_check_data) == 2:
+                    parts_order.goods = _check_data[0]
+                    parts_order.cs_information = _check_data[1]
+                else:
                     result['false'] += 1
                     obj.mistake_tag = 4
                     obj.save()
                     continue
-                else:
-                    parts_order.goods = _check_data[0]
-                    parts_order.cs_information = _check_data[1]
+
                 order_category = categroy.get(obj.reason, None)
                 if order_category:
                     parts_order.order_category = order_category
@@ -93,6 +100,7 @@ class ExtractAction(BaseActionView):
                 parts_order.nickname = obj.mobile
                 parts_order.platform = 4
                 parts_order.shop = obj.shop
+                parts_order.m_sn = obj.goods_id
 
                 try:
 

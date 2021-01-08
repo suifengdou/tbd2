@@ -33,6 +33,7 @@ from apps.crm.customers.models import CustomerInfo, OrderList, CountIdList
 from apps.base.shop.models import ShopInfo
 from apps.crm.cslabel.models import LabelInfo, LabelOrder, LabelDetial
 from apps.crm.services.models import ServicesInfo, ServicesDetail
+from apps.assistants.giftintalk.models import GiftImportInfo
 
 ACTION_CHECKBOX_NAME = '_selected_action'
 
@@ -219,17 +220,30 @@ class SubmitOriODAction(BaseActionView):
                 for obj in queryset:
                     self.log('change', '%s递交了原始订单' % self.request.user.username, obj)
                     if '*' in obj.buyer_nick:
-                        try:
-                            bms_order = OriBMSOrderInfo.objects.get(src_tids__exact=obj.src_tids)
-                            if bms_order.buyer_nick:
-                                obj.buyer_nick = bms_order.buyer_nick
-                            else:
-                                obj.buyer_nick = str(obj.buyer_nick).replace("*", '')
-                            obj.receiver_address = bms_order.receiver_address
-                            obj.receiver_mobile = bms_order.receiver_mobile
-                            obj.receiver_name = bms_order.receiver_name
-                        except OriBMSOrderInfo.DoesNotExist:
-                            pass
+                        if "GT" in str(obj.src_tids):
+                            try:
+                                part_order = GiftImportInfo.objects.get(erp_order_id=obj.src_tids)
+                                if part_order.nickname:
+                                    obj.buyer_nick = part_order.nickname
+                                else:
+                                    obj.buyer_nick = str(obj.buyer_nick).replace("*", 'lost')
+                                obj.receiver_address = part_order.address
+                                obj.receiver_mobile = part_order.mobile
+                                obj.receiver_name = part_order.receiver
+                            except Exception as e:
+                                self.message_user("%s" % e, "error")
+                        else:
+                            try:
+                                bms_order = OriBMSOrderInfo.objects.get(src_tids__exact=obj.src_tids)
+                                if bms_order.buyer_nick:
+                                    obj.buyer_nick = bms_order.buyer_nick
+                                else:
+                                    obj.buyer_nick = str(obj.buyer_nick).replace("*", 'lost')
+                                obj.receiver_address = bms_order.receiver_address
+                                obj.receiver_mobile = bms_order.receiver_mobile
+                                obj.receiver_name = bms_order.receiver_name
+                            except Exception as e:
+                                self.message_user("%s" % e, "error")
                     _q_order_list = OriOrderList.objects.filter(ori_order=obj)
                     if _q_order_list.exists():
                         self.message_user("%s已导入过此订单" % obj.trade_no, "error")
@@ -696,7 +710,7 @@ class CreateGWSAction(BaseActionView):
         return None
 
 
-# 递交订单到客户档案
+# 校正选中的单据
 class CorrectionODAction(BaseActionView):
     action_name = "correction_od"
     description = "校正选中的单据"
@@ -725,7 +739,7 @@ class CorrectionODAction(BaseActionView):
                                 if obj.buyer_nick:
                                     ori_order.buyer_nick = obj.buyer_nick
                                 else:
-                                    ori_order.buyer_nick = str(ori_order.buyer_nick).replace("*", '')
+                                    ori_order.buyer_nick = str(ori_order.buyer_nick).replace("*", 'lost')
                                 ori_order.receiver_address = obj.receiver_address
                                 ori_order.receiver_mobile = obj.receiver_mobile
                                 ori_order.receiver_name = obj.receiver_name
@@ -737,7 +751,7 @@ class CorrectionODAction(BaseActionView):
                                 if obj.buyer_nick:
                                     order.buyer_nick = obj.buyer_nick
                                 else:
-                                    order.buyer_nick = str(order.buyer_nick).replace("*", '')
+                                    order.buyer_nick = str(order.buyer_nick).replace("*", 'lost')
                                 order.receiver_mobile = obj.receiver_mobile
                                 order.receiver_address = obj.receiver_address
                                 order.receiver_name = obj.receiver_name
@@ -891,7 +905,7 @@ class SubmitOriOrderAdmin(object):
                 setattr(order, field, row[field])
             if not order.src_tids:
                 order.src_tids = order.trade_no
-            if len(order.scr_tids) > 100:
+            if len(str(order.src_tids)) > 100:
                 order.src_tids = str(order.src_tids)[:100]
             try:
                 order.creator = request.user.username

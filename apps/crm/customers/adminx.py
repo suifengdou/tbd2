@@ -28,7 +28,55 @@ from xadmin.layout import Fieldset, Main, Row, Side
 
 from .models import CustomerInfo, CountIdList, OrderList
 from apps.crm.services.models import ServicesInfo, ServicesDetail
+from apps.crm.cslabel.models import LabelOrder, LabelDetial
 
+
+# 订单批量自动标记客户
+class SignCusAction(BaseActionView):
+    action_name = "sign_customers"
+    description = "标记选中的客户"
+    model_perm = 'change'
+    icon = "fa fa-flag"
+
+    modify_models_batch = False
+
+    @filter_hook
+    def do_action(self, queryset):
+        n = queryset.count()
+        if not self.has_change_permission():
+            raise PermissionDenied
+        if n:
+            if self.modify_models_batch:
+                self.log('change',
+                         '批量审核了 %(count)d %(items)s.' % {"count": n, "items": model_ngettext(self.opts, n)})
+                queryset.update(order_status=3)
+            else:
+
+                label_order = LabelOrder()
+                serial_number = str(datetime.datetime.now())
+                serial_number = serial_number.replace("-", "").replace(" ", "").replace(":", "").replace(".", "")
+                label_order.order_id = str(serial_number) + '自定义名称'
+
+                label_order.quantity = n
+                try:
+                    label_order.creator = self.request.user.username
+                    label_order.save()
+                except Exception as e:
+                    self.message_user("标签单据%s保存出错：%s" % (label_order.order_id, e), "error")
+                    return None
+                for obj in queryset:
+                    label_detial = LabelDetial()
+                    label_detial.customer = obj
+                    label_detial.label_order = label_order
+                    try:
+                        label_detial.creator = self.request.user.username
+                        label_detial.save()
+                    except Exception as e:
+                        self.message_user("标签单据明细%s保存出错：%s" % (label_detial.id, e), "error")
+                        continue
+            self.message_user("成功提交 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
 
 
 # 快捷创建注册任务
@@ -96,7 +144,7 @@ class CustomerInfoAdmin(object):
                        'webchat', 'others_id', 'birthday', 'total_amount', 'total_times', 'last_time', 'return_time',
                        'contact_times', 'free_service_times', 'maintenance_times', 'memorandum', 'order_failure_times',
                        'creator', 'create_time', 'update_time', 'is_delete']
-    actions = [CreateSTAction]
+    actions = [CreateSTAction, SignCusAction]
 
     list_filter = ['mobile', 'wangwang', 'jdfbp_id', 'jdzy_id', 'gfsc_id', 'webchat']
     relfield_style = 'fk-ajax'

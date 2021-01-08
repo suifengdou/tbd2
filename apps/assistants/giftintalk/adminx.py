@@ -185,6 +185,19 @@ class SubmitGiftAction(BaseActionView):
                 for goods_info in goods_group:
                     # 对货品进行处理
                     gift_order = GiftOrderInfo()
+                    if obj.order_category in [1, 2]:
+                        if not all([obj.m_sn, obj.broken_part, obj.description]):
+                            self.message_user("%s售后配件需要补全sn、部件和描述" % obj.id, "error")
+                            error_tag = 1
+                            n -= 1
+                            obj.mistakes = 12
+                            obj.save()
+                            continue
+                        else:
+                            gift_order.m_sn = obj.m_sn
+                            gift_order.broken_part = obj.broken_part
+                            gift_order.description = obj.description
+
                     goods_list = str(goods_info).split("*")
                     if len(goods_list) == 2:
                         gift_order.quantity = goods_list[1]
@@ -828,10 +841,11 @@ class SubmitImportAction(BaseActionView):
 
 # 对话信息导入和处理
 class GiftInTalkPenddingAdmin(object):
-    list_display = ['platform', 'shop', 'order_status', 'mistakes', 'process_tag', 'cs_information', 'goods',
-                    'nickname', 'order_category', 'order_id', 'servicer', 'creator', 'create_time']
+    list_display = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname',
+                    'order_id', 'cs_information', 'm_sn', 'broken_part', 'description',
+                    'mistakes', 'creator', 'create_time']
     list_filter = ['mistakes', 'create_time', 'creator', 'order_category', 'cs_information',]
-    list_editable = ['shop', 'goods', 'nickname', 'order_id', 'cs_information']
+    list_editable = ['shop', 'goods', 'nickname', 'order_id', 'cs_information', 'm_sn', 'broken_part', 'description']
     search_fields = ['nickname', 'order_id']
 
     ALLOWED_EXTENSIONS = ['log', 'txt']
@@ -958,12 +972,14 @@ class GiftInTalkPenddingAdmin(object):
 # 对话信息查询
 class GiftInTalkAdmin(object):
     list_display = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname',
-                    'order_id', 'cs_information', 'mistakes', 'creator', 'create_time']
+                    'order_id', 'cs_information', 'm_sn', 'broken_part', 'description',
+                    'mistakes', 'creator', 'create_time']
     list_filter = ['creator', 'platform', 'create_time', 'update_time', 'order_status', 'order_category',
                    'cs_information', 'mistakes', 'shop', 'nickname',]
     search_fields = ['nickname', 'order_id']
-    readonly_fields = ['platform', 'order_category', 'servicer', 'order_status', 'goods', 'nickname', 'order_id',
-                       'cs_information', 'creator', 'is_delete', 'mistakes', 'submit_user', 'shop']
+    readonly_fields = ['platform', 'shop', 'order_category', 'servicer', 'order_status', 'goods', 'nickname',
+                       'order_id', 'cs_information', 'm_sn', 'broken_part', 'description',
+                       'mistakes', 'creator', 'create_time', 'is_delete', 'submit_user', 'process_tag']
 
     def has_add_permission(self):
         # 禁用添加按钮
@@ -974,10 +990,14 @@ class GiftInTalkAdmin(object):
 class GiftOrderPenddingAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
-                    'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
+                    'm_sn', 'broken_part', 'description', 'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
     list_filter = ['creator', 'update_time', 'nickname', 'mobile', 'shop', 'address', 'quantity', 'district',
                    'order_category']
     search_fields = ['order_id']
+    readonly_fields = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
+                       'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
+                       'm_sn', 'broken_part', 'description', 'buyer_remark', 'cs_memoranda',
+                       'province', 'city', 'district']
     actions = [SubmitAction, RejectSelectedAction]
 
     def queryset(self):
@@ -994,10 +1014,14 @@ class GiftOrderPenddingAdmin(object):
 class GiftOrderInfoAdmin(object):
     list_display = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
                     'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
-                    'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
+                    'm_sn', 'broken_part', 'description', 'buyer_remark', 'cs_memoranda', 'province', 'city', 'district']
     list_filter = ['creator', 'update_time', 'order_status', 'city', 'district', 'mobile', 'address', 'receiver',
                    'shop', 'order_category']
     search_fields = ['nickname', 'mobile', 'order_id']
+    readonly_fields = ['shop', 'nickname', 'receiver', 'address', 'mobile', 'd_condition', 'discount', 'post_fee',
+                       'receivable', 'goods_price', 'total_prices', 'goods_id', 'goods_name', 'quantity', 'category',
+                       'm_sn', 'broken_part', 'description', 'buyer_remark', 'cs_memoranda',
+                       'province', 'city', 'district']
 
     def has_add_permission(self):
         # 禁用添加按钮

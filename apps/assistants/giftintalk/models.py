@@ -32,6 +32,7 @@ class GiftInTalkInfo(BaseModel):
         (9, '手机错误'),
         (10, '集运仓地址'),
         (11, '无店铺'),
+        (12, '售后配件需要补全sn、部件和描述'),
 
     )
     PLATFORM = (
@@ -67,6 +68,10 @@ class GiftInTalkInfo(BaseModel):
     order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
     shop = models.CharField(max_length=150, null=True, blank=True, verbose_name='店铺')
     process_tag = models.SmallIntegerField(choices=PROCESS_TAG, default=0, verbose_name='处理标签')
+
+    m_sn = models.CharField(null=True, blank=True, max_length=50, verbose_name='机器序列号')
+    broken_part = models.CharField(null=True, blank=True, max_length=50, verbose_name='故障部位')
+    description = models.CharField(null=True, blank=True, max_length=200, verbose_name='故障描述')
 
     class Meta:
         verbose_name = 'ASS-GT-手工订单提取查询'
@@ -125,6 +130,10 @@ class GiftOrderInfo(BaseModel):
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='处理人')
     order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
 
+    m_sn = models.CharField(null=True, blank=True, max_length=50, verbose_name='机器序列号')
+    broken_part = models.CharField(null=True, blank=True, max_length=50, verbose_name='故障部位')
+    description = models.CharField(null=True, blank=True, max_length=200, verbose_name='故障描述')
+
     class Meta:
         verbose_name = 'ASS-GT-手工预订单查询'
         verbose_name_plural = verbose_name
@@ -174,7 +183,7 @@ class GiftImportInfo(BaseModel):
     city = models.CharField(max_length=50, verbose_name='市')
     district = models.CharField(null=True, blank=True, max_length=50, verbose_name='区')
 
-    order_id = models.CharField(null=True, blank=True, max_length=50, verbose_name='订单号')
+    order_id = models.CharField(null=True, blank=True, max_length=50, db_index=True, verbose_name='订单号')
     order_status = models.IntegerField(choices=ORDERSTATUS, default=1, verbose_name='赠品单状态')
     submit_user = models.CharField(null=True, blank=True, max_length=50, verbose_name='处理人')
     erp_order_id = models.CharField(null=True, blank=True, unique=True, max_length=50, verbose_name='原始单号')

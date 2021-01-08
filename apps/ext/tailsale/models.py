@@ -1193,6 +1193,7 @@ class TailPartsOrder(BaseModel):
         (10, '单据生成出错'),
         (11, '店铺错误'),
         (12, '电话重复'),
+        (13, '售后配件需要补全sn、部件和描述'),
 
     )
     ORDER_CATEGORY = (
@@ -1219,6 +1220,10 @@ class TailPartsOrder(BaseModel):
     mistake_tag = models.SmallIntegerField(choices=MISTAKE_LIST, default=0, verbose_name='错误原因')
     order_status = models.SmallIntegerField(choices=ORDER_STATUS, default=1, verbose_name='订单状态')
     order_category = models.SmallIntegerField(choices=ORDER_CATEGORY, default=3, verbose_name='单据类型')
+
+    m_sn = models.CharField(null=True, blank=True, max_length=50, verbose_name='机器序列号')
+    broken_part = models.CharField(null=True, blank=True, max_length=50, verbose_name='故障部位')
+    description = models.CharField(null=True, blank=True, max_length=200, verbose_name='故障描述')
 
     class Meta:
         verbose_name = 'EXT-尾货配件-查询'

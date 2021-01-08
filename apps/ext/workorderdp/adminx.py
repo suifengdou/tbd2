@@ -154,6 +154,7 @@ class SubmitWODPAction(BaseActionView):
                     obj.mistake_tag = 3
                     obj.save()
                     continue
+
                 goods_group = self.goods_split(obj.parts_info)
                 error_tag = 0
                 for goods_info in goods_group:
@@ -208,7 +209,13 @@ class SubmitWODPAction(BaseActionView):
                         obj.mistake_tag = 12
                         obj.save()
                         continue
-
+                if obj.order_category in [1, 2]:
+                    if not all([obj.m_sn, obj.broken_part, obj.description]):
+                        self.message_user("%s售后配件需要补全sn、部件和描述" % obj.order_id, "error")
+                        n -= 1
+                        obj.mistake_tag = 13
+                        obj.save()
+                        continue
                 self.log('change', '提交经销商配件订单', obj)
                 obj.order_status = 2
                 obj.submit_time = datetime.datetime.now()

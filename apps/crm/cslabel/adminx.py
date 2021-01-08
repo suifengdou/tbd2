@@ -30,6 +30,91 @@ from .models import LabelInfo, AssociateLabel, LabelOrder, LabelDetial, LabelRes
 from apps.crm.services.models import ServicesInfo, ServicesDetail
 from apps.crm.customers.models import CustomerInfo
 
+
+ACTION_CHECKBOX_NAME = '_selected_action'
+
+
+class RejectSelectedAction(BaseActionView):
+
+    action_name = "reject_selected"
+    description = '驳回选中的单据'
+
+    delete_confirmation_template = None
+    delete_selected_confirmation_template = None
+
+    delete_models_batch = False
+
+    model_perm = 'change'
+    icon = 'fa fa-times'
+
+    @filter_hook
+    def reject_models(self, queryset):
+        n = queryset.count()
+        if n:
+            for obj in queryset:
+
+                if isinstance(obj, LabelOrder):
+                    obj.order_status -= 1
+                    obj.labeldetial_set.all().delete()
+                    obj.process_tag = 5
+                    if obj.order_status == 0:
+                        self.message_user("%s 取消成功" % obj.order_id, "success")
+                    obj.save()
+
+            self.message_user("成功驳回 %(count)d %(items)s." % {"count": n, "items": model_ngettext(self.opts, n)},
+                              'success')
+        return None
+
+    @filter_hook
+    def do_action(self, queryset):
+        # Check that the user has delete permission for the actual model
+        if not self.has_change_permission():
+            raise PermissionDenied
+
+        using = router.db_for_write(self.model)
+
+        # Populate deletable_objects, a data structure of all related objects that
+        # will also be deleted.
+        deletable_objects, model_count, perms_needed, protected = get_deleted_objects(
+            queryset, self.opts, self.user, self.admin_site, using)
+
+        # The user has already confirmed the deletion.
+        # Do the deletion and return a None to display the change list view again.
+        if self.request.POST.get('post'):
+            if not self.has_change_permission():
+                raise PermissionDenied
+            self.reject_models(queryset)
+            # Return None to display the change list page again.
+            return None
+
+        if len(queryset) == 1:
+            objects_name = force_text(self.opts.verbose_name)
+        else:
+            objects_name = force_text(self.opts.verbose_name_plural)
+        perms_needed = []
+        if perms_needed or protected:
+            title = "Cannot reject %(name)s" % {"name": objects_name}
+        else:
+            title = "Are you sure?"
+
+        context = self.get_context()
+        context.update({
+            "title": title,
+            "objects_name": objects_name,
+            "deletable_objects": [deletable_objects],
+            'queryset': queryset,
+            "perms_lacking": perms_needed,
+            "protected": protected,
+            "opts": self.opts,
+            "app_label": self.app_label,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+        })
+
+        # Display the confirmation page
+        return TemplateResponse(self.request, self.delete_selected_confirmation_template or
+                                self.get_template_list('views/model_reject_selected_confirm.html'), context)
+
+
 # 审核标签订单
 class SubmitALAction(BaseActionView):
     action_name = "submit_label_order"
@@ -375,7 +460,7 @@ class AssociateLabelAdmin(object):
     readonley_fields = ['order_id', 'label', 'quantity', 'order_status', 'creator',
                         'is_delete', 'create_time', 'update_time']
 
-    actions = [FinishALAction, SubmitALAction]
+    actions = [FinishALAction, SubmitALAction, RejectSelectedAction]
 
     list_filter = ['mistake_tag', 'order_id', 'label',  'creator', 'create_time']
 

@@ -3616,6 +3616,13 @@ class SubmitTPOAction(BaseActionView):
                                 obj.mistake_tag = 4
                                 obj.save()
                                 continue
+                    if obj.order_category in [1, 2]:
+                        if not all([obj.m_sn, obj.broken_part, obj.description]):
+                            self.message_user("%s售后配件需要补全sn、部件和描述" % obj.id, "error")
+                            n -= 1
+                            obj.mistake_tag = 13
+                            obj.save()
+                            continue
 
                     gift_order.address = obj.sent_address
                     gift_order.receiver = obj.sent_consignee
